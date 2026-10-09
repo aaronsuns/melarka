@@ -2,7 +2,7 @@
 # Every key is shown with its default; delete any line you don't change. Durations need a unit
 # ("3s", "0s"). Environment variables are separate (docs/configuration.md); LARK_LANGUAGE
 # overrides language below, LARK_OFFLINE_CACHE (on/off) overrides offline_cache.
-# LARK_YOUTUBE_FEED_URL and LARK_YOUTUBE_THUMB_URL (channel feeds, 视频 thumbnails) are for tests.
+# LARK_YOUTUBE_FEED_URL, LARK_YOUTUBE_THUMB_URL and LARK_YOUTUBE_COVER_URL (channel feeds, 视频 thumbnails, video cover links) are for tests.
 
 language: en                # UI language before a user picks their own: en, zh-Hans, zh-Hant or sv
 music_root: /music          # libraries added in the admin console must live under this directory

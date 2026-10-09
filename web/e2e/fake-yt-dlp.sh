@@ -182,8 +182,8 @@ if [[ "$last" == ytsearch10:* ]]; then
   [[ "$last" == *chromium-360 ]] && a=11 b=12
   cat <<JSON
 {"_type":"playlist","entries":[
-{"id":"fakevideo${a}","title":"假歌手 - 测试歌曲【MV】","channel":"假歌手频道","channel_id":"UCfakechannel00000000001","webpage_url":"https://www.youtube.com/watch?v=fakevideo${a}","duration":123,"thumbnails":[{"url":"https://i.ytimg.com/vi/fakevideo${a}/hqdefault.jpg"}]},
-{"id":"fakevideo${b}","title":"Another Song","channel":"Some Channel","webpage_url":"https://www.youtube.com/watch?v=fakevideo${b}","duration":200,"thumbnails":[{"url":"https://i.ytimg.com/vi/fakevideo${b}/hqdefault.jpg"}]}
+{"id":"fakevideo${a}","title":"假歌手 - 测试歌曲【MV】","channel":"假歌手频道","channel_id":"UCfakechannel00000000001","webpage_url":"https://www.youtube.com/watch?v=fakevideo${a}","duration":123,"thumbnails":[{"url":"http://127.0.0.1:4701/vi/fakevideo${a}/hqdefault.jpg"}]},
+{"id":"fakevideo${b}","title":"Another Song","channel":"Some Channel","webpage_url":"https://www.youtube.com/watch?v=fakevideo${b}","duration":200,"thumbnails":[{"url":"http://127.0.0.1:4701/vi/fakevideo${b}/hqdefault.jpg"}]}
 ]}
 JSON
   exit 0
@@ -198,8 +198,8 @@ fi
 if [[ "$last" == ytsearch5:* ]]; then
   cat <<'JSON'
 {"_type":"playlist","entries":[
-{"id":"fakeseed001","title":"种子歌曲","channel":"种子频道","duration":30,"thumbnails":[{"url":"https://i.ytimg.com/vi/fakeseed001/hqdefault.jpg"}]},
-{"id":"fakeseed002","title":"种子歌曲（长）","channel":"种子频道","duration":180,"thumbnails":[{"url":"https://i.ytimg.com/vi/fakeseed002/hqdefault.jpg"}]}
+{"id":"fakeseed001","title":"种子歌曲","channel":"种子频道","duration":30,"thumbnails":[{"url":"http://127.0.0.1:4701/vi/fakeseed001/hqdefault.jpg"}]},
+{"id":"fakeseed002","title":"种子歌曲（长）","channel":"种子频道","duration":180,"thumbnails":[{"url":"http://127.0.0.1:4701/vi/fakeseed002/hqdefault.jpg"}]}
 ]}
 JSON
   exit 0
@@ -238,7 +238,7 @@ fi
 if [[ "$last" == "https://www.youtube.com/results?search_query="* ]]; then
   cat <<'JSON'
 {"_type":"playlist","id":"q","title":"q","entries":[
-{"_type":"url","ie_key":"YoutubeTab","id":"PLfakelist0001","url":"https://www.youtube.com/playlist?list=PLfakelist0001","title":"假歌单","channel":"假歌手频道","thumbnails":[{"url":"https://i.ytimg.com/vi/fakevideo01/hqdefault.jpg"}]}
+{"_type":"url","ie_key":"YoutubeTab","id":"PLfakelist0001","url":"https://www.youtube.com/playlist?list=PLfakelist0001","title":"假歌单","channel":"假歌手频道","thumbnails":[{"url":"http://127.0.0.1:4701/vi/fakevideo01/hqdefault.jpg"}]}
 ]}
 JSON
   exit 0
@@ -267,5 +267,5 @@ fi
 title="假歌手 - 测试歌曲【MV】"
 [[ "$id" == "fakevideo03" ]] && title="假歌手 - 第二首歌"
 cat <<JSON
-{"id":"${id}","title":"${title}","channel":"假歌手频道","webpage_url":"${last}","duration":123,"thumbnails":[{"url":"https://i.ytimg.com/vi/${id}/hqdefault.jpg"}]}
+{"id":"${id}","title":"${title}","channel":"假歌手频道","webpage_url":"${last}","duration":123,"thumbnails":[{"url":"http://127.0.0.1:4701/vi/${id}/hqdefault.jpg"}]}
 JSON
