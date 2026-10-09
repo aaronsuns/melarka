@@ -322,9 +322,12 @@ func (sc *Scanner) update(ctx context.Context, lib Library, id int64, f found, r
 	}
 	// Tags are stored cleaned (cleanTag): GBK mojibake repaired, garbled or
 	// placeholder values emptied so the display falls back to the file name.
+	// A new or changed file has no loudness yet: clearing it queues the file
+	// for the background loudness worker.
 	r, err := sc.Store.DB.ExecContext(ctx, `UPDATE tracks SET size=?, mtime=0, fingerprint=COALESCE(NULLIF(?,''),fingerprint),
 		duration_ms=?, codec=?, bitrate=?, sample_rate=?, lossless=?, tag_title=?, tag_artist=?, tag_album=?,
-		tag_album_artist=?, tag_year=NULLIF(?,0), track_no=NULLIF(?,0), disc_no=NULLIF(?,0), broken=0, broken_reason='' WHERE id=? AND status!='trashed'`,
+		tag_album_artist=?, tag_year=NULLIF(?,0), track_no=NULLIF(?,0), disc_no=NULLIF(?,0), broken=0, broken_reason='',
+		loudness_lufs=NULL, true_peak_db=NULL, loudness_checked_at=NULL WHERE id=? AND status!='trashed'`,
 		f.size, fp, info.DurationMS, info.Codec, info.BitrateKbps, info.SampleRate, info.Lossless,
 		cleanTag(info.Title), cleanTag(info.Artist), cleanTag(info.Album), cleanTag(info.AlbumArtist), info.Year, info.TrackNo, info.DiscNo, id)
 	if err != nil {

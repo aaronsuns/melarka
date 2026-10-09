@@ -252,3 +252,34 @@ func TestChannelsConfigRejectsBadValues(t *testing.T) {
 		}
 	}
 }
+
+func TestLoudnessConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LARK_DATA_DIR", dir)
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !c.Loudness.Enabled || c.Loudness.Gap != 2*time.Second || c.Loudness.RetryFailedAfter != 720*time.Hour {
+		t.Fatalf("defaults %+v", c.Loudness)
+	}
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("loudness:\n  enabled: false\n  gap: 0s\n  retry_failed_after: 24h\n"), 0o644)
+	c, err = Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Loudness.Enabled || c.Loudness.Gap != 0 || c.Loudness.RetryFailedAfter != 24*time.Hour {
+		t.Fatalf("yaml %+v", c.Loudness)
+	}
+	// The limits only apply when the worker runs.
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("loudness:\n  enabled: false\n  retry_failed_after: 10m\n"), 0o644)
+	if _, err := Load(); err != nil {
+		t.Fatalf("disabled worker: %v", err)
+	}
+	for _, bad := range []string{"loudness:\n  gap: -1s\n", "loudness:\n  retry_failed_after: 10m\n"} {
+		os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(bad), 0o644)
+		if _, err := Load(); err == nil {
+			t.Errorf("%q: want an error", bad)
+		}
+	}
+}

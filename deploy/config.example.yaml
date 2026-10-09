@@ -39,6 +39,12 @@ artwork:
   providers: [embedded, folder, itunes, netease, qq]
   prefetch_interval: 3s     # background lookup pace, one song per interval; 0s = off
 
+loudness:                   # loudness and true peak per song, measured in the background with ffmpeg
+  # One niced decode at a time: a library of N tracks takes roughly N x (decode time + gap).
+  enabled: true
+  gap: 2s                   # pause between songs; 0s = back to back
+  retry_failed_after: 720h  # a song that failed to decode is tried again after this (at least 1h)
+
 recommendations:            # "For you" on Home: YouTube songs like the ones you play (docs/configuration.md)
   enabled: true
   refresh_at: "02:30"       # nightly refresh (HH:MM), container local time: UTC unless TZ is set (compose example: TZ)

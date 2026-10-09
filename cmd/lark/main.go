@@ -23,6 +23,7 @@ import (
 	"github.com/aaronsuns/lark-server/internal/download"
 	"github.com/aaronsuns/lark-server/internal/lastfm"
 	"github.com/aaronsuns/lark-server/internal/library"
+	"github.com/aaronsuns/lark-server/internal/loudness"
 	"github.com/aaronsuns/lark-server/internal/lyrics"
 	"github.com/aaronsuns/lark-server/internal/media"
 	"github.com/aaronsuns/lark-server/internal/personal"
@@ -161,6 +162,16 @@ func run(log *slog.Logger) error {
 	go func() { defer close(prefetchDone); lyricsSvc.RunPrefetch(ctx, cfg.Lyrics.PrefetchInterval) }()
 	artworkDone := make(chan struct{})
 	go func() { defer close(artworkDone); artworkSvc.RunPrefetch(ctx, cfg.Artwork.PrefetchInterval) }()
+	// Loudness: one niced ffmpeg decode at a time, waiting while the stream
+	// preparer transcodes so playback always comes first.
+	loudnessDone := make(chan struct{})
+	if cfg.Loudness.Enabled {
+		lw := &loudness.Worker{DB: d, Measure: loudness.FFmpeg{Path: cfg.FFmpegPath, Nice: cfg.Transcode.Nice}, Log: log,
+			Gap: cfg.Loudness.Gap, RetryFailedAfter: cfg.Loudness.RetryFailedAfter, Busy: func() bool { return !preparer.Idle() }}
+		go func() { defer close(loudnessDone); lw.Run(ctx) }()
+	} else {
+		close(loudnessDone)
+	}
 
 	lastfmDone := make(chan struct{})
 	// One client (one rate limit) for tagging and recommendations.
@@ -262,6 +273,7 @@ func run(log *slog.Logger) error {
 	<-channelsDone
 	<-prefetchDone
 	<-artworkDone
+	<-loudnessDone
 	<-prepareDone
 	return nil
 }

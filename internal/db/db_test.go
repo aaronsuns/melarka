@@ -33,7 +33,7 @@ func TestOpenMigratesAndIsIdempotent(t *testing.T) {
 	}
 	var n int
 	d.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&n)
-	if n != 24 {
+	if n != 25 {
 		t.Fatalf("migrations=%d", n)
 	}
 }
@@ -117,5 +117,34 @@ func TestPreviewHDMigrationKeepsTheIDSequence(t *testing.T) {
 	}
 	if id, _ := r.LastInsertId(); id <= 3 {
 		t.Fatalf("new id %d reuses one that was given out", id)
+	}
+}
+
+// Loudness is measured in the background: the three columns exist and are
+// NULL on a track that has not been measured yet.
+func TestLoudnessColumns(t *testing.T) {
+	ctx := context.Background()
+	d, err := Open(ctx, filepath.Join(t.TempDir(), "lark.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	if _, err := d.Exec(`INSERT INTO libraries(id,name,root) VALUES (1,'m','/m')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Exec(`INSERT INTO tracks(library_id,rel_path,size,mtime,fingerprint,added_at) VALUES (1,'a.flac',1,1,'f',1)`); err != nil {
+		t.Fatal(err)
+	}
+	var lufs, peak, checked any = 1, 1, 1
+	if err := d.QueryRow(`SELECT loudness_lufs, true_peak_db, loudness_checked_at FROM tracks`).Scan(&lufs, &peak, &checked); err != nil {
+		t.Fatal(err)
+	}
+	if lufs != nil || peak != nil || checked != nil {
+		t.Fatalf("want NULLs, got %v %v %v", lufs, peak, checked)
+	}
+	var idx int
+	d.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='tracks_loudness_pending'`).Scan(&idx)
+	if idx != 1 {
+		t.Fatal("tracks_loudness_pending index missing")
 	}
 }
