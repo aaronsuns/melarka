@@ -260,6 +260,8 @@ function WebPlayerProvider({
   loudnessRef.current = loudness;
   // Multiplies the track's gain; a fade (sleep timer) lowers it. There is no
   // volume slider here: the device volume is the user's and is untouched.
+  // Whatever changes it (the sleep-timer fade) must call applyVolume after,
+  // or the new level is not heard until the next track loads.
   const fadeRef = useRef(1);
   const applyVolume = useCallback(
     (track: Track) => {

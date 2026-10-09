@@ -18,7 +18,9 @@ func TestGainDB(t *testing.T) {
 		{f(-20), f(-3), ptr(0)},              // quiet: never boosted
 		{f(-14.5), f(0.8), ptr(-1.8)},        // peak cap: -1-0.8 = -1.8 < 0
 		{f(-10), sql.NullFloat64{}, ptr(-4)}, // no peak reading: loudness alone
-		{f(-14), f(-1), ptr(0)},              // exactly on target: 0, not -0
+		{f(-14), f(-1), ptr(0)},
+		{f(-20), f(0.5), ptr(-1.5)},   // quiet but a hot peak: the peak cap still turns it down
+		{f(-20), f(-0.97), ptr(-0.1)}, // -0.03 rounds toward more attenuation, never to 0              // exactly on target: 0, not -0
 	}
 	for i, c := range cases {
 		got := GainDB(c.l, c.p)
