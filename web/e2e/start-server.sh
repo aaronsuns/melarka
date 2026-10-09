@@ -14,13 +14,16 @@ if [[ "${LARK_DEMO:-}" == 1 ]]; then
   python3 "$LARK_DEMO_PY" library "$TMP/music/main"
 else
   mkdir -p "$TMP/music/main/邓丽君精选" "$TMP/music/main/Alan Walker" "$TMP/music/youtube" "$TMP/data"
-  tone() { ffmpeg -nostdin -loglevel error -y -f lavfi -i "sine=frequency=$1:duration=30" "${@:2}"; }
+  # tone FREQ SECONDS ffmpeg-args...: a sine of that length.
+  tone() { ffmpeg -nostdin -loglevel error -y -f lavfi -i "sine=frequency=$1:duration=$2" "${@:3}"; }
   # A folder cover for 邓丽君精选; Faded has none (its cover answers 404).
   ffmpeg -nostdin -loglevel error -y -f lavfi -i color=c=0x8a5cf6:s=600x600 -frames:v 1 "$TMP/music/main/邓丽君精选/cover.jpg"
-  tone 440 -metadata title=甜蜜蜜 -metadata artist=邓丽君 -metadata album=邓丽君精选 -b:a 192k "$TMP/music/main/邓丽君精选/01 甜蜜蜜.mp3"
+  # 甜蜜蜜 (the synced-lyrics track) outlasts a whole test (playwright.config.ts: 60 s), so it can never end
+  # and auto-advance to a track without lyrics in the middle of a lyrics test, however slow the machine.
+  tone 440 180 -metadata title=甜蜜蜜 -metadata artist=邓丽君 -metadata album=邓丽君精选 -b:a 192k "$TMP/music/main/邓丽君精选/01 甜蜜蜜.mp3"
   printf '[00:00.50]甜蜜蜜第一句\n[00:02.00]甜蜜蜜第二句\n[00:04.00]甜蜜蜜第三句\n' > "$TMP/music/main/邓丽君精选/01 甜蜜蜜.lrc"
-  tone 523 -metadata title=月亮代表我的心 -metadata artist=邓丽君 -metadata album=邓丽君精选 "$TMP/music/main/邓丽君精选/02 月亮代表我的心.flac"
-  tone 660 -metadata title=Faded -metadata artist="Alan Walker" "$TMP/music/main/Alan Walker/Faded.wav"
+  tone 523 30 -metadata title=月亮代表我的心 -metadata artist=邓丽君 -metadata album=邓丽君精选 "$TMP/music/main/邓丽君精选/02 月亮代表我的心.flac"
+  tone 660 30 -metadata title=Faded -metadata artist="Alan Walker" "$TMP/music/main/Alan Walker/Faded.wav"
 fi
 printf 'libraries:\n  - name: main\n    path: %s/music/main\n  - name: youtube\n    path: %s/music/youtube\n    download_target: true\nytdlp_path: %s\nlyrics:\n  providers: [embedded]\n  prefetch_interval: 0s\nartwork:\n  providers: [embedded, folder]\n  prefetch_interval: 0s\n' \
   "$TMP" "$TMP" "$ROOT/web/e2e/fake-yt-dlp.sh" > "$TMP/data/config.yaml"

@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 import WebKit
 
 struct WaitTimeout: Error, CustomStringConvertible {
@@ -15,6 +16,25 @@ struct WaitTimeout: Error, CustomStringConvertible {
     }
     if try await condition() { return }
     throw WaitTimeout(seconds: timeout)
+}
+
+extension XCTestCase {
+    /// A web view in a visible window of the test host, for as long as the test runs. iOS treats a web view
+    /// outside any window as hidden and lets its web content process be throttled and suspended while the test
+    /// waits on it, so loads and script calls then take as long as the system pleases.
+    @MainActor func onScreenWebView(_ configuration: WKWebViewConfiguration) throws -> WKWebView {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
+                                  "the test host has no window scene")
+        let window = UIWindow(windowScene: scene)
+        let web = WKWebView(frame: window.bounds, configuration: configuration)
+        window.addSubview(web)
+        window.isHidden = false
+        addTeardownBlock { @MainActor in
+            web.removeFromSuperview()
+            window.isHidden = true
+        }
+        return web
+    }
 }
 
 /// Calls `done` once, on the first finished navigation.
