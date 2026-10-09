@@ -162,16 +162,19 @@ func makeSilentFile(seconds: Double) throws -> URL {
     func testARepeatedSeekWaitsForTheNewestOne() async throws {
         let url = try silent(3)
         let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
-        b.load(.file(url), startMs: 0, autoplay: false, rate: 1, generation: 1)
+        b.load(.file(url), startMs: 0, autoplay: true, rate: 1, generation: 1)
         let item = try XCTUnwrap(b.player.currentItem as? LarkPlayerItem)
-        try await waitUntil(timeout: 10) { item.status == .readyToPlay }
+        try await waitUntil(timeout: 10) { item.status == .readyToPlay && b.player.rate != 0 }
+        // Stopped under the backend, as an adopt does before its seek: the seek's completion is what plays it.
+        b.player.pause()
         b.seek(ms: 2000)
         b.seek(ms: 2000)
-        XCTAssertEqual(item.seekCount, 2)
         XCTAssertEqual(item.pendingSeekMs, 2000)
         XCTAssertEqual(b.positionMs, 2000)
-        try await waitUntil(timeout: 10) { item.pendingSeekMs == nil }
-        XCTAssertEqual(item.currentTime().seconds, 2, accuracy: 0.05)
+        // Playback resumes only once the newest seek has landed: never from the old position.
+        try await waitUntil(timeout: 10) { b.player.rate != 0 }
+        XCTAssertGreaterThanOrEqual(item.currentTime().seconds, 1.95)
+        XCTAssertNil(item.pendingSeekMs)
     }
 
     /// A media services reset: a new player, nothing of the old one reports again, and the next load plays.

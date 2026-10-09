@@ -60,8 +60,8 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: '1.26'
-      - id: distro # the .deb cache is per Ubuntu release
-        run: . /etc/os-release && echo "id=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
+      - id: distro # the .deb cache is per Ubuntu release, and refreshed monthly
+        run: . /etc/os-release && echo "id=$ID-$VERSION_ID-$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ffmpeg-debs
@@ -113,8 +113,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - id: distro # the .deb cache is per Ubuntu release
-        run: . /etc/os-release && echo "id=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
+      - id: distro # the .deb cache is per Ubuntu release, and refreshed monthly
+        run: . /etc/os-release && echo "id=$ID-$VERSION_ID-$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ffmpeg-debs
