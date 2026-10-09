@@ -16,7 +16,7 @@ ARG TARGETOS TARGETARCH VERSION=dev
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
     -ldflags="-s -w -X github.com/aaronsuns/lark-server/internal/buildinfo.Version=${VERSION}" -o /out/lark ./cmd/lark
 
-FROM alpine:3.22
+FROM alpine:3.24
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="Melarka" \
       org.opencontainers.image.source="https://github.com/aaronsuns/melarka" \
