@@ -104,7 +104,7 @@ struct WebShell: UIViewRepresentable {
             guard fromServer(frame) else { return }
             await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
                 let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-                a.addAction(UIAlertAction(title: "好", style: .default) { _ in done.resume() })
+                a.addAction(UIAlertAction(title: String(localized: "OK"), style: .default) { _ in done.resume() })
                 present(a, from: webView) { done.resume() }
             }
         }
@@ -114,8 +114,8 @@ struct WebShell: UIViewRepresentable {
             guard fromServer(frame) else { return false }
             return await withCheckedContinuation { (done: CheckedContinuation<Bool, Never>) in
                 let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-                a.addAction(UIAlertAction(title: "取消", style: .cancel) { _ in done.resume(returning: false) })
-                a.addAction(UIAlertAction(title: "好", style: .default) { _ in done.resume(returning: true) })
+                a.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel) { _ in done.resume(returning: false) })
+                a.addAction(UIAlertAction(title: String(localized: "OK"), style: .default) { _ in done.resume(returning: true) })
                 present(a, from: webView) { done.resume(returning: false) }
             }
         }

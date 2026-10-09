@@ -30,9 +30,9 @@ enum LarkIntentError: Error, Equatable, CustomLocalizedStringResourceConvertible
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
-        case .notSetUp: return "请先打开 Melarka 并设置服务器"
-        case .notSignedIn: return "未登录"
-        case .offlineNothingCached: return "离线且没有缓存的歌曲"
+        case .notSetUp: return "Open Melarka and set the server first"
+        case .notSignedIn: return "Not signed in"
+        case .offlineNothingCached: return "Offline, and no songs are cached"
         case .nothingToPlay(let text): return "\(text)"
         }
     }
@@ -49,8 +49,8 @@ enum IntentOutcome: Equatable {
 
     var dialog: LocalizedStringResource {
         switch self {
-        case .started: return "正在随机播放收藏"
-        case .alreadyPlaying: return "已在播放"
+        case .started: return "Shuffling favorites"
+        case .alreadyPlaying: return "Already playing"
         }
     }
 
@@ -62,7 +62,7 @@ enum IntentOutcome: Equatable {
 /// because iOS may suspend a background-launched app while it waits. A start that fails throws its reason.
 enum IntentRun {
     /// Already playing: nothing at all (no session, no new queue). When the car connects, its own play resumes
-    /// the queue and the Bluetooth automation's 随机播放收藏 arrives a moment later; it must not cut that song.
+    /// the queue and the Bluetooth automation's Shuffle Favorites arrives a moment later; it must not cut that song.
     @discardableResult
     @MainActor static func shuffleFavorites(_ player: IntentPlayer?) async throws -> IntentOutcome {
         if let player, player.playing { return .alreadyPlaying }
@@ -92,11 +92,11 @@ enum IntentRun {
     }
 }
 
-/// 随机播放收藏: the Bluetooth automation's action. It runs in the background (no UI) and plays cached
+/// Shuffle Favorites (随机播放收藏): the Bluetooth automation's action. It runs in the background (no UI) and plays cached
 /// favorites at once, with or without a network.
 struct ShuffleFavoritesIntent: AudioPlaybackIntent {
-    static let title: LocalizedStringResource = "随机播放收藏"
-    static let description = IntentDescription("在后台随机播放收藏的歌曲；没有网络时播放已缓存的收藏。")
+    static let title: LocalizedStringResource = "Shuffle Favorites"
+    static let description = IntentDescription("Shuffles your favorites in the background; with no network, the cached ones play.")
     static let openAppWhenRun = false
 
     @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {

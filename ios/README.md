@@ -20,6 +20,25 @@ user-visible text says Melarka. Installing the app on a phone is covered in [doc
 
 The bundle id is `io.github.aaronsuns.melarka` and the deployment target is iOS 17.
 
+## Languages
+
+The native screens follow the phone's language: English is the development language, with a full Simplified
+Chinese (`zh-Hans`) translation. A phone set to Chinese shows Chinese; any other language shows English. There
+is no in-app language picker. The web app inside the WKWebView is not affected: it follows the server's or the
+user's own language setting.
+
+- `Sources/App/Localizable.xcstrings`: every native string. SwiftUI `Text("English")` keys are looked up in it;
+  other code uses `String(localized: "English")`. Intent titles, descriptions and dialogs are
+  `LocalizedStringResource` keys in the same catalog. The car guide is the `shortcutsGuide.text` entry.
+- `Sources/Intents/AppShortcuts.xcstrings`: the Siri and Shortcuts phrases. Each translation must contain
+  `${applicationName}`.
+- `Sources/App/InfoPlist.xcstrings`: the permission prompt (`NSLocalNetworkUsageDescription`).
+
+iOS does not fall back from Traditional to Simplified Chinese, so each catalog also has a `zh-Hant`
+localization that repeats the `zh-Hans` text: a phone set to Traditional Chinese shows the Simplified text
+rather than English. Add a new string in English, then its `zh-Hans` and the same `zh-Hant` value;
+`LocalizationTests` checks the key strings in each language.
+
 ## Build and test locally
 
 You need a Mac with Xcode and XcodeGen (`brew install xcodegen`). From `ios/`:

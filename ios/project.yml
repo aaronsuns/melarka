@@ -1,7 +1,7 @@
 name: Lark
 options:
   bundleIdPrefix: io.github.aaronsuns
-  developmentLanguage: zh-Hans      # the native UI, intent titles and Siri phrases are Chinese; English is the second language
+  developmentLanguage: en           # native screens, intents and Siri phrases follow the phone: zh-Hans/zh-Hant phones get Chinese, all others English
   deploymentTarget: { iOS: "17.0" }
   createIntermediateGroups: true
 settings:
@@ -29,7 +29,7 @@ targets:
         BGTaskSchedulerPermittedIdentifiers: [io.github.aaronsuns.melarka.refresh]
         ITSAppUsesNonExemptEncryption: false
         NSAppTransportSecurity: { NSAllowsLocalNetworking: true }   # http://*.local and localhost, for development servers
-        NSLocalNetworkUsageDescription: 开发时连接局域网中的 Melarka 服务器
+        NSLocalNetworkUsageDescription: Connects to a Melarka server on your local network, for development   # translated in InfoPlist.xcstrings
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.aaronsuns.melarka

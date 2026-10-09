@@ -8,6 +8,15 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-09
+
+### Changed
+
+- **iPhone app**: native screens are now English or Chinese, following the phone language. The
+  first-launch server screen, the native settings, the car autoplay guide, the "can't connect"
+  screen, alerts, and the Shortcuts actions and Siri phrases are in Chinese on a phone set to
+  Chinese and in English on any other phone. The web app inside keeps its own language setting.
+
 ## [0.1.0] - 2026-10-09
 
 The first public release.
@@ -44,5 +53,6 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/aaronsuns/melarka/releases/tag/v0.1.1
 [0.1.0]: https://github.com/aaronsuns/melarka/releases/tag/v0.1.0

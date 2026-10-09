@@ -63,7 +63,7 @@ final class NeverStopTests: EngineTestCase {
         backend.fail(network: true)                  // offline: no retry, straight to what is on the phone
         XCTAssertEqual(backend.loads.last?.0, .file(tmp("21.m4a")))
         XCTAssertEqual(engine.music.items.map(\.id), ["7", "21", "7", "8"])   // 7 is requeued, to play once online
-        XCTAssertEqual(notices.last, "离线：正在播放已缓存的收藏")
+        XCTAssertEqual(notices.last, PlayerEngine.offlineNotice)
         XCTAssertEqual(engine.music.items[1].meta["title"], .string("T21"))
     }
 

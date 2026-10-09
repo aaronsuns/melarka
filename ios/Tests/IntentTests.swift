@@ -40,7 +40,7 @@ import AppIntents
         XCTAssertFalse(ResumeIntent.openAppWhenRun)
     }
 
-    func testIntentTitlesAreChineseWithEnglishSecond() {
+    func testIntentTextsAreEnglishAndChinese() {
         func text(_ r: LocalizedStringResource, _ lang: String) -> String {
             var r = r; r.locale = Locale(identifier: lang); return String(localized: r)
         }
@@ -49,14 +49,19 @@ import AppIntents
         XCTAssertEqual(text(ShuffleFavoritesIntent.title, "en"), "Shuffle Favorites")
         XCTAssertEqual(text(ResumeIntent.title, "en"), "Resume")
         XCTAssertEqual(text(LarkIntentError.notSignedIn.localizedStringResource, "zh-Hans"), "未登录")
+        XCTAssertEqual(text(LarkIntentError.notSignedIn.localizedStringResource, "en"), "Not signed in")
         XCTAssertEqual(text(LarkIntentError.offlineNothingCached.localizedStringResource, "zh-Hans"), "离线且没有缓存的歌曲")
+        XCTAssertEqual(text(LarkIntentError.offlineNothingCached.localizedStringResource, "en"), "Offline, and no songs are cached")
+        XCTAssertEqual(text(IntentOutcome.started.dialog, "zh-Hans"), "正在随机播放收藏")
+        XCTAssertEqual(text(IntentOutcome.started.dialog, "en"), "Shuffling favorites")
     }
 
-    /// Chinese is the development language (Siri in 中文 matches the phrases), English the second.
-    func testTheAppIsLocalizedInChineseAndEnglish() throws {
-        XCTAssertEqual(Bundle.main.developmentLocalization, "zh-Hans")
-        XCTAssertTrue(Bundle.main.localizations.contains("zh-Hans"), "\(Bundle.main.localizations)")
-        XCTAssertTrue(Bundle.main.localizations.contains("en"), "\(Bundle.main.localizations)")
+    /// English is the development language; Chinese phones get the zh-Hans text (Siri in 中文 matches its phrases).
+    func testTheAppIsLocalizedInEnglishAndChinese() throws {
+        XCTAssertEqual(Bundle.main.developmentLocalization, "en")
+        for lang in ["en", "zh-Hans", "zh-Hant"] {
+            XCTAssertTrue(Bundle.main.localizations.contains(lang), "\(lang) not in \(Bundle.main.localizations)")
+        }
         for lang in ["zh-Hans", "en"] {
             let lproj = try XCTUnwrap(Bundle.main.path(forResource: lang, ofType: "lproj"), lang)
             XCTAssertNotNil(Bundle(path: lproj)?.path(forResource: "AppShortcuts", ofType: "strings"), lang)

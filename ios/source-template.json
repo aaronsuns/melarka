@@ -3,4 +3,4 @@
               "localizedDescription": "Melarka 音乐：原生后台播放、锁屏控制、车载自动播放、离线收藏。",
               "iconURL": "", "tintColor": "#2f6fde", "category": "entertainment",
               "appPermissions": { "entitlements": [],
-                                  "privacy": { "NSLocalNetworkUsageDescription": "开发时连接局域网中的 Melarka 服务器" } }, "versions": [] } ], "news": [] }
+                                  "privacy": { "NSLocalNetworkUsageDescription": "Connects to a Melarka server on your local network, for development" } }, "versions": [] } ], "news": [] }

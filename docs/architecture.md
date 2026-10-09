@@ -90,7 +90,9 @@ The app accepts messages only from the configured server's origin.
 ## The iOS app
 
 `ios/` is a SwiftUI app generated with XcodeGen from `ios/project.yml` (iOS 17 or later).
-`ios/README.md` explains building and testing it.
+`ios/README.md` explains building and testing it. The native screens (first launch, settings, the
+"can't connect" screen, Shortcuts actions and Siri phrases) follow the phone's language: Chinese on a
+phone set to Chinese, English otherwise. The web app inside it keeps its own language setting.
 
 | Directory | Job |
 |---|---|

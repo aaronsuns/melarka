@@ -7,8 +7,8 @@ native engine. That gives it what a web page on iOS can't do reliably:
   car controls;
 - gapless transitions and a few tracks downloaded ahead;
 - an offline cache of your favorites, synced on Wi-Fi, with a size limit you choose;
-- Shortcuts actions, **随机播放收藏** (shuffle favorites) and **继续播放** (resume), so music can start by itself when the
-  phone connects to the car's Bluetooth;
+- Shortcuts actions, **Shuffle Favorites** and **Resume** (随机播放收藏 and 继续播放 on a Chinese phone), so
+  music can start by itself when the phone connects to the car's Bluetooth;
 - the current lyric line on the lock screen and car display.
 
 It needs iOS 17 or later and a Melarka server reachable over **HTTPS**. The app accepts plain
@@ -54,8 +54,7 @@ there; it signs you out of the old one.
 
 ## Native settings
 
-**Me → iPhone app settings** opens the app's own settings (some of these screens are only in
-Chinese for now):
+**Me → iPhone app settings** opens the app's own settings:
 
 - **Server**: the address in use, and changing it.
 - **Offline cache**: how much is used, the size limit, **sync favorites now**, and clearing it.
@@ -69,8 +68,19 @@ Chinese for now):
 Most cars send a "play" command when Bluetooth connects, and iOS passes it to the app that played
 last. Melarka then resumes its last queue from the cache, or shuffles your favorites when the
 queue is empty. For a sure start, add an automation in the **Shortcuts** app: **Automation → + →
-Bluetooth**, pick your car, **Connected**, **Run Immediately**, and add Melarka's **随机播放收藏**
-(shuffle favorites) or **继续播放** (resume) action.
+Bluetooth**, pick your car, **Is Connected**, **Run Immediately**, and add Melarka's **Shuffle Favorites**
+or **Resume** action (**随机播放收藏** or **继续播放** on a Chinese phone).
+
+## Language
+
+The app's own screens (the first-launch server screen, the native settings, the car guide, the
+"can't connect" screen, alerts, and the Shortcuts actions and Siri phrases) follow the phone's language:
+Chinese when the phone is set to Chinese (Simplified, or Traditional, which shows the Simplified text), and
+English for every other language. There is no language setting in the app; change the phone's language in
+**Settings → General → Language & Region**, or for Melarka alone in **Settings → Apps → Melarka → Language**.
+
+The music pages inside the app are the web app, which keeps its own language: the server's default
+(`LARK_LANGUAGE`) or the one chosen in **Me → Settings**.
 
 ## Updates and the 7-day refresh
 

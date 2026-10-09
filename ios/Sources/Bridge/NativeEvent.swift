@@ -38,7 +38,7 @@ enum NativeEvent: Encodable, Equatable {
     case queue(kind: Item.Kind, items: [Item], index: Int, source: QueueSource)
     case flushed(id: String)
     case authRequired
-    case notice(String)      // e.g. 离线：正在播放已缓存的收藏
+    case notice(String)      // e.g. PlayerEngine.offlineNotice, in the phone's language
 
     private enum CodingKeys: String, CodingKey { case type, kind, items, index, source, id, text }
 
