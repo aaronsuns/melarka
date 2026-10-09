@@ -11,7 +11,7 @@ func localized(_ key: String, _ lang: String, table: String = "Localizable") -> 
 }
 
 /// The native screens follow the phone's language: Chinese phones get Chinese, every other phone English.
-final class LocalizationTests: XCTestCase {
+@MainActor final class LocalizationTests: XCTestCase {
     func testKeyStringsResolveInEnglishAndChinese() {
         let cases: [(String, String, String)] = [
             ("Melarka Settings", "Melarka Settings", "Melarka 设置"),
