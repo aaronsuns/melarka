@@ -55,6 +55,10 @@ With Docker, put `LARK_ADMIN_PASSWORD` (and any key) in `.env`, which the compos
 | `artwork` | | cover settings |
 | `artwork.providers` | `[embedded, folder, itunes, netease, qq]` | cover sources in order; remove one to switch it off |
 | `artwork.prefetch_interval` | `3s` | background cover lookups, one song per interval; `0s` turns it off |
+| `loudness` | | background loudness measurement (see [Loudness](#loudness)) |
+| `loudness.enabled` | `true` | measure each song's loudness and true peak in the background |
+| `loudness.gap` | `2s` | pause between songs; `0s` measures back to back |
+| `loudness.retry_failed_after` | `720h` | a song that failed to measure is tried again after this (at least `1h`) |
 | `tagging` | | tagging settings |
 | `tagging.folder_rules` | 18 rules (see the example) | folder-name rules; writing this key replaces the whole list |
 | `tagging.folder_rules[].match` | | texts matched case-insensitively against a song's folder path |
@@ -203,6 +207,17 @@ Melarka shows the picture embedded in the file (YouTube downloads embed their th
 sources: `itunes` (Apple's iTunes Search API), `netease` and `qq` (unofficial, like their lyrics
 APIs). Covers are cached as 300 px and 1000 px JPEGs in `<data dir>/cache/artwork`; deleting that
 directory only costs a re-extract. Music files and folders are never written.
+
+## Loudness
+
+Melarka measures each song's integrated loudness (EBU R128, in LUFS) and true peak with ffmpeg's
+`ebur128` filter, one song at a time in the background: new songs first, newest first, so a fresh
+scan or download is measured within minutes. The ffmpeg process runs at low priority when
+`transcode.nice` is on, and the worker waits while songs are being prepared for playback. It
+decodes every file once, so a library of N tracks takes roughly N × (decode time + `loudness.gap`)
+to finish; after that only new and changed files are measured. A changed file is measured again.
+A song that cannot be measured is skipped and tried again after `loudness.retry_failed_after`.
+Music files are only read, never written.
 
 ## Tags
 

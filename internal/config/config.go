@@ -82,6 +82,24 @@ type ArtworkConfig struct {
 	PrefetchInterval time.Duration `yaml:"prefetch_interval"` // default 3s; 0 = off (write "0s" in YAML)
 }
 
+// LoudnessConfig paces the background loudness measurement (one niced
+// ffmpeg decode per track, one at a time).
+type LoudnessConfig struct {
+	Enabled          bool          `yaml:"enabled"`            // default true
+	Gap              time.Duration `yaml:"gap"`                // pause between tracks, default 2s; 0s = none
+	RetryFailedAfter time.Duration `yaml:"retry_failed_after"` // a failed measurement is tried again after this, default 720h, at least 1h
+}
+
+func (c LoudnessConfig) validate() error {
+	switch {
+	case c.Gap < 0:
+		return fmt.Errorf("loudness.gap %s: must not be negative", c.Gap)
+	case c.RetryFailedAfter < time.Hour:
+		return fmt.Errorf("loudness.retry_failed_after %s: at least 1h (with a unit)", c.RetryFailedAfter)
+	}
+	return nil
+}
+
 // RecommendationsConfig switches "为你推荐" on and sets the nightly refresh time.
 type RecommendationsConfig struct {
 	Enabled   bool   `yaml:"enabled"`    // default true
@@ -137,6 +155,7 @@ type Config struct {
 	Tagging         TaggingConfig         `yaml:"tagging"`
 	Lyrics          LyricsConfig          `yaml:"lyrics"`
 	Artwork         ArtworkConfig         `yaml:"artwork"`
+	Loudness        LoudnessConfig        `yaml:"loudness"`
 	Recommendations RecommendationsConfig `yaml:"recommendations"`
 	Channels        ChannelsConfig        `yaml:"channels"`
 	// YouTubeFeedURL is where channel feeds are read (LARK_YOUTUBE_FEED_URL;
@@ -185,6 +204,7 @@ func Load() (Config, error) {
 		Tagging:         TaggingConfig{FolderRules: DefaultFolderRules(), LastFMMinCount: 10},
 		Lyrics:          LyricsConfig{Providers: []string{"embedded", "lrclib", "netease", "qq", "kugou"}, PrefetchInterval: 3 * time.Second},
 		Artwork:         ArtworkConfig{Providers: []string{"embedded", "folder", "itunes", "netease", "qq"}, PrefetchInterval: 3 * time.Second},
+		Loudness:        LoudnessConfig{Enabled: true, Gap: 2 * time.Second, RetryFailedAfter: 720 * time.Hour},
 		Recommendations: RecommendationsConfig{Enabled: true, RefreshAt: "02:30"},
 		Channels:        ChannelsConfig{Enabled: true, PollInterval: 2 * time.Hour, KeepDays: 10, InitialBackfill: 3, MaxGB: 200, PreviewTTL: 24 * time.Hour, PreviewMaxGB: 10},
 	}
@@ -222,6 +242,9 @@ func Load() (Config, error) {
 		return c, fmt.Errorf("recommendations.refresh_at %q: want HH:MM (00:00–23:59)", c.Recommendations.RefreshAt)
 	}
 	if err := c.Channels.validate(); err != nil {
+		return c, err
+	}
+	if err := c.Loudness.validate(); err != nil {
 		return c, err
 	}
 	if !slices.Contains(Languages, c.Language) {

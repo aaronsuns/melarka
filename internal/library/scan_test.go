@@ -494,3 +494,30 @@ func TestSkipsYtdlpIntermediates(t *testing.T) {
 		t.Fatal("real track not ingested")
 	}
 }
+
+// A replaced file is measured again: the probe of a changed file clears the
+// loudness columns the background worker filled in.
+func TestRescanClearsLoudness(t *testing.T) {
+	e := newEnv(t, fakeProber{})
+	p := filepath.Join(e.root, "a.mp3")
+	writeRandom(t, p)
+	writeRandom(t, filepath.Join(e.root, "b.mp3"))
+	e.scan(t)
+	if _, err := e.st.DB.Exec(`UPDATE tracks SET loudness_lufs=-9.5, true_peak_db=-0.2, loudness_checked_at=100`); err != nil {
+		t.Fatal(err)
+	}
+	writeRandom(t, p)
+	future := e.now.Add(time.Minute)
+	if err := os.Chtimes(p, future, future); err != nil {
+		t.Fatal(err)
+	}
+	e.scan(t)
+	for _, c := range []string{"loudness_lufs", "true_peak_db", "loudness_checked_at"} {
+		if v := e.col(t, "a.mp3", c); v != nil {
+			t.Errorf("changed file: %s = %v, want NULL", c, v)
+		}
+	}
+	if e.col(t, "b.mp3", "loudness_lufs") != -9.5 {
+		t.Error("an unchanged file must keep its loudness")
+	}
+}
