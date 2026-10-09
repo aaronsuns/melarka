@@ -60,10 +60,12 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: '1.26'
+      - id: distro # the .deb cache is per Ubuntu release
+        run: . /etc/os-release && echo "id=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ffmpeg-debs
-          key: ffmpeg-debs-v1-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}
+          key: ffmpeg-debs-v1-${{ steps.distro.outputs.id }}-${{ runner.arch }}
       - run: scripts/ci-install-ffmpeg.sh
         env:
           DEB_CACHE: ~/.cache/ffmpeg-debs
@@ -111,10 +113,12 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - id: distro # the .deb cache is per Ubuntu release
+        run: . /etc/os-release && echo "id=$ID-$VERSION_ID" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ffmpeg-debs
-          key: ffmpeg-debs-v1-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}
+          key: ffmpeg-debs-v1-${{ steps.distro.outputs.id }}-${{ runner.arch }}
       - run: ../scripts/ci-install-ffmpeg.sh
         env:
           DEB_CACHE: ~/.cache/ffmpeg-debs
@@ -122,6 +126,8 @@ jobs:
       - run: npx playwright install --with-deps webkit chromium
       - run: npm run build
       - run: npm run e2e # the test server uses web/e2e/fake-yt-dlp.sh: no network
+      - name: TEMP the whole e2e suite 3 more times, each on a fresh server
+        run: for i in 1 2 3; do echo "== e2e round $i"; npm run e2e || exit 1; done
       - name: TEMP keep the failed tests' traces
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
