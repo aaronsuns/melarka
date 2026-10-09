@@ -69,3 +69,35 @@ func TestRandomSourceFavoritesShape(t *testing.T) {
 		t.Fatalf("plain form must stay an array: %s", b)
 	}
 }
+
+// Every track carries gain_db: the attenuation computed from its measured
+// loudness, or null while it has not been measured.
+func TestTracksCarryGainDB(t *testing.T) {
+	s, ts := newTestServer(t)
+	tok := loginAs(t, s, "alice", "member")
+	loud := seedTrack(t, s, "loud.mp3", "Loud", "X", "Y")
+	quiet := seedTrack(t, s, "unmeasured.mp3", "Unmeasured", "X", "Y")
+	if _, err := s.Library.DB.Exec(`UPDATE tracks SET loudness_lufs=-9, true_peak_db=-0.5, loudness_checked_at=1 WHERE id=?`, loud); err != nil {
+		t.Fatal(err)
+	}
+	_, body := do(t, ts, tok, "GET", "/api/v1/tracks", nil)
+	var page struct{ Items []map[string]json.RawMessage }
+	if err := json.Unmarshal(body, &page); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, it := range page.Items {
+		var id int64
+		json.Unmarshal(it["id"], &id)
+		got[fmt.Sprint(id)] = string(it["gain_db"])
+	}
+	if got[fmt.Sprint(loud)] != "-5" || got[fmt.Sprint(quiet)] != "null" {
+		t.Fatalf("gain_db: %v in %s", got, body)
+	}
+	if !strings.Contains(string(body), `"gain_db":-5`) || !strings.Contains(string(body), `"gain_db":null`) {
+		t.Fatalf("raw JSON %s", body)
+	}
+	if _, b := do(t, ts, tok, "GET", fmt.Sprintf("/api/v1/tracks/%d", loud), nil); !strings.Contains(string(b), `"gain_db":-5`) {
+		t.Fatalf("single track %s", b)
+	}
+}
