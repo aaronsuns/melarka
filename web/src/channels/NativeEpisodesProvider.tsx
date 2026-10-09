@@ -3,6 +3,7 @@ import type { Episode } from "../api/types";
 import { nativePost, onNative, type NativeState } from "../native/bridge";
 import { episodeItem, fromItem } from "../native/items";
 import { clockPosition, stoppedClock, useNativeClock, type ClockBase } from "../native/useNativeClock";
+import { moveEntry, removeEntry } from "../player/dragReorder";
 import { claimSession, onSessionClaim, ownsSession } from "../player/sessionOwner";
 import { buildQueue, clearStoredQueue, loadStoredQueue, saveStoredQueue, type EpisodeOrder } from "./episodeQueue";
 import { EPISODE_RATES, EpisodesCtx, EpisodesProgressCtx, resumeAt, type EpisodesPlayer, type EpisodesProviderProps } from "./EpisodesProvider";
@@ -127,6 +128,31 @@ export function NativeEpisodesProvider({ children, userId = 0 }: EpisodesProvide
     [sendQueue],
   );
   const setOrder = useCallback((o: EpisodeOrder) => rebuild(o, incRef.current), [rebuild]);
+  // Queue sheet edits: sent without a position, so native keeps the current episode playing.
+  const reorder = useCallback(
+    (list: Episode[], i: number) => {
+      queueRef.current = list;
+      indexRef.current = i;
+      setQueue(list);
+      setIndex(i);
+      sendQueue(list, i, { play: playingRef.current });
+    },
+    [sendQueue],
+  );
+  const move = useCallback(
+    (from: number, to: number) => {
+      const m = from === to ? null : moveEntry(queueRef.current, indexRef.current, from, to);
+      if (m) reorder(m.list, m.index);
+    },
+    [reorder],
+  );
+  const removeAt = useCallback(
+    (i: number) => {
+      const r = removeEntry(queueRef.current, indexRef.current, i);
+      if (r) reorder(r.list, r.index);
+    },
+    [reorder],
+  );
   const setIncludePlayed = useCallback((on: boolean) => rebuild(orderRef.current, on), [rebuild]);
 
   const jump = useCallback(
@@ -281,8 +307,8 @@ export function NativeEpisodesProvider({ children, userId = 0 }: EpisodesProvide
   const progress = useNativeClock(clockBase);
 
   const value = useMemo<EpisodesPlayer>(
-    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close }),
-    [queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close],
+    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close }),
+    [queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close],
   );
   return (
     <EpisodesCtx.Provider value={value}>

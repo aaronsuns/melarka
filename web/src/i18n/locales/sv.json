@@ -99,7 +99,7 @@
   "job.short.network": "Nedladdningen misslyckades (nätverksproblem)",
   "job.short.failed": "Nedladdningen misslyckades",
 
-  "track.more": "Mer: {title}", "track.favorited": "Favoritmarkerad", "track.playNext": "Spela härnäst",
+  "track.more": "Mer: {title}", "track.favorited": "Favoritmarkerad", "track.playNext": "Spela härnäst", "track.addToQueue": "Lägg till i kön",
   "track.addToPlaylist": "Lägg till i spellista", "track.editInfo": "Redigera information",
   "track.confirmDelete": "Bekräfta radering (går att återställa i 30 dagar)", "track.delete": "Radera låt",
 
@@ -125,7 +125,8 @@
   "player.cannotPlayTrack": "Kan inte spela upp \"{title}\"",
   "player.tapToPlayFavorites": "▶ Tryck för att spela dina favoriter",
 
-  "now.ariaLabel": "Spelas nu", "now.close": "Stäng", "now.queue": "Kö", "now.position": "Position",
+  "now.ariaLabel": "Spelas nu", "now.close": "Stäng", "now.queue": "Kö",
+  "queue.drag": "Flytta {title}", "queue.remove": "Ta bort {title}", "queue.nowPlaying": "Spelas nu", "now.position": "Position",
   "now.lossless": "Förlustfri", "now.high": "Hög", "now.saver": "Datasparläge",
   "now.radioEnd": "Min radio startar automatiskt när kön tar slut",
   "now.shuffle": "Blanda", "now.repeat.off": "Upprepa: av", "now.repeat.all": "Upprepa alla", "now.repeat.one": "Upprepa en",

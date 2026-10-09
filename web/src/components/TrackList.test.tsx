@@ -131,3 +131,23 @@ test("a broken track in the middle is skipped from the queue", async () => {
   expect(audio.src).toContain("/tracks/3/stream");
   expect(screen.getByTestId("queue").textContent).toBe("1,3");
 });
+
+test("⋯ → 添加到队列 queues the track after what was queued with 下一首播放", async () => {
+  let p!: ReturnType<typeof usePlayer>;
+  function Probe() {
+    p = usePlayer();
+    return null;
+  }
+  const ts = [tr(1), tr(2), tr(3), tr(4)];
+  renderWithApp(<><TrackList tracks={ts} /><Probe /></>, { role: "member" });
+  await userEvent.click(await screen.findByText("歌1"));
+  await userEvent.click(screen.getByRole("button", { name: "更多：歌4" }));
+  await userEvent.click(screen.getByRole("menuitem", { name: "下一首播放" }));
+  await userEvent.click(screen.getByRole("button", { name: "更多：歌3" }));
+  const menu = screen.getByRole("menu");
+  expect(within(menu).getAllByRole("menuitem").map((b) => b.textContent).slice(0, 2)).toEqual(["下一首播放", "添加到队列"]);
+  await userEvent.click(within(menu).getByRole("menuitem", { name: "添加到队列" }));
+  expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 4, 3, 2]);
+  expect(p.current?.id).toBe(1);
+  expect(screen.queryByRole("menu")).toBeNull();
+});

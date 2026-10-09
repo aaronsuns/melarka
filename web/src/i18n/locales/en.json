@@ -99,7 +99,7 @@
   "job.short.network": "Download failed (network problem)",
   "job.short.failed": "Download failed",
 
-  "track.more": "More: {title}", "track.favorited": "Favorited", "track.playNext": "Play next",
+  "track.more": "More: {title}", "track.favorited": "Favorited", "track.playNext": "Play next", "track.addToQueue": "Add to queue",
   "track.addToPlaylist": "Add to playlist", "track.editInfo": "Edit info",
   "track.confirmDelete": "Confirm delete (recoverable for 30 days)", "track.delete": "Delete song",
 
@@ -125,7 +125,8 @@
   "player.cannotPlayTrack": "Can't play \"{title}\"",
   "player.tapToPlayFavorites": "▶ Tap to play your favorites",
 
-  "now.ariaLabel": "Now playing", "now.close": "Close", "now.queue": "Queue", "now.position": "Position",
+  "now.ariaLabel": "Now playing", "now.close": "Close", "now.queue": "Queue",
+  "queue.drag": "Move {title}", "queue.remove": "Remove {title}", "queue.nowPlaying": "Now playing", "now.position": "Position",
   "now.lossless": "Lossless", "now.high": "High", "now.saver": "Data saver",
   "now.radioEnd": "My radio starts automatically when the queue ends",
   "now.shuffle": "Shuffle", "now.repeat.off": "Repeat: off", "now.repeat.all": "Repeat all", "now.repeat.one": "Repeat one",

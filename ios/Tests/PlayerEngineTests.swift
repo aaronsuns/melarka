@@ -25,6 +25,29 @@ final class PlayerEngineTests: EngineTestCase {
         XCTAssertEqual(queues(.track).last?.items.map(\.id), ["7", "9", "8"])
     }
 
+    // Dragging the current track elsewhere in the queue sheet: the web sends the new order with the
+    // current entry's new index and no position. It keeps playing, unloaded and unreset.
+    func testEditMovingCurrentKeepsLoadedItem() {
+        engine.handle(.setQueue(q([1, 2, 3, 4], index: 1, pos: 0, play: true)))
+        let loads = backend.loads.count
+        engine.handle(.setQueue(q([1, 3, 4, 2], index: 3, pos: nil, play: true)))
+        XCTAssertEqual(backend.loads.count, loads)        // not reloaded
+        XCTAssertEqual(engine.music.index, 3)
+        XCTAssertEqual(engine.current?.id, "2")
+        XCTAssertEqual(queues(.track).last?.items.map(\.id), ["1", "3", "4", "2"])
+        XCTAssertEqual(queues(.track).last?.index, 3)
+    }
+
+    // Removing an entry before the current one only renumbers it.
+    func testEditRemovingAnEarlierEntryKeepsLoadedItem() {
+        engine.handle(.setQueue(q([1, 2, 3], index: 1, pos: 0, play: true)))
+        let loads = backend.loads.count
+        engine.handle(.setQueue(q([2, 3], index: 0, pos: nil, play: true)))
+        XCTAssertEqual(backend.loads.count, loads)
+        XCTAssertEqual(engine.music.index, 0)
+        XCTAssertEqual(engine.current?.id, "2")
+    }
+
     func testRemovingTheCurrentItemLoadsTheOneThatSlidIntoPlace() {
         engine.handle(.setQueue(q([7, 8], index: 0, pos: 0, play: true)))
         engine.handle(.setQueue(q([8], index: 0, pos: nil, play: true)))

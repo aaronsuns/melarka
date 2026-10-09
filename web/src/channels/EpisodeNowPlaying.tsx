@@ -3,19 +3,25 @@ import { Link } from "react-router";
 import { Cover } from "../components/Cover";
 import { duration } from "../format";
 import { useT } from "../i18n/i18n";
+import { QueueRows, entryKeys } from "../player/QueueSheet";
 import { EPISODE_ORDERS } from "./episodeQueue";
 import { EPISODE_RATES, useEpisodes, useEpisodesProgress } from "./EpisodesProvider";
 
-/** The episode queue: the current one marked, a tap jumps; its order and "include played". */
+/**
+ * The episode queue: the current one marked, a tap jumps, rows drag to reorder and swipe (or ✕) away;
+ * its order and "include played" (either rebuilds the queue from its list).
+ */
 function EpisodeQueueSheet() {
   const t = useT();
   const ep = useEpisodes();
-  const current = useRef<HTMLButtonElement>(null);
+  // By id: saving progress replaces the episode objects every few seconds.
+  const keys = entryKeys(ep.queue, (e) => e.video_id);
+  const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    current.current?.scrollIntoView?.({ block: "nearest" });
+    list.current?.querySelector<HTMLElement>("[aria-current]")?.scrollIntoView?.({ block: "nearest" });
   }, []);
   return (
-    <div className="episode-queue">
+    <div className="episode-queue" ref={list}>
       <div className="seg" role="group" aria-label={t("episodes.order")}>
         {EPISODE_ORDERS.map((o) => (
           <button key={o} aria-pressed={ep.order === o} onClick={() => ep.setOrder(o)}>{t(`episodes.order.${o}`)}</button>
@@ -25,22 +31,20 @@ function EpisodeQueueSheet() {
         <input type="checkbox" className="switch" checked={ep.includePlayed} onChange={(e) => ep.setIncludePlayed(e.target.checked)} />
         {t("episodes.includePlayed")}
       </label>
-      <ul id="episode-queue" className="now-queue" aria-label={t("episodes.queue")}>
-        {ep.queue.map((q, i) => (
-          <li key={q.video_id}>
-            <button
-              ref={i === ep.index ? current : undefined}
-              className="row"
-              aria-current={i === ep.index ? true : undefined}
-              onClick={() => i !== ep.index && ep.jump(i)}
-            >
-              <span className="ellipsis">{q.title}</span>
-              <span className="muted small ellipsis">{q.channel_title}{q.played ? ` · ${t("episodes.played")}` : ""}</span>
-            </button>
-          </li>
-        ))}
-        {ep.queue.length === 0 && <li className="muted">{t("episodes.queueEmpty")}</li>}
-      </ul>
+      <QueueRows
+        id="episode-queue"
+        label={t("episodes.queue")}
+        items={ep.queue.map((q, i) => ({
+          key: keys[i],
+          title: q.title,
+          sub: `${q.channel_title}${q.played ? ` · ${t("episodes.played")}` : ""}`,
+          current: i === ep.index,
+        }))}
+        onJump={(i) => ep.jump(i)}
+        onMove={ep.move}
+        onRemove={ep.removeAt}
+        footer={ep.queue.length === 0 && <li className="muted">{t("episodes.queueEmpty")}</li>}
+      />
     </div>
   );
 }

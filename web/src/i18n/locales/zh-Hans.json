@@ -99,7 +99,7 @@
   "job.short.network": "下载失败（网络问题）",
   "job.short.failed": "下载失败",
 
-  "track.more": "更多：{title}", "track.favorited": "已收藏", "track.playNext": "下一首播放",
+  "track.more": "更多：{title}", "track.favorited": "已收藏", "track.playNext": "下一首播放", "track.addToQueue": "添加到队列",
   "track.addToPlaylist": "添加到歌单", "track.editInfo": "编辑信息",
   "track.confirmDelete": "确认删除（30天内可恢复）", "track.delete": "删除歌曲",
 
@@ -124,7 +124,8 @@
   "player.cannotPlayTrack": "无法播放「{title}」",
   "player.tapToPlayFavorites": "▶ 点一下播放你的收藏",
 
-  "now.ariaLabel": "正在播放", "now.close": "收起", "now.queue": "队列", "now.position": "进度",
+  "now.ariaLabel": "正在播放", "now.close": "收起", "now.queue": "队列",
+  "queue.drag": "移动 {title}", "queue.remove": "移除 {title}", "queue.nowPlaying": "正在播放", "now.position": "进度",
   "now.lossless": "无损", "now.high": "高品质", "now.saver": "省流量",
   "now.radioEnd": "队列结束后会自动播放私人电台",
   "now.shuffle": "随机播放", "now.repeat.off": "循环：关", "now.repeat.all": "列表循环", "now.repeat.one": "单曲循环",

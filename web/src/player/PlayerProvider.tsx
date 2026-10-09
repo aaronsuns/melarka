@@ -12,7 +12,7 @@ import { activeLine, getLyrics, isBlankLine, onLyrics, prefetchLyrics } from "./
 import { chooseNext, isLocalChoice, type ChooseOpts, type NextChoice } from "./nextTrack";
 import { BlobPreloader, BLOB_MAX_BYTES, estimateHighBytes } from "./preload";
 import { claimSession, onSessionClaim, ownsSession } from "./sessionOwner";
-import { appendable, current, emptyQueue, needsRefill, queueReducer, upcoming, type QueueAction, type QueueState } from "./queue";
+import { appendable, current, emptyQueue, needsRefill, queueReducer, saveUpNext, storedUpNext, upcoming, type QueueAction, type QueueState } from "./queue";
 import { hasNative } from "../native/bridge";
 import { gainFactor } from "./gain";
 import { loadModes, newPass, nextRepeat, saveModes, shuffleUpcoming, unshuffleUpcoming, type PlayModes, type StoredModes } from "./modes";
@@ -34,6 +34,12 @@ export interface Player {
   needsTap: boolean;
   playList(tracks: Track[], start: number, opts?: { source?: "list" | "shuffle" | "favorites" }): void;
   enqueueNext(t: Track): void;
+  // After the explicitly queued tracks (play next, earlier adds), ahead of the rest of the list.
+  addToQueue(t: Track): void;
+  // Queue sheet edits. Neither reloads the playing track: it can be moved
+  // (and stays current) but not removed (removeAt ignores it).
+  move(from: number, to: number): void;
+  removeAt(index: number): void;
   toggle(): void;
   play(): void;
   pause(): void;
@@ -539,8 +545,8 @@ function WebPlayerProvider({
         if (nq.tracks.length === 0) return false;
         const j = playableNow(nq.tracks[0].id) ? 0 : firstPlayable(nq.tracks, 0);
         const i = j >= 0 ? j : 0;
-        queueRef.current = { ...nq, index: i };
-        dispatch({ type: "setOrder", tracks: nq.tracks, index: i });
+        queueRef.current = { ...nq, index: i, upNext: undefined };
+        dispatch({ type: "setOrder", tracks: nq.tracks, index: i, upNext: 0 });
         load(nq.tracks[i], { autoplay: wantPlay.current, index: i, picked: o.picked });
         if (i > 0) showNotice(t("player.skippedUncached"));
         else if (notice) showNotice(notice);
@@ -577,6 +583,12 @@ function WebPlayerProvider({
     audio.src = srcFor(track);
     if (wantPlay.current) playOrAskTap(track.id);
   }, [audio, srcFor, playOrAskTap]);
+
+  // The queued block, kept on this device for a reload of this very queue
+  // (an empty queue is the state before restore: nothing to say yet).
+  useEffect(() => {
+    if (queue.tracks.length > 0) saveUpNext(userId, queue);
+  }, [queue, userId]);
 
   // Load whatever became current (next/prev/jump/remove/ended), keeping play state.
   const cur = current(queue);
@@ -1063,7 +1075,85 @@ function WebPlayerProvider({
     },
     [load, showNotice],
   );
-  const enqueueNext = useCallback((t: Track) => dispatch({ type: "enqueueNext", track: t }), []);
+  // Shuffle on: a track the user queued or took out is placed by the user now,
+  // so turning shuffle off must not put it back into its pre-shuffle slot.
+  const forgetOriginal = useCallback(
+    (id: number, times: number) => {
+      const m = modesRef.current;
+      if (!m.shuffle || !m.original || times <= 0) return;
+      const original = [...m.original];
+      for (let n = 0; n < times; n++) {
+        const k = original.indexOf(id);
+        if (k < 0) break;
+        original.splice(k, 1);
+      }
+      if (original.length !== m.original.length) updateModes({ ...m, original });
+    },
+    [updateModes],
+  );
+  // Queue edits: the reducer's result is known now (for the next edit in the
+  // same tick); the playing instance keeps playing — loadedIndex follows it
+  // so the "load whatever became current" effect sees nothing new.
+  const edit = useCallback((a: QueueAction): QueueState | null => {
+    const q = queueRef.current;
+    const nq = queueReducer(q, a);
+    if (nq === q) return null;
+    queueRef.current = nq;
+    if (loadedIndex.current === q.index) loadedIndex.current = nq.index;
+    dispatch(a);
+    return q;
+  }, []);
+  const enqueueNext = useCallback(
+    (t: Track) => {
+      const q = edit({ type: "enqueueNext", track: t });
+      if (q) forgetOriginal(t.id, Math.max(1, q.tracks.filter((x) => x.id === t.id).length));
+    },
+    [edit, forgetOriginal],
+  );
+  const addToQueue = useCallback(
+    (t: Track) => {
+      const q = edit({ type: "addToQueue", track: t });
+      if (q) forgetOriginal(t.id, Math.max(1, upcoming(q).filter((x) => x.id === t.id).length));
+    },
+    [edit, forgetOriginal],
+  );
+  const move = useCallback(
+    (from: number, to: number) => {
+      const q = edit({ type: "move", from, to });
+      const m = modesRef.current;
+      if (!q || !m.shuffle || !m.original) return;
+      // Shuffle on: the dropped track keeps its new neighbour on shuffle off —
+      // in the pre-shuffle order it goes just before the first track that now
+      // follows it and is still in that order (or last).
+      const id = q.tracks[from].id;
+      const k = m.original.indexOf(id);
+      if (k < 0) return; // added while shuffled: it already stays where the user puts it
+      const original = [...m.original.slice(0, k), ...m.original.slice(k + 1)];
+      const nq = queueRef.current;
+      if (to > nq.index) {
+        const after = nq.tracks.slice(to + 1).find((t) => original.includes(t.id));
+        const at = after ? original.indexOf(after.id) : original.length;
+        original.splice(at, 0, id);
+      }
+      updateModes({ ...m, original });
+    },
+    [edit, updateModes],
+  );
+  const removeAt = useCallback(
+    (index: number) => {
+      const q = edit({ type: "removeAt", index });
+      if (!q) return;
+      const gone = q.tracks[index];
+      forgetOriginal(gone.id, 1);
+      // A repeat-all substitute's retry (the interrupted track's requeued
+      // copy) taken out: the interrupted entry stays, so the track stays in
+      // the loop when the substitute leaves.
+      substitutes.current = substitutes.current.map((sub) =>
+        sub.requeue === gone && index > q.tracks.indexOf(sub.track) ? { ...sub, requeue: null } : sub,
+      );
+    },
+    [edit, forgetOriginal],
+  );
   // Neither touches the element: the current track plays on.
   const setShuffle = useCallback(
     (on: boolean) => {
@@ -1071,9 +1161,11 @@ function WebPlayerProvider({
       if (m.shuffle === on) return;
       const q = queueRef.current;
       if (on) {
-        const { queue: nq, original } = shuffleUpcoming(q);
-        queueRef.current = nq;
-        dispatch({ type: "setOrder", tracks: nq.tracks, index: nq.index });
+        const { queue: shuffledQ, original } = shuffleUpcoming(q);
+        // Everything after the current track is shuffled, queued tracks too.
+        const a: QueueAction = { type: "setOrder", tracks: shuffledQ.tracks, index: shuffledQ.index, upNext: 0 };
+        queueRef.current = queueReducer(q, a);
+        dispatch(a);
         updateModes({ ...m, shuffle: true, original });
       } else {
         const nq = unshuffleUpcoming(q, m.original ?? []);
@@ -1233,7 +1325,7 @@ function WebPlayerProvider({
         // the first copy regardless of which one the server says is current.
         const idx = tracks[q.current_index]?.id === curId ? q.current_index : Math.max(0, tracks.findIndex((t) => t.id === curId));
         skipNextSave.current = true;
-        dispatch({ type: "restore", tracks, index: idx });
+        dispatch({ type: "restore", tracks, index: idx, upNext: storedUpNext(userId, tracks.map((t) => t.id), idx) });
         load(tracks[idx], { autoplay: false, startAt: tracks[idx].id === curId ? q.position_ms / 1000 : 0, index: idx });
       });
     const shuffleOnOpen = () =>
@@ -1515,11 +1607,11 @@ function WebPlayerProvider({
   const value = useMemo<Player>(
     () => ({
       queue, current: cur, playing, quality, error, notice, showNotice, needsTap,
-      playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
+      playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
       modes: shownModes, modesAvailable: true, setShuffle, cycleRepeat,
     }),
     [
-      queue, cur, playing, quality, error, notice, showNotice, needsTap, playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove,
+      queue, cur, playing, quality, error, notice, showNotice, needsTap, playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove,
       updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready, shownModes, setShuffle, cycleRepeat,
     ],
   );

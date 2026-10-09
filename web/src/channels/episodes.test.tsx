@@ -596,3 +596,24 @@ test("a queue step after music took over claims the session back: music and an e
   expect(music.paused).toBe(true);
   expect(eps().current?.title).toBe("第2集");
 });
+
+test("the episode queue sheet's move and remove keep the current episode playing and are stored", () => {
+  const { episode, eps } = setup({ routes: progressOk(3) });
+  act(() => eps().playList([ep(3), ep(2), ep(1)], 1, { order: "oldest" })); // 第1集,第2集,第3集 on 第2集
+  const src = episode.src;
+  act(() => eps().move(1, 2)); // the current one, to the end
+  expect(titles(eps().queue)).toBe("第1集,第3集,第2集");
+  expect(eps().index).toBe(2);
+  act(() => eps().removeAt(0));
+  expect(titles(eps().queue)).toBe("第3集,第2集");
+  expect(eps().index).toBe(1);
+  act(() => eps().removeAt(1)); // the current one: kept
+  expect(titles(eps().queue)).toBe("第3集,第2集");
+  expect(eps().current?.title).toBe("第2集");
+  expect(episode.src).toBe(src); // never reloaded
+  const stored = JSON.parse(localStorage.getItem("lark.episodeQueue.0")!) as { ids: string[]; index: number };
+  expect(stored.ids).toEqual(["episode0003", "episode0002"]);
+  expect(stored.index).toBe(1);
+  act(() => eps().setOrder("oldest")); // the order rebuilds the list from scratch, edits gone
+  expect(titles(eps().queue)).toBe("第1集,第2集,第3集");
+});

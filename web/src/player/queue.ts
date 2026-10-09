@@ -1,9 +1,14 @@
 import type { Track } from "../api/types";
+import { moveEntry, removeEntry } from "./dragReorder";
 
 export interface QueueState {
   tracks: Track[];
   index: number;
   source: "list" | "radio" | "restored" | "shuffle" | "favorites";
+  // How many entries right after the current one the user queued explicitly
+  // (play next, add to queue): "add to queue" goes after them, ahead of the
+  // rest of the list. Absent means none. Not saved with the queue.
+  upNext?: number;
 }
 
 export type QueueAction =
@@ -19,9 +24,18 @@ export type QueueAction =
   // Advance onto this track, inserted after the current one.
   | { type: "advanceInsert"; track: Track; requeue?: Track }
   | { type: "remove"; trackId: number }
-  | { type: "restore"; tracks: Track[]; index: number }
+  // `upNext`: the queued block stored on this device for this very queue (see storedUpNext).
+  | { type: "restore"; tracks: Track[]; index: number; upNext?: number }
   // A new order (shuffle on/off, a repeat-all pass); unlike restore, keeps the source.
-  | { type: "setOrder"; tracks: Track[]; index: number }
+  // `upNext`: how many queued entries follow the current one in the new order (default: as before).
+  | { type: "setOrder"; tracks: Track[]; index: number; upNext?: number }
+  // To the end of the explicitly queued entries (after any play next / earlier adds); an upcoming copy
+  // moves there; the current entry is untouched.
+  | { type: "addToQueue"; track: Track }
+  // Any entry, the current one too; `index` follows the current entry.
+  | { type: "move"; from: number; to: number }
+  // One entry; a no-op for the current one.
+  | { type: "removeAt"; index: number }
   | { type: "updateTrack"; track: Track };
 
 export const emptyQueue: QueueState = { tracks: [], index: 0, source: "list" };
@@ -29,29 +43,38 @@ export const emptyQueue: QueueState = { tracks: [], index: 0, source: "list" };
 const clamp = (i: number, len: number) => (len === 0 ? 0 : Math.min(Math.max(i, 0), len - 1));
 
 export function queueReducer(s: QueueState, a: QueueAction): QueueState {
+  const n = s.upNext ?? 0;
   switch (a.type) {
     case "playList":
       return { tracks: a.tracks, index: clamp(a.start, a.tracks.length), source: a.source ?? "list" };
-    case "restore":
-      return { tracks: a.tracks, index: clamp(a.index, a.tracks.length), source: "restored" };
-    case "setOrder":
-      return { ...s, tracks: a.tracks, index: clamp(a.index, a.tracks.length) };
+    case "restore": {
+      const index = clamp(a.index, a.tracks.length);
+      return withUpNext({ tracks: a.tracks, index, source: "restored" }, Math.min(a.upNext ?? 0, a.tracks.length - index - 1));
+    }
+    case "setOrder": {
+      const index = clamp(a.index, a.tracks.length);
+      return withUpNext({ ...s, tracks: a.tracks, index }, Math.min(a.upNext ?? n, a.tracks.length - index - 1));
+    }
     case "next":
-      return { ...s, index: clamp(s.index + 1, s.tracks.length) };
     case "prev":
-      return { ...s, index: clamp(s.index - 1, s.tracks.length) };
-    case "jump":
-      return { ...s, index: clamp(a.index, s.tracks.length) };
+    case "jump": {
+      const index = clamp(a.type === "jump" ? a.index : s.index + (a.type === "next" ? 1 : -1), s.tracks.length);
+      return withUpNext({ ...s, index }, afterNav(n, s.index, index));
+    }
     case "advance": {
       if (a.to <= s.index || a.to >= s.tracks.length) return s;
       const back = a.requeue ? [a.requeue] : [];
       const tracks = [...s.tracks.slice(0, s.index + 1), s.tracks[a.to], ...back, ...s.tracks.slice(s.index + 1, a.to), ...s.tracks.slice(a.to + 1)];
-      return { ...s, tracks, index: s.index + 1 };
+      // The requeued track is tried again before the queued ones, as one of them.
+      return withUpNext({ ...s, tracks, index: s.index + 1 }, (a.to <= s.index + n ? n - 1 : n) + back.length);
     }
     case "advanceInsert": {
       if (s.tracks.length === 0) return { tracks: [a.track], index: 0, source: s.source };
       const back = a.requeue ? [a.requeue] : [];
-      return { ...s, tracks: [...s.tracks.slice(0, s.index + 1), a.track, ...back, ...s.tracks.slice(s.index + 1)], index: s.index + 1 };
+      return withUpNext(
+        { ...s, tracks: [...s.tracks.slice(0, s.index + 1), a.track, ...back, ...s.tracks.slice(s.index + 1)], index: s.index + 1 },
+        n + back.length,
+      );
     }
     case "enqueueNext": {
       if (s.tracks.length === 0) return { tracks: [a.track], index: 0, source: "list" };
@@ -62,25 +85,102 @@ export function queueReducer(s: QueueState, a: QueueAction): QueueState {
       // Adjust index: count how many removed entries were before current
       const removedBefore = s.tracks.slice(0, s.index).filter((t) => t.id === a.track.id).length;
       const newCurIndex = s.index - removedBefore;
+      const removedQueued = s.tracks.slice(s.index + 1, s.index + 1 + n).filter((t) => t.id === a.track.id).length;
       // Insert after current position
       rest.splice(newCurIndex + 1, 0, a.track);
-      return { ...s, tracks: rest, index: newCurIndex };
+      return withUpNext({ ...s, tracks: rest, index: newCurIndex }, n - removedQueued + 1);
+    }
+    case "addToQueue": {
+      if (s.tracks.length === 0) return { tracks: [a.track], index: 0, source: "list" };
+      const head = s.tracks.slice(0, s.index + 1);
+      const after = s.tracks.slice(s.index + 1);
+      const queued = after.slice(0, n).filter((t) => t.id !== a.track.id);
+      const others = after.slice(n).filter((t) => t.id !== a.track.id);
+      return withUpNext({ ...s, tracks: [...head, ...queued, a.track, ...others] }, queued.length + 1);
+    }
+    case "move": {
+      if (a.from === a.to) return s;
+      const m = moveEntry(s.tracks, s.index, a.from, a.to);
+      if (!m) return s;
+      const flags = moveEntry(queuedFlags(s), s.index, a.from, a.to)!.list;
+      // The moved entry is queued when dropped among queued ones (just before or after one).
+      // Dropped right after the current entry with nothing queued, it is just reordered, not
+      // queued: a later add to queue goes ahead of it, as it would have before the move.
+      flags[a.to] = a.to > m.index && (flags[a.to + 1] === true || (a.to - 1 > m.index && flags[a.to - 1] === true));
+      return withUpNext({ ...s, tracks: m.list, index: m.index }, countQueued(flags, m.index));
+    }
+    case "removeAt": {
+      const r = removeEntry(s.tracks, s.index, a.index);
+      if (!r) return s;
+      return withUpNext({ ...s, tracks: r.list, index: r.index }, a.index > s.index && a.index <= s.index + n ? n - 1 : n);
     }
     case "append":
       return { ...s, tracks: [...s.tracks, ...appendable(s, a.tracks, a.source)], source: a.source ?? s.source };
     case "remove": {
       const i = s.tracks.findIndex((t) => t.id === a.trackId);
       if (i < 0) return s;
-      const tracks = s.tracks.filter((t) => t.id !== a.trackId);
+      const keep = (t: Track) => t.id !== a.trackId;
+      const tracks = s.tracks.filter(keep);
+      const flags = queuedFlags(s).filter((_, x) => keep(s.tracks[x]));
       // Count how many removed entries were before current index
       const removedBefore = s.tracks.slice(0, s.index).filter((t) => t.id === a.trackId).length;
-      const index = s.index - removedBefore; // next entry slides into place if current was removed
-      return { ...s, tracks, index: clamp(index, tracks.length) };
+      const index = clamp(s.index - removedBefore, tracks.length); // next entry slides into place if current was removed
+      return withUpNext({ ...s, tracks, index }, countQueued(flags, index));
     }
     case "updateTrack": {
       if (!s.tracks.some((t) => t.id === a.track.id)) return s;
       return { ...s, tracks: s.tracks.map((t) => (t.id === a.track.id ? a.track : t)) };
     }
+  }
+}
+
+function withUpNext(s: QueueState, n: number): QueueState {
+  const { upNext: _, ...rest } = s;
+  return n > 0 ? { ...rest, upNext: n } : rest;
+}
+
+// Moving forward plays through the queued entries; moving back puts what was
+// skipped back in front of them (so later adds still go after them).
+function afterNav(n: number, from: number, to: number): number {
+  if (to >= from) return Math.max(0, n - (to - from));
+  return n > 0 ? n + (from - to) : 0;
+}
+
+function queuedFlags(s: QueueState): boolean[] {
+  const n = s.upNext ?? 0;
+  return s.tracks.map((_, i) => i > s.index && i <= s.index + n);
+}
+
+function countQueued(flags: boolean[], index: number): number {
+  let k = 0;
+  while (flags[index + 1 + k]) k++;
+  return k;
+}
+
+// The queued block (upNext) is kept per user on this device, with the queue it
+// belongs to: the server's /queue doesn't carry it, so a reload restores it
+// only for that very queue (same ids, same current index).
+export function upNextKey(userId?: number): string {
+  return userId === undefined ? "lark.upNext" : `lark.upNext.${userId}`;
+}
+
+export function saveUpNext(userId: number | undefined, q: QueueState): void {
+  try {
+    if (!q.upNext) localStorage.removeItem(upNextKey(userId));
+    else localStorage.setItem(upNextKey(userId), JSON.stringify({ ids: q.tracks.map((t) => t.id), index: q.index, upNext: q.upNext }));
+  } catch {
+    // not remembered; this session still has it
+  }
+}
+
+export function storedUpNext(userId: number | undefined, ids: number[], index: number): number {
+  try {
+    const v = JSON.parse(localStorage.getItem(upNextKey(userId)) ?? "null") as { ids?: unknown; index?: unknown; upNext?: unknown } | null;
+    if (!v || !Array.isArray(v.ids) || v.index !== index || typeof v.upNext !== "number") return 0;
+    if (v.ids.length !== ids.length || v.ids.some((id, i) => id !== ids[i])) return 0;
+    return Math.max(0, Math.floor(v.upNext));
+  } catch {
+    return 0;
   }
 }
 

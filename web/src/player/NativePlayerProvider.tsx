@@ -6,7 +6,7 @@ import { nativePost, onNative, type NativeState } from "../native/bridge";
 import { fromItem, trackItem } from "../native/items";
 import { clockPosition, stoppedClock, useNativeClock, type ClockBase } from "../native/useNativeClock";
 import { PlayerCtx, PlayerProgressCtx, type Player, type PlayerProgress, type PlayerProviderProps } from "./PlayerProvider";
-import { current, emptyQueue, queueReducer, type QueueAction, type QueueState } from "./queue";
+import { current, emptyQueue, queueReducer, saveUpNext, storedUpNext, type QueueAction, type QueueState } from "./queue";
 import { claimSession, onSessionClaim } from "./sessionOwner";
 
 // How long a passing notice stays up (as the web player).
@@ -36,6 +36,16 @@ async function favoritesOrFallback(): Promise<{ tracks: Track[]; source: "favori
 
 let flushSeq = 0;
 
+// Native's queue carries no record of which tracks the user queued (play
+// next, add to queue). When it is the mirrored queue again — the echo of an
+// edit, an advance, a refill appended — that record is carried over (moved
+// along with the index); any other queue starts with none.
+function withQueued(prev: QueueState, next: QueueState): QueueState {
+  const same = prev.tracks.length <= next.tracks.length && prev.tracks.every((t, i) => t.id === next.tracks[i].id);
+  if (!same || !prev.upNext) return next;
+  return queueReducer({ ...prev, tracks: next.tracks, source: next.source }, { type: "jump", index: next.index });
+}
+
 /**
  * The music Player inside the Lark iPhone app: native plays, keeps the queue,
  * posts play events and syncs /queue; this mirrors its `queue` and `state`
@@ -43,7 +53,7 @@ let flushSeq = 0;
  * actions into bridge messages. No <audio>, no EventBuffer, no Media Session,
  * no PUT /queue, no offline cache.
  */
-export function NativePlayerProvider({ children, onOpen, carLyrics = true }: PlayerProviderProps) {
+export function NativePlayerProvider({ children, onOpen, carLyrics = true, userId }: PlayerProviderProps) {
   const [queue, setQueueState] = useState<QueueState>(emptyQueue);
   const queueRef = useRef(queue);
   const [state, setState] = useState<NativeState | null>(null);
@@ -54,6 +64,7 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true }: Pla
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flushWaiters = useRef(new Map<string, () => void>());
   const playingRef = useRef(false);
+  const firstQueue = useRef(true);
 
   const mirror = useCallback((q: QueueState) => {
     queueRef.current = q;
@@ -85,7 +96,14 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true }: Pla
             const items = Array.isArray(m.items) ? m.items : [];
             const tracks = items.map((i) => fromItem({ ...i, kind: "track" }) as Track);
             const index = tracks.length === 0 ? 0 : Math.min(Math.max(0, m.index), tracks.length - 1);
-            mirror({ tracks, index, source: m.source ?? "list" });
+            const next: QueueState = { tracks, index, source: m.source ?? "list" };
+            const first = firstQueue.current && queueRef.current.tracks.length === 0;
+            firstQueue.current = false;
+            if (first) {
+              // The app's queue on (re)opening: the block stored on this device, if it is this very queue.
+              const restored = queueReducer(emptyQueue, { type: "restore", tracks, index, upNext: storedUpNext(userId, tracks.map((t) => t.id), index) });
+              mirror({ ...restored, source: next.source });
+            } else mirror(withQueued(queueRef.current, next));
             setReady(true);
             return;
           }
@@ -103,7 +121,7 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true }: Pla
             // An automatic advance may reach the web as a state first.
             const q = queueRef.current;
             if (m.index !== q.index && m.index >= 0 && m.index < q.tracks.length && String(q.tracks[m.index].id) === m.itemId) {
-              mirror({ ...q, index: m.index });
+              mirror(queueReducer(q, { type: "jump", index: m.index }));
             }
             const was = playingRef.current;
             playingRef.current = m.playing;
@@ -151,6 +169,11 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true }: Pla
     [],
   );
 
+  // The queued block, kept on this device (see saveUpNext).
+  useEffect(() => {
+    if (queue.tracks.length > 0) saveUpNext(userId, queue);
+  }, [queue, userId]);
+
   const sendQueue = useCallback((q: QueueState, start: { positionMs?: number; play: boolean }) => {
     nativePost({
       type: "setQueue", kind: "track", items: q.tracks.map(trackItem), index: q.index,
@@ -190,6 +213,10 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true }: Pla
   );
   const jump = useCallback((index: number) => start({ type: "jump", index }), [start]);
   const enqueueNext = useCallback((tr: Track) => edit({ type: "enqueueNext", track: tr }), [edit]);
+  const addToQueue = useCallback((tr: Track) => edit({ type: "addToQueue", track: tr }), [edit]);
+  // The queue sheet: the current item can move (it stays current, unreloaded) but not go.
+  const move = useCallback((from: number, to: number) => edit({ type: "move", from, to }), [edit]);
+  const removeAt = useCallback((index: number) => edit({ type: "removeAt", index }), [edit]);
   const updateTrack = useCallback((tr: Track) => edit({ type: "updateTrack", track: tr }), [edit]);
   const remove = useCallback(
     (trackId: number) => {
@@ -261,11 +288,11 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true }: Pla
   const value = useMemo<Player>(
     () => ({
       queue, current: cur, playing, quality, error, notice, showNotice, needsTap: false,
-      playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
+      playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
       modes: NO_MODES, modesAvailable: false, setShuffle: noop, cycleRepeat: noop,
     }),
     [
-      queue, cur, playing, quality, error, notice, showNotice, playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove,
+      queue, cur, playing, quality, error, notice, showNotice, playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove,
       updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
     ],
   );

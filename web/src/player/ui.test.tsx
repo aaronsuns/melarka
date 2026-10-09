@@ -31,7 +31,7 @@ test("mini player controls and now playing", async () => {
   expect(dialog).toBeInTheDocument();
   expect(dialog.querySelector(".now-art .cover img")).toHaveAttribute("src", "/api/v1/tracks/2/cover?size=1000");
   await userEvent.click(screen.getByRole("button", { name: "队列" }));
-  await userEvent.click(await screen.findByRole("button", { name: /歌4/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /^歌4/ }));
   expect(p.current?.id).toBe(4);
   await userEvent.click(screen.getByRole("button", { name: "收起" }));
   expect(screen.queryByRole("dialog")).toBeNull();
