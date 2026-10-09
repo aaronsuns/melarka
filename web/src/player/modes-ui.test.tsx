@@ -62,7 +62,7 @@ test("the queue's end line says the queue starts over with repeat all", async ()
   expect(screen.getByText("播完后从头再来")).toBeInTheDocument();
 });
 
-test("in the iPhone app (no modes in the native engine yet) the buttons are hidden", async () => {
+test("in an iPhone app that reports no modes (an older app, or no state yet) the buttons are hidden", async () => {
   const n = installFakeNative();
   try {
     renderWithApp(<><Grab /><MiniPlayer /></>);

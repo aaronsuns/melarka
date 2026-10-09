@@ -223,6 +223,7 @@ import CryptoKit
     private func dropEngine() {
         guard let e = engineStorage else { return }
         e.onActiveChange = nil         // the remote commands stay installed; they resolve the next engine
+        e.onModesChange = nil
         audioSession = nil
         ticker?.invalidate(); ticker = nil
         e.onEvent = nil

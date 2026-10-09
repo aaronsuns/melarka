@@ -523,3 +523,101 @@ it("episode queue sheet edits keep the current episode playing (setQueue without
   expect(n.post).not.toHaveBeenCalled();
   expect(e.current?.video_id).toBe("b");
 });
+
+// Shuffle and repeat run in the native engine: the web posts setModes and
+// mirrors the modes from native's music state.
+it("the modes mirror native's music state; setShuffle and cycleRepeat post setModes and change nothing locally", () => {
+  renderPlayer();
+  n.emit({ type: "queue", kind: "track", items: [track1, track2, tr(3)].map(trackItem), index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true }));
+  expect(p.modesAvailable).toBe(true);
+  expect(p.modes).toEqual({ shuffle: false, repeat: "off" });
+  n.post.mockClear();
+  act(() => p.setShuffle(true));
+  expect(n.post.mock.calls.map(([m]) => m)).toEqual([{ type: "setModes", shuffle: true, repeat: "off" }]);
+  expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 2, 3]); // native answers with the shuffled queue
+  act(() => p.setShuffle(true)); // already on (as far as the web knows): nothing more
+  expect(n.sent("setModes")).toHaveLength(1);
+  n.emit({ type: "queue", kind: "track", items: [track1, tr(3), track2].map(trackItem), index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, shuffle: true }));
+  expect(p.modes).toEqual({ shuffle: true, repeat: "off" });
+  expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 3, 2]);
+  act(() => p.cycleRepeat());
+  act(() => p.cycleRepeat()); // a second tap before native answers still steps on
+  expect(n.sent("setModes").slice(1)).toEqual([
+    { type: "setModes", shuffle: true, repeat: "all" },
+    { type: "setModes", shuffle: true, repeat: "one" },
+  ]);
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, shuffle: true, repeat: "one" }));
+  expect(p.modes).toEqual({ shuffle: true, repeat: "one" });
+  // An episode's state (always false/"off") never touches music's modes.
+  n.emit(stateEvent({ kind: "episode", itemId: "v1", playing: false }));
+  expect(p.modes).toEqual({ shuffle: true, repeat: "one" });
+  // The lock screen changed them: the next state says so.
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, shuffle: false, repeat: "all" }));
+  expect(p.modes).toEqual({ shuffle: false, repeat: "all" });
+  expect(n.sent("setQueue")).toEqual([]);
+});
+
+it("an app from before the modes: no modes, the buttons stay hidden; a state with them shows the buttons", async () => {
+  renderWithApp(<><Probe /><MiniPlayer /></>);
+  const audio = { codec: "flac", bitrate: 900, lossless: true } as Partial<Track>;
+  n.emit({ type: "queue", kind: "track", items: [tr(1, audio), tr(2, audio)].map(trackItem), index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "track", itemId: "1", shuffle: undefined, repeat: undefined }));
+  expect(p.modesAvailable).toBe(false);
+  await userEvent.click(await screen.findByText(track1.title));
+  const dialog = await screen.findByRole("dialog", { name: "正在播放" });
+  expect(screen.queryByRole("button", { name: "随机播放" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /循环/ })).toBeNull();
+  n.emit(stateEvent({ kind: "track", itemId: "1", shuffle: false, repeat: "all" }));
+  expect(p.modesAvailable).toBe(true);
+  const shuffle = await screen.findByRole("button", { name: "随机播放" });
+  expect(shuffle).toHaveAttribute("aria-pressed", "false");
+  expect(dialog.querySelector('[data-repeat="all"]')).not.toBeNull();
+  n.post.mockClear();
+  await userEvent.click(shuffle);
+  expect(n.sent("setModes")).toEqual([{ type: "setModes", shuffle: true, repeat: "all" }]);
+  expect(shuffle).toHaveAttribute("aria-pressed", "false"); // until native says so
+  n.emit(stateEvent({ kind: "track", itemId: "1", shuffle: true, repeat: "all" }));
+  expect(shuffle).toHaveAttribute("aria-pressed", "true");
+});
+
+it("turning shuffle on drops the queued block; native's unshuffled queue keeps it when it still follows the current track", () => {
+  renderPlayer();
+  const [t3, t4, t7, t8] = [tr(3), tr(4), tr(7), tr(8)];
+  n.emit({ type: "queue", kind: "track", items: [track1, track2, t3, t4].map(trackItem), index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true }));
+  act(() => p.addToQueue(t7)); // queued: [1 | 7] 2 3 4
+  act(() => p.setShuffle(true));
+  expect(p.queue.upNext).toBeUndefined(); // as the web player: everything after the current track is shuffled
+  n.emit({ type: "queue", kind: "track", items: [track1, t4, t7, track2, t3].map(trackItem), index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, shuffle: true }));
+  act(() => p.enqueueNext(t8)); // play next while shuffled: [1 | 8] 4 7 2 3
+  expect(p.queue.upNext).toBe(1);
+  act(() => p.setShuffle(false));
+  // Native restores the order; the play-next track stays in front.
+  n.emit({ type: "queue", kind: "track", items: [track1, t8, track2, t3, t4, t7].map(trackItem), index: 0, source: "list" });
+  expect(p.queue.upNext).toBe(1);
+  act(() => p.addToQueue(tr(9)));
+  expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 8, 9, 2, 3, 4, 7]);
+});
+
+it("a state already in flight before native handled a tap doesn't roll the next tap back", () => {
+  vi.useFakeTimers();
+  renderPlayer();
+  n.emit({ type: "queue", kind: "track", items: [track1, track2].map(trackItem), index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true }));
+  act(() => p.cycleRepeat()); // asks for "all"
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, positionMs: 500 })); // a tick sent before that: still "off"
+  act(() => p.cycleRepeat());
+  expect(n.sent("setModes").map((m) => m.repeat)).toEqual(["all", "one"]);
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, repeat: "one" })); // confirmed
+  expect(p.modes.repeat).toBe("one");
+  // Native never confirmed a request (an old reply lost, the lock screen won): its state rules again soon.
+  act(() => p.setShuffle(true));
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, repeat: "one" }));
+  act(() => vi.advanceTimersByTime(3000));
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, repeat: "one" }));
+  act(() => p.setShuffle(true));
+  expect(n.sent("setModes").slice(-2).map((m) => m.shuffle)).toEqual([true, true]);
+});

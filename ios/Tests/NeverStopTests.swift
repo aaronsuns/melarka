@@ -189,4 +189,28 @@ final class NeverStopTests: EngineTestCase {
         XCTAssertEqual(backend.loads.last?.0, remote(8)); XCTAssertEqual(backend.loads.last?.1, 9_000); XCTAssertEqual(backend.loads.last?.2, true)
         XCTAssertTrue(engine.playing)
     }
+
+    /// Shuffle and repeat at their defaults (or turned back off): the refill and the favorite fallback are
+    /// exactly what they were before the modes existed.
+    func testDefaultModesLeaveNeverStopAsItWas() async {
+        XCTAssertEqual(engine.modes, PlayModes())
+        engine.handle(.setModes(shuffle: false, repeatMode: .all))
+        engine.handle(.setModes(shuffle: false, repeatMode: .off))
+        XCTAssertEqual(engine.modes, PlayModes())
+        api.randomFavoritesAnswer = ("favorites", [trackModel(30), trackModel(31)])
+        engine.handle(.setQueue(q([5, 6, 7], index: 0, pos: 0, play: true, source: .favorites)))
+        await engine.idle()
+        XCTAssertEqual(api.randomFavoritesCalls, [.init(n: 20, exclude: [6, 7])])
+        XCTAssertEqual(engine.music.items.map(\.id), ["5", "6", "7", "30", "31"])
+
+        // The end of a list offline: a cached favorite is put after it (never a wrap, never a stop).
+        network.isOnline = false
+        cache.local = [8: tmp("8.m4a"), 20: tmp("20.m4a")]
+        cache.favorites = [trackModel(20)]
+        engine.handle(.setQueue(q([8], index: 0, pos: 0, play: true)))
+        backend.start(); backend.finish()
+        XCTAssertEqual(engine.music.items.map(\.id), ["8", "20"])
+        XCTAssertEqual(backend.loads.last?.0, .file(tmp("20.m4a")))
+        XCTAssertEqual(notices.last, PlayerEngine.offlineNotice)
+    }
 }

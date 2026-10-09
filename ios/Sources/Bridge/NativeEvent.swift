@@ -11,8 +11,14 @@ struct StateEvent: Encodable, Equatable {
     let buffering: Bool
     let error: String?
     let rate: Double
+    /// The music queue's modes; an episode's state always says false and "off".
+    var shuffle = false
+    var repeatMode: RepeatMode = .off
 
-    private enum CodingKeys: String, CodingKey { case type, kind, itemId, index, playing, positionMs, durationMs, buffering, error, rate }
+    private enum CodingKeys: String, CodingKey {
+        case type, kind, itemId, index, playing, positionMs, durationMs, buffering, error, rate, shuffle
+        case repeatMode = "repeat"
+    }
 
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -26,11 +32,14 @@ struct StateEvent: Encodable, Equatable {
         try c.encode(buffering, forKey: .buffering)
         try c.encode(error, forKey: .error)
         try c.encode(rate.isFinite ? rate : 1, forKey: .rate)
+        try c.encode(shuffle, forKey: .shuffle)
+        try c.encode(repeatMode, forKey: .repeatMode)
     }
 }
 
 /// An event native dispatches to the page as `window` `lark-native` CustomEvent; `detail` is the encoded event:
-/// - `{type:"state", kind, itemId, index, playing, positionMs, durationMs, buffering, error, rate}`
+/// - `{type:"state", kind, itemId, index, playing, positionMs, durationMs, buffering, error, rate, shuffle, repeat}`
+///   (`repeat`: "off" | "all" | "one"; a web without modes ignores both, a web with them shows the buttons)
 /// - `{type:"queue", kind, items, index, source}`
 /// - `{type:"flushed", id}`, `{type:"authRequired"}`, `{type:"notice", text}`
 enum NativeEvent: Encodable, Equatable {

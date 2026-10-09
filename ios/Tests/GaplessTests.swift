@@ -52,4 +52,38 @@ final class GaplessTests: EngineTestCase {
         XCTAssertEqual(backend.preloads.count, preloads + 1)
         XCTAssertEqual(backend.preloads.last, remote(2))
     }
+
+    /// Repeat one: the current item's own source is preloaded, and its natural end loads exactly that source,
+    /// so the backend takes the preloaded copy over (a gapless loop, nothing fresh fetched).
+    func testRepeatOnePreloadsTheCurrentItemAndTheLoopAdoptsIt() {
+        engine.handle(.setQueue(q([1, 2], index: 0, pos: 0, play: true)))
+        backend.start()
+        XCTAssertEqual(backend.preloads.last, remote(2))
+        engine.handle(.setModes(shuffle: false, repeatMode: .one))
+        XCTAssertEqual(backend.preloads.last, remote(1))
+        cache.local[1] = tmp("1.m4a")                 // reached the cache meanwhile: the preloaded stream still wins
+        let loads = backend.loads.count
+        backend.finish()
+        XCTAssertEqual(backend.loads.count, loads + 1)
+        XCTAssertEqual(backend.loads.last?.0, remote(1))
+        XCTAssertEqual(backend.loads.last?.1, 0)
+        XCTAssertEqual(engine.current?.id, "1")
+        XCTAssertEqual(backend.preloads.last, .file(tmp("1.m4a")))   // and the next loop is ready, from the phone now
+    }
+
+    /// Repeat all without shuffle: at the last item the first one is preloaded, so the wrap is gapless too.
+    func testRepeatAllPreloadsTheFirstItemAtTheEnd() {
+        engine.handle(.setModes(shuffle: false, repeatMode: .all))
+        engine.handle(.setQueue(q([1, 2], index: 1, pos: 0, play: true)))
+        XCTAssertEqual(backend.preloads.last, remote(1))
+        backend.start(); backend.finish()
+        XCTAssertEqual(backend.loads.last?.0, remote(1))
+        XCTAssertEqual(engine.music.index, 0)
+    }
+
+    /// Modes off: what is preloaded is exactly as before (nothing after the last item).
+    func testModesOffPreloadNothingAfterTheLastItem() {
+        engine.handle(.setQueue(q([1, 2], index: 1, pos: 0, play: true)))
+        XCTAssertEqual(backend.preloads.last, .some(nil))
+    }
 }

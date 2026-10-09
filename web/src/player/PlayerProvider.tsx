@@ -561,13 +561,13 @@ function WebPlayerProvider({
         // Repeat all: the whole queue again from its first track (offline,
         // from the first one that can play).
         const nq = newPass(queueRef.current, modesRef.current.shuffle);
-        if (nq.tracks.length === 0) return false;
-        const j = playableNow(nq.tracks[0].id) ? 0 : firstPlayable(nq.tracks, 0);
-        const i = j >= 0 ? j : 0;
+        // The first track that can play (the chooser wraps only when there is one).
+        const i = nq.tracks.findIndex((t) => !isFailed(t.id) && playableNow(t.id) && (!c.local || isLocal(t.id)));
+        if (i < 0) return false;
         queueRef.current = { ...nq, index: i, upNext: undefined };
         dispatch({ type: "setOrder", tracks: nq.tracks, index: i, upNext: 0 });
         load(nq.tracks[i], { autoplay: wantPlay.current, index: i, picked: o.picked });
-        if (i > 0) showNotice(t("player.skippedUncached"));
+        if (nq.tracks.slice(0, i).some((t) => !playableNow(t.id))) showNotice(t("player.skippedUncached"));
         else if (notice) showNotice(notice);
         return true;
       }
@@ -583,7 +583,7 @@ function WebPlayerProvider({
       else if (notice) showNotice(notice);
       return true;
     },
-    [load, showNotice, dropSubstitutes],
+    [load, showNotice, dropSubstitutes, isFailed, isLocal],
   );
 
   // Reload the same track at the last known position after a network error.

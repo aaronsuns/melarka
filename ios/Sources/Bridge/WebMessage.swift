@@ -15,6 +15,7 @@ struct NativePrefs: Equatable { let quality: String; let carLyrics: Bool }
 /// - `seek {kind, ms}`, `skip {kind, ms}` (ms may be negative), `setRate {rate}`
 /// - `setPrefs {quality, carLyrics}`, `auth {signedIn, userId?}`, `pauseForWeb`
 /// - `favoriteChanged {trackId, on}`, `flushEvents {id}`, `openSettings`
+/// - `setModes {shuffle, repeat}` (`repeat`: "off" | "all" | "one"; music only)
 /// Unknown fields are ignored. `auth` never carries the token: native reads it from the HttpOnly cookie.
 enum WebMessage: Equatable {
     case hello(onOpen: String)                    // web mounted; native answers with queue+state for both kinds
@@ -28,6 +29,7 @@ enum WebMessage: Equatable {
     case favoriteChanged(trackId: Int, on: Bool)
     case flushEvents(id: String)
     case openSettings
+    case setModes(shuffle: Bool, repeatMode: RepeatMode)
 
     struct InvalidBody: Error {}
 
@@ -43,7 +45,8 @@ enum WebMessage: Equatable {
 
         private enum Keys: String, CodingKey {
             case type, onOpen, kind, items, index, positionMs, play, source, ms, rate, quality, carLyrics
-            case signedIn, userId, trackId, on, id
+            case signedIn, userId, trackId, on, id, shuffle
+            case repeatMode = "repeat"
         }
 
         init(from decoder: Decoder) throws {
@@ -80,6 +83,9 @@ enum WebMessage: Equatable {
                 message = .favoriteChanged(trackId: try c.decode(Int.self, forKey: .trackId), on: try c.decode(Bool.self, forKey: .on))
             case "flushEvents": message = .flushEvents(id: try c.decode(String.self, forKey: .id))
             case "openSettings": message = .openSettings
+            case "setModes":
+                message = .setModes(shuffle: try c.decode(Bool.self, forKey: .shuffle),
+                                    repeatMode: try c.decode(RepeatMode.self, forKey: .repeatMode))
             default:
                 throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown message type")
             }

@@ -204,3 +204,242 @@ final class PlayerEngineTests: EngineTestCase {
         XCTAssertTrue(engine.playing)
     }
 }
+
+// MARK: - Shuffle and repeat (the web's modes, music only)
+
+extension PlayerEngineTests {
+    func items(_ ids: ClosedRange<Int>) -> [Item] { ids.map(track) }
+    var ids: [String] { engine.music.items.map(\.id) }
+
+    func testRepeatOneLoopsOnNaturalEndAndCountsTwoPlays() async {
+        engine.handle(.setQueue(SetQueue(kind: .track, items: items(1...3), index: 0, positionMs: 0, play: true, source: .list)))
+        engine.handle(.setModes(shuffle: false, repeatMode: .one))
+        backend.play(to: 31_000); backend.finish()
+        XCTAssertEqual(engine.current?.id, "1")
+        backend.play(to: 31_000); backend.finish()
+        XCTAssertEqual(engine.events.pending.filter { $0.track_id == 1 }.count, 2)
+    }
+
+    func testRepeatOneUserNextStillMoves() {
+        engine.handle(.setQueue(q([1, 2, 3], index: 0, pos: 0, play: true)))
+        engine.handle(.setModes(shuffle: false, repeatMode: .one))
+        engine.next()
+        XCTAssertEqual(engine.current?.id, "2")
+        engine.prev()
+        XCTAssertEqual(engine.current?.id, "1")
+        backend.finish()                                       // only the natural end loops
+        XCTAssertEqual(engine.current?.id, "1")
+    }
+
+    func testRepeatAllWrapsWithoutRefill() async {
+        engine.handle(.setModes(shuffle: false, repeatMode: .all))
+        engine.handle(.setQueue(q([1, 2], index: 0, pos: 0, play: true, source: .radio)))
+        backend.start(); backend.finish()
+        backend.start(); backend.finish()
+        XCTAssertEqual(engine.current?.id, "1")
+        XCTAssertEqual(engine.music.index, 0)
+        XCTAssertEqual(ids, ["1", "2"])
+        XCTAssertTrue(engine.playing)
+        await engine.idle()
+        XCTAssertTrue(api.radioCalls.isEmpty); XCTAssertTrue(api.randomTracksCalls.isEmpty); XCTAssertTrue(api.randomFavoritesCalls.isEmpty)
+        // the user's next at the last item wraps too
+        engine.next()
+        engine.next()
+        XCTAssertEqual(engine.current?.id, "1")
+        // repeat off again: the radio refills as before
+        engine.handle(.setModes(shuffle: false, repeatMode: .off))
+        await engine.idle()
+        XCTAssertEqual(api.radioCalls.count, 1)
+    }
+
+    func testRepeatAllShuffleStartsNewShuffledPass() async {
+        engine.handle(.setModes(shuffle: true, repeatMode: .all))
+        engine.handle(.setQueue(q([1, 2, 3, 4], index: 0, pos: 0, play: true, source: .favorites)))
+        let first = ids
+        XCTAssertEqual(first.first, "1")
+        for _ in 0..<4 { backend.start(); backend.finish() }
+        XCTAssertEqual(engine.music.index, 0)
+        XCTAssertEqual(ids.sorted(), ["1", "2", "3", "4"])
+        XCTAssertNotEqual(ids, first)                          // a new shuffled pass
+        XCTAssertNotEqual(engine.current?.id, first.last)      // never the item that just ended
+        await engine.idle()
+        XCTAssertTrue(api.randomFavoritesCalls.isEmpty)
+    }
+
+    func testShuffleOnKeepsCurrentLoaded() {
+        engine.handle(.setQueue(q([1, 2, 3, 4, 5], index: 1, pos: 0, play: true)))
+        backend.start(); backend.play(to: 5_000)
+        let loads = backend.loads.count, generation = backend.generation
+        sent = []
+        engine.handle(.setModes(shuffle: true, repeatMode: .off))
+        XCTAssertEqual(backend.loads.count, loads)
+        XCTAssertEqual(backend.generation, generation)
+        XCTAssertEqual(engine.current?.id, "2"); XCTAssertEqual(engine.music.index, 1)
+        XCTAssertTrue(engine.playing)
+        XCTAssertEqual(Array(ids.prefix(2)), ["1", "2"])
+        XCTAssertEqual(ids.dropFirst(2).sorted(), ["3", "4", "5"])
+        XCTAssertNotEqual(ids, ["1", "2", "3", "4", "5"])
+        XCTAssertEqual(engine.modes.original, ["3", "4", "5"])
+        XCTAssertEqual(queues(.track).last?.items.map(\.id), ids)
+        XCTAssertEqual(backend.preloads.last, .remote(api.streamURL(engine.music.items[2], quality: "high"), token: "T1"))
+    }
+
+    func testShuffleOffRestoresOrder() {
+        engine.handle(.setQueue(q([1, 2, 3, 4, 5], index: 0, pos: 0, play: true)))
+        engine.handle(.setModes(shuffle: true, repeatMode: .off))
+        backend.start(); backend.finish()                     // one shuffled item played
+        let now = engine.current?.id
+        let loads = backend.loads.count
+        engine.handle(.setModes(shuffle: false, repeatMode: .off))
+        XCTAssertEqual(backend.loads.count, loads)
+        XCTAssertEqual(engine.current?.id, now)
+        XCTAssertEqual(Array(ids.dropFirst(2)), ["2", "3", "4", "5"].filter { $0 != now })
+        XCTAssertNil(engine.modes.original)
+    }
+
+    func testAListPlayedWhileShuffledIsShuffledAfterTheChosenItemAJumpIsNot() {
+        engine.handle(.setModes(shuffle: true, repeatMode: .off))
+        engine.handle(.setQueue(q([1, 2, 3, 4, 5], index: 1, pos: 0, play: true)))
+        XCTAssertEqual(Array(ids.prefix(2)), ["1", "2"])
+        XCTAssertNotEqual(ids, ["1", "2", "3", "4", "5"])
+        XCTAssertEqual(engine.modes.original, ["3", "4", "5"])
+        let order = ids
+        engine.handle(.setQueue(SetQueue(kind: .track, items: engine.music.items, index: 3, positionMs: 0, play: true, source: .list)))
+        XCTAssertEqual(ids, order)
+        XCTAssertEqual(engine.music.index, 3)
+    }
+
+    func testAMoveWhileShuffledKeepsItsNewNeighbourOnShuffleOff() {
+        engine.handle(.setQueue(q([1, 2, 3, 4, 5], index: 0, pos: 0, play: true)))
+        engine.handle(.setModes(shuffle: true, repeatMode: .off))      // random 0: [1, 3, 4, 5, 2]
+        XCTAssertEqual(ids, ["1", "3", "4", "5", "2"])
+        engine.handle(.setQueue(q([1, 5, 3, 4, 2], index: 0, pos: nil, play: true)))   // the queue sheet: 5 dragged up
+        engine.handle(.setModes(shuffle: false, repeatMode: .off))
+        XCTAssertEqual(ids, ["1", "2", "5", "3", "4"])                 // 5 still right before 3
+    }
+
+    func testEpisodesIgnoreModes() {
+        engine.handle(.setModes(shuffle: true, repeatMode: .one))
+        engine.handle(.setQueue(SetQueue(kind: .episode, items: [episode("aaaaaaaaaaa"), episode("bbbbbbbbbbb"), episode("ccccccccccc")],
+                                         index: 0, positionMs: 0, play: true, source: .list)))
+        XCTAssertEqual(engine.episodes.items.map(\.id), ["aaaaaaaaaaa", "bbbbbbbbbbb", "ccccccccccc"])
+        backend.start(); backend.finish()
+        XCTAssertEqual(engine.current?.id, "bbbbbbbbbbb")
+        let ep = states.last { $0.kind == .episode }
+        XCTAssertEqual(ep?.shuffle, false); XCTAssertEqual(ep?.repeatMode, .off)
+    }
+
+    func testModesPersistAndRestore() throws {
+        engine.handle(.setQueue(q([1, 2, 3, 4], index: 0, pos: 0, play: false)))
+        engine.handle(.setModes(shuffle: true, repeatMode: .all))
+        let order = ids
+        makeEngine()
+        XCTAssertEqual(engine.modes.shuffle, true); XCTAssertEqual(engine.modes.repeatMode, .all)
+        XCTAssertEqual(engine.modes.original, ["2", "3", "4"])
+        XCTAssertEqual(ids, order)
+        // A file written before the modes existed (v0.1.0): no `modes` key, both off.
+        var s = try XCTUnwrap(store.load())
+        s.modes = nil
+        store.save(s)
+        let json = try String(contentsOf: dir.appendingPathComponent("queues-1.json"), encoding: .utf8)
+        XCTAssertFalse(json.contains("\"modes\""))
+        makeEngine()
+        XCTAssertEqual(engine.modes, PlayModes())
+        XCTAssertEqual(ids, order)
+    }
+
+    func testStateCarriesModes() {
+        engine.handle(.setQueue(q([1, 2], index: 0, pos: 0, play: true)))
+        XCTAssertEqual(states.last?.shuffle, false); XCTAssertEqual(states.last?.repeatMode, .off)
+        engine.handle(.setModes(shuffle: true, repeatMode: .one))
+        let st = states.last { $0.kind == .track }
+        XCTAssertEqual(st?.shuffle, true); XCTAssertEqual(st?.repeatMode, .one)
+        sent = []
+        engine.emitAll()
+        XCTAssertEqual(states.first { $0.kind == .track }?.repeatMode, .one)
+        XCTAssertEqual(states.first { $0.kind == .episode }?.repeatMode, .off)
+    }
+
+    /// Repeat all, offline: a cached favorite stands in for a track that can't play; it plays once and leaves,
+    /// and the interrupted track is tried again before the queue starts over (the web's transient substitute).
+    func testRepeatAllSubstituteIsTransient() {
+        cache.favorites = [trackModel(9)]
+        cache.local = [9: tmp("9.m4a")]
+        engine.handle(.setModes(shuffle: false, repeatMode: .all))
+        engine.handle(.setQueue(q([1, 2], index: 1, pos: 0, play: true)))
+        network.isOnline = false
+        backend.fail(network: true)
+        XCTAssertEqual(ids, ["1", "2", "9", "2"]); XCTAssertEqual(engine.current?.id, "9")
+        network.isOnline = true
+        backend.start(); backend.finish()                     // the substitute ends: it leaves, 2 is retried
+        XCTAssertEqual(ids, ["1", "2"]); XCTAssertEqual(engine.current?.id, "2")
+        backend.start(); backend.finish()
+        XCTAssertEqual(ids, ["1", "2"]); XCTAssertEqual(engine.current?.id, "1")
+    }
+
+    func testRepeatOffKeepsTheSubstitute() {
+        cache.favorites = [trackModel(9)]
+        cache.local = [9: tmp("9.m4a")]
+        engine.handle(.setQueue(q([1, 2], index: 1, pos: 0, play: true)))
+        network.isOnline = false
+        backend.fail(network: true)
+        network.isOnline = true
+        backend.start(); backend.finish()
+        XCTAssertEqual(ids, ["1", "2", "9", "2"]); XCTAssertEqual(engine.current?.id, "2")
+    }
+
+    // MARK: Repeat all never loops on what cannot play (review: a failing queue, no token, nothing cached)
+
+    func testRepeatAllWithEveryTrackFailingStopsInsteadOfLooping() {
+        engine.handle(.setModes(shuffle: false, repeatMode: .all))
+        engine.handle(.setQueue(q([1, 2, 3], index: 0, pos: 0, play: true)))
+        backend.fail(network: false); backend.fail(network: false); backend.fail(network: false)
+        XCTAssertEqual(backend.loads.count, 3)                // each once, then the brake: no wrap onto failed items
+        XCTAssertFalse(engine.playing)
+        XCTAssertEqual(states.last?.error, PlayerEngine.cannotPlay)
+    }
+
+    func testRepeatAllOneFailingTrackFallsBackToACachedFavorite() {
+        cache.favorites = [trackModel(9)]
+        cache.local = [9: tmp("9.m4a")]
+        engine.handle(.setModes(shuffle: false, repeatMode: .all))
+        engine.handle(.setQueue(q([1], index: 0, pos: 0, play: true)))
+        backend.fail(network: false)
+        XCTAssertEqual(backend.loads.count, 2)
+        XCTAssertEqual(backend.loads.last?.0, .file(tmp("9.m4a")))   // never-stop's favorite, not item 1 again
+    }
+
+    func testRepeatAllWithNoTokenAndNothingCachedStopsWithoutRecursing() {
+        api.token = nil
+        engine.handle(.setModes(shuffle: false, repeatMode: .all))
+        engine.handle(.setQueue(q([1, 2], index: 1, pos: 0, play: true)))   // the last item: the wrap is the next choice
+        XCTAssertTrue(backend.loads.isEmpty)
+        XCTAssertFalse(engine.playing)
+        XCTAssertEqual(states.last?.error, PlayerEngine.cannotPlay)
+    }
+
+    func testRepeatAllWrapSkipsFailedAndStartsLocalWhenItMust() {
+        cache.local = [3: tmp("3.m4a")]
+        engine.handle(.setModes(shuffle: false, repeatMode: .all))
+        engine.handle(.setQueue(q([1, 2, 3], index: 1, pos: 0, play: true)))
+        network.isOnline = false
+        backend.start(); backend.finish()                     // offline: 3 is on the phone
+        XCTAssertEqual(engine.current?.id, "3")
+        backend.start(); backend.finish()                     // the wrap: only 3 can play offline
+        XCTAssertEqual(engine.music.index, 2)
+        XCTAssertEqual(backend.loads.last?.0, .file(tmp("3.m4a")))
+    }
+
+    // MARK: Repeat one: the looped stream is cached, so it is fetched once
+
+    func testRepeatOnePrefetchesTheCurrentStream() {
+        engine.handle(.setQueue(q([1, 2, 3], index: 0, pos: 0, play: true)))
+        backend.start()
+        cache.prefetched = []
+        engine.handle(.setModes(shuffle: false, repeatMode: .one))
+        XCTAssertEqual(cache.prefetched.last?.first, 1)
+        cache.local[1] = tmp("1.m4a"); cache.prefetched = []
+        backend.finish(); backend.start()
+        XCTAssertFalse(cache.prefetched.contains { $0.contains(1) })   // on the phone now: not asked again
+    }
+}

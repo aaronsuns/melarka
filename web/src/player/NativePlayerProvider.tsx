@@ -6,6 +6,7 @@ import { nativePost, onNative, type NativeState } from "../native/bridge";
 import { fromItem, trackItem } from "../native/items";
 import { clockPosition, stoppedClock, useNativeClock, type ClockBase } from "../native/useNativeClock";
 import { PlayerCtx, PlayerProgressCtx, type Player, type PlayerProgress, type PlayerProviderProps } from "./PlayerProvider";
+import { nextRepeat, type PlayModes, type RepeatMode } from "./modes";
 import { current, emptyQueue, queueReducer, saveUpNext, storedUpNext, type QueueAction, type QueueState } from "./queue";
 import { claimSession, onSessionClaim } from "./sessionOwner";
 
@@ -14,12 +15,19 @@ const NOTICE_MS = 4000;
 // Native answers hello with its queue at once; if it never does, the idle
 // mini player's shortcut still appears.
 const READY_AFTER_MS = 1500;
+// A setModes native hasn't confirmed yet: states that disagree with it are
+// taken as sent before native handled it, for at most this long.
+const MODES_PENDING_MS = 2000;
 // flushEvents gives up waiting for native's `flushed` after this long.
 const FLUSH_TIMEOUT_MS = 3000;
-// The native engine has no shuffle/repeat yet: the buttons stay hidden and
-// the queue keeps its never-stop behaviour.
-const NO_MODES = { shuffle: false, repeat: "off" } as const;
+// An app without shuffle/repeat (its state carries no `shuffle`): the
+// buttons stay hidden and the queue keeps its never-stop behaviour.
+const NO_MODES: PlayModes = { shuffle: false, repeat: "off" };
 const noop = () => {};
+const isRepeat = (v: unknown): v is RepeatMode => v === "off" || v === "all" || v === "one";
+// The modes native's music state reports; null from an app without them.
+const stateModes = (s: NativeState | null): PlayModes | null =>
+  s && typeof s.shuffle === "boolean" ? { shuffle: s.shuffle, repeat: isRepeat(s.repeat) ? s.repeat : "off" } : null;
 
 function storedQuality(): Quality {
   const q = localStorage.getItem("lark.quality");
@@ -40,10 +48,16 @@ let flushSeq = 0;
 // next, add to queue). When it is the mirrored queue again — the echo of an
 // edit, an advance, a refill appended — that record is carried over (moved
 // along with the index); any other queue starts with none.
+// Reordered around it (shuffle off keeps the play-next tracks in front), the
+// block stays while the same entries still directly follow the same current one.
 function withQueued(prev: QueueState, next: QueueState): QueueState {
+  const n = prev.upNext;
+  if (!n) return next;
   const same = prev.tracks.length <= next.tracks.length && prev.tracks.every((t, i) => t.id === next.tracks[i].id);
-  if (!same || !prev.upNext) return next;
-  return queueReducer({ ...prev, tracks: next.tracks, source: next.source }, { type: "jump", index: next.index });
+  if (same) return queueReducer({ ...prev, tracks: next.tracks, source: next.source }, { type: "jump", index: next.index });
+  const block = prev.tracks.slice(prev.index, prev.index + 1 + n);
+  const now = next.tracks.slice(next.index, next.index + 1 + n);
+  return now.length === block.length && block.every((t, i) => t.id === now[i].id) ? { ...next, upNext: n } : next;
 }
 
 /**
@@ -65,6 +79,9 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
   const flushWaiters = useRef(new Map<string, () => void>());
   const playingRef = useRef(false);
   const firstQueue = useRef(true);
+  // The modes as last sent or reported (a second tap before native answers steps on from the first).
+  const modesRef = useRef<PlayModes>(NO_MODES);
+  const pendingModes = useRef<{ modes: PlayModes; at: number } | null>(null);
 
   const mirror = useCallback((q: QueueState) => {
     queueRef.current = q;
@@ -125,6 +142,14 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
             }
             const was = playingRef.current;
             playingRef.current = m.playing;
+            const said = stateModes(m) ?? NO_MODES;
+            const asked = pendingModes.current;
+            // A state already on its way before native handled the last tap: the tap stands.
+            const stale = asked && (said.shuffle !== asked.modes.shuffle || said.repeat !== asked.modes.repeat) && Date.now() - asked.at < MODES_PENDING_MS;
+            if (!stale) {
+              pendingModes.current = null;
+              modesRef.current = said;
+            }
             setState(m);
             setClock({ positionMs: m.positionMs, durationMs: m.durationMs, playing: m.playing, rate: m.rate, at: Date.now() });
             // Native sounding takes the session: a web preview or video pauses.
@@ -232,6 +257,26 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
     [edit],
   );
 
+  // Shuffle and repeat run in the native engine (the lock screen and the car
+  // too): the web only asks; native answers with its queue and state.
+  const postModes = useCallback((m: PlayModes) => {
+    modesRef.current = m;
+    pendingModes.current = { modes: m, at: Date.now() };
+    nativePost({ type: "setModes", shuffle: m.shuffle, repeat: m.repeat });
+  }, []);
+  const setShuffle = useCallback(
+    (on: boolean) => {
+      const m = modesRef.current;
+      if (m.shuffle === on) return;
+      // As the web player: everything after the current track is shuffled, queued tracks too.
+      const q = queueRef.current;
+      if (on && q.upNext) mirror(queueReducer(q, { type: "setOrder", tracks: q.tracks, index: q.index, upNext: 0 }));
+      postModes({ ...m, shuffle: on });
+    },
+    [mirror, postModes],
+  );
+  const cycleRepeat = useCallback(() => postModes({ ...modesRef.current, repeat: nextRepeat(modesRef.current.repeat) }), [postModes]);
+
   const play = useCallback(() => nativePost({ type: "play", kind: "track" }), []);
   const pause = useCallback(() => nativePost({ type: "pause", kind: "track" }), []);
   const toggle = useCallback(() => (playingRef.current ? pause() : play()), [play, pause]);
@@ -284,18 +329,23 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
     [clock, cur],
   );
   const { position, duration } = useNativeClock(clockBase);
+  const reported = stateModes(state);
+  const modesAvailable = reported !== null;
+  const shownShuffle = reported?.shuffle ?? false;
+  const shownRepeat = reported?.repeat ?? "off";
+  const modes = useMemo<PlayModes>(() => ({ shuffle: shownShuffle, repeat: shownRepeat }), [shownShuffle, shownRepeat]);
 
   const value = useMemo<Player>(
     () => ({
       queue, current: cur, playing, quality, error, notice, showNotice, needsTap: false,
       playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
-      modes: NO_MODES, modesAvailable: false, setShuffle: noop, cycleRepeat: noop,
+      modes, modesAvailable, setShuffle, cycleRepeat,
       // The native engine runs its own sleep timer; the web one is hidden here.
       setFade: noop, stopAfterCurrent: noop,
     }),
     [
       queue, cur, playing, quality, error, notice, showNotice, playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove,
-      updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
+      updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready, modes, modesAvailable, setShuffle, cycleRepeat,
     ],
   );
   const progress = useMemo<PlayerProgress>(() => ({ position, duration }), [position, duration]);

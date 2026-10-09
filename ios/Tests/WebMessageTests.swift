@@ -51,6 +51,30 @@ final class WebMessageTests: XCTestCase {
         XCTAssertEqual(try WebMessage.decode(["type": "openSettings"]), .openSettings)
     }
 
+    func testDecodesSetModes() throws {
+        XCTAssertEqual(try WebMessage.decode(["type": "setModes", "shuffle": true, "repeat": "one"]), .setModes(shuffle: true, repeatMode: .one))
+        XCTAssertEqual(try WebMessage.decode(["type": "setModes", "shuffle": false, "repeat": "all"]), .setModes(shuffle: false, repeatMode: .all))
+        XCTAssertEqual(try WebMessage.decode(["type": "setModes", "shuffle": false, "repeat": "off", "extra": 1]), .setModes(shuffle: false, repeatMode: .off))
+        XCTAssertThrowsError(try WebMessage.decode(["type": "setModes", "shuffle": true, "repeat": "sometimes"]))
+        XCTAssertThrowsError(try WebMessage.decode(["type": "setModes", "repeat": "all"]))       // shuffle missing
+        XCTAssertThrowsError(try WebMessage.decode(["type": "setModes", "shuffle": "yes", "repeat": "all"]))
+        // setPrefs from a web that knows nothing newer still decodes
+        XCTAssertEqual(try WebMessage.decode(["type": "setPrefs", "quality": "saver", "carLyrics": true]),
+                       .setPrefs(NativePrefs(quality: "saver", carLyrics: true)))
+    }
+
+    func testStateCarriesTheModes() throws {
+        let s = try detail(.state(StateEvent(kind: .track, itemId: "7", index: 0, playing: true, positionMs: 0, durationMs: 1,
+                                             buffering: false, error: nil, rate: 1, shuffle: true, repeatMode: .all)))
+        XCTAssertEqual(s["shuffle"] as? Bool, true)
+        XCTAssertEqual(s["repeat"] as? String, "all")
+        XCTAssertNil(s["repeatMode"])
+        let d = try detail(.state(StateEvent(kind: .episode, itemId: nil, index: 0, playing: false, positionMs: 0, durationMs: 0,
+                                             buffering: false, error: nil, rate: 1)))
+        XCTAssertEqual(d["shuffle"] as? Bool, false)
+        XCTAssertEqual(d["repeat"] as? String, "off")
+    }
+
     func testRejectsMalformedBodies() {
         XCTAssertThrowsError(try WebMessage.decode("just a string"))
         XCTAssertThrowsError(try WebMessage.decode(["type": "play"]))                    // kind missing

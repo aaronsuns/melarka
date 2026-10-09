@@ -992,6 +992,33 @@ describe("shuffle and repeat", () => {
     expect(random).not.toHaveBeenCalled();
   });
 
+  test("repeat all: a queue whose tracks all fail stops instead of looping", () => {
+    storeModes({ shuffle: false, repeat: "all", original: null });
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2)], 0));
+    audio.error = { code: 3 };
+    act(() => audio.fire("error"));
+    expect(player().current?.id).toBe(2);
+    audio.error = { code: 3 };
+    act(() => audio.fire("error"));
+    expect(audio.src).toContain("/tracks/2/"); // never back to the failed 1
+    expect(player().playing).toBe(false);
+    expect(player().error).toBeTruthy();
+  });
+
+  test("repeat all: the new pass starts at the first track that can play", () => {
+    storeModes({ shuffle: false, repeat: "all", original: null });
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3)], 0));
+    audio.error = { code: 3 };
+    act(() => audio.fire("error")); // 1 failed → 2
+    act(() => audio.fire("ended")); // → 3
+    act(() => audio.fire("ended")); // the wrap: 1 is passed over
+    expect(player().queue.index).toBe(1);
+    expect(player().current?.id).toBe(2);
+    expect(audio.src).toContain("/tracks/2/");
+  });
+
   test("repeat all: next() at the last track wraps too", () => {
     storeModes({ shuffle: false, repeat: "all", original: null });
     const { player } = setup();
