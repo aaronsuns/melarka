@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { login, trackIdByTitle } from "./playback";
 
 // The queue sheet in a real engine (WebKit as on an iPhone, and Chromium):

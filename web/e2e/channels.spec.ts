@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { login } from "./playback";
 
 test("频道: paste a channel link, follow, the newest episodes download, ▶ 听 plays one, 保留 keeps it", async ({ page }) => {

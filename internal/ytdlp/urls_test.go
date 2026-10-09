@@ -196,3 +196,15 @@ func TestThumbnailURL(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestSetThumbnailBase(t *testing.T) {
+	defer SetThumbnailBase("https://i.ytimg.com/vi")
+	SetThumbnailBase("")
+	if got := ThumbnailURL("abcdefghijk"); got != "https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg" {
+		t.Fatalf("empty base: %s", got)
+	}
+	SetThumbnailBase("http://127.0.0.1:4701/vi/")
+	if got := ThumbnailURL("abcdefghijk"); got != "http://127.0.0.1:4701/vi/abcdefghijk/hqdefault.jpg" {
+		t.Fatalf("local base: %s", got)
+	}
+}

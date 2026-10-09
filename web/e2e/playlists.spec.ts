@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { login } from "./playback";
 
 test("a YouTube playlist downloads into a Lark playlist, in order; pasted links offer the right choices", async ({ page }) => {
@@ -17,6 +17,8 @@ test("a YouTube playlist downloads into a Lark playlist, in order; pasted links 
   // The songs land as their downloads finish, in YouTube's order.
   await expect(async () => {
     await page.reload();
+    // The list renders after the page has loaded: read it once it shows the second song.
+    await expect(page.locator(".track-main", { hasText: "第二首歌" })).toBeVisible({ timeout: 2_000 });
     const titles = await page.locator(".track-main").allTextContents();
     expect(titles.findIndex((x) => x.includes("测试歌曲"))).toBeGreaterThanOrEqual(0);
     expect(titles.findIndex((x) => x.includes("第二首歌"))).toBeGreaterThan(titles.findIndex((x) => x.includes("测试歌曲")));

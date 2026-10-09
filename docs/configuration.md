@@ -26,6 +26,7 @@ or `.env`, and `docker compose restart melarka` a changed `config.yaml`.
 | `LARK_WEB_DIR` | none | serve the web app from this directory instead of the embedded copy (development) |
 | `LARK_YOUTUBE_FEED_URL` | `https://www.youtube.com/feeds/videos.xml` | where channel feeds are read (tests point it at a local server) |
 | `LARK_YOUTUBE_THUMB_URL` | `https://i.ytimg.com/vi` | where the video thumbnail proxy reads YouTube thumbnails, as `<url>/<video id>/mqdefault.jpg` (tests point it at a local server) |
+| `LARK_YOUTUBE_COVER_URL` | `https://i.ytimg.com/vi` | the base of the video cover links given to pages, as `<url>/<video id>/hqdefault.jpg` (tests point it at a local server) |
 | `TZ` | UTC | the container's time zone, in `Area/City` form, such as `America/New_York`; used for `recommendations.refresh_at` |
 
 With Docker, put `LARK_ADMIN_PASSWORD` (and any key) in `.env`, which the compose file loads with

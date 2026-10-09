@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { login, trackIdByTitle, verifyPlaybackStarted } from "./playback";
 
 test("Now Playing opens on the synced lyrics from the sidecar .lrc; they follow playback, a tapped line seeks, and the cover shows the current line", async ({ page }, info) => {

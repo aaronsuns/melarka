@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { login } from "./playback";
 
 test("a finished download appears in My downloads and plays from Playlists", async ({ page }) => {

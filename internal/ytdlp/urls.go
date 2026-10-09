@@ -73,6 +73,19 @@ func IsMixID(id string) bool { return strings.HasPrefix(id, "RD") }
 // PlaylistURL is the canonical page of playlist id.
 func PlaylistURL(id string) string { return "https://www.youtube.com/playlist?list=" + id }
 
+// thumbnailBase is where ThumbnailURL points. SetThumbnailBase changes it
+// once, at startup, before anything reads it.
+var thumbnailBase = "https://i.ytimg.com/vi"
+
+// SetThumbnailBase points ThumbnailURL at base (LARK_YOUTUBE_COVER_URL: the
+// e2e tests serve the thumbnails locally, so no page they load reaches the
+// Internet). An empty base keeps the default.
+func SetThumbnailBase(base string) {
+	if base = strings.TrimRight(base, "/"); base != "" {
+		thumbnailBase = base
+	}
+}
+
 // ThumbnailURL is a video's canonical cover: hqdefault exists for every
 // video (maxresdefault doesn't), whatever link or search result it came from.
-func ThumbnailURL(id string) string { return "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg" }
+func ThumbnailURL(id string) string { return thumbnailBase + "/" + id + "/hqdefault.jpg" }

@@ -51,7 +51,14 @@ PY
     mkdir -p "$TMP/feeds/vi/$v"
     ffmpeg -nostdin -loglevel error -y -f lavfi -i color=c=0x3a7bd5:s=320x180 -frames:v 1 "$TMP/feeds/vi/$v/mqdefault.jpg"
   done
+  # Covers the pages link to (<LARK_YOUTUBE_COVER_URL>/<id>/hqdefault.jpg): the channel's episodes. Other
+  # ids answer a local 404, never a request to YouTube.
+  for v in fakeep00001 fakeep00002 fakeep00003 fakeep0000a fakeep0000b; do
+    mkdir -p "$TMP/feeds/vi/$v" && cp "$TMP/feeds/vi/fakevideo01/mqdefault.jpg" "$TMP/feeds/vi/$v/hqdefault.jpg"
+  done
   python3 -m http.server 4701 --bind 127.0.0.1 --directory "$TMP/feeds" >/dev/null 2>&1 &
+  # No page links to YouTube: the tests never leave the machine (fixtures.ts fails one that tries).
+  export LARK_YOUTUBE_COVER_URL=http://127.0.0.1:4701/vi
 fi
 FEED_PID=$!
 trap 'kill $FEED_PID 2>/dev/null; rm -rf "$TMP"' EXIT

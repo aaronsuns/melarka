@@ -58,6 +58,7 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	ytdlp.SetThumbnailBase(cfg.YouTubeCoverURL)
 	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil {
 		return err
 	}

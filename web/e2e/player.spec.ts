@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { login, trackIdByTitle, verifyPlaybackStarted } from "./playback";
 
 test("login, pinyin search, play, favorite, queue survives reload", async ({ page }, info) => {

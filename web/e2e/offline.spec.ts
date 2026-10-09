@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { login, trackIdByTitle } from "./playback";
 
 async function miniProgressPct(page: Page): Promise<number> {

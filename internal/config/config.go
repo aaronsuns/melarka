@@ -168,6 +168,10 @@ type Config struct {
 	// thumbnails, <base>/<id>/mqdefault.jpg (LARK_YOUTUBE_THUMB_URL; default
 	// https://i.ytimg.com/vi, which must equal preview.DefaultThumbURL).
 	YouTubeThumbURL string `yaml:"-"`
+	// YouTubeCoverURL is the base of the video cover links given to pages,
+	// <base>/<id>/hqdefault.jpg (LARK_YOUTUBE_COVER_URL; default
+	// https://i.ytimg.com/vi; the e2e tests point it at a local server).
+	YouTubeCoverURL string `yaml:"-"`
 	LastFMAPIKey    string `yaml:"-"`
 
 	// OfflineCache lets the web app keep songs on the phone (its service
@@ -229,6 +233,7 @@ func Load() (Config, error) {
 	c.LastFMAPIKey = os.Getenv("LARK_LASTFM_API_KEY")
 	c.YouTubeFeedURL = env("LARK_YOUTUBE_FEED_URL", "https://www.youtube.com/feeds/videos.xml")
 	c.YouTubeThumbURL = env("LARK_YOUTUBE_THUMB_URL", "https://i.ytimg.com/vi")
+	c.YouTubeCoverURL = env("LARK_YOUTUBE_COVER_URL", "https://i.ytimg.com/vi")
 	if v := os.Getenv("LARK_LANGUAGE"); v != "" {
 		c.Language = v
 	}

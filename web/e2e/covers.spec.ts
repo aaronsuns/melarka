@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { login } from "./playback";
 
 test("covers load from the folder image; songs without one keep their initials", async ({ page }) => {
