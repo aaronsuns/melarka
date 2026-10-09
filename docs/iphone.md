@@ -106,6 +106,12 @@ level there. It works in desktop browsers. Melarka
 deliberately does not route playback through Web Audio to work around this: iOS suspends that when
 the phone is locked, which would stop the music.
 
+**The sleep timer** (Now Playing → ⋯) in a browser tab is a JavaScript timer, which a browser may
+delay while the page is in the background, so it can pause a little late. Its 10-second fade is
+not heard in Safari on an iPhone (the same volume limit as above): there it simply pauses. In the
+iPhone app the timer is hidden for now; the app's own engine will run it natively, so that it keeps
+time with the phone locked.
+
 ## Troubleshooting
 
 - **"Can't connect" on first launch**: open `https://<your server>/api/v1/info` in Safari on the

@@ -85,6 +85,12 @@ export interface Player {
   modesAvailable: boolean;
   setShuffle(on: boolean): void;
   cycleRepeat(): void;
+  // The sleep timer's fade: multiplies the track's loudness gain (0..1).
+  // iOS Safari ignores audio.volume, so there it is not heard.
+  setFade(f: number): void;
+  // On: the next natural end loads the next track paused instead of playing
+  // it (beats repeat one). Cleared by that end, or by passing false.
+  stopAfterCurrent(on: boolean): void;
 }
 
 export interface PlayerProgress {
@@ -297,6 +303,19 @@ function WebPlayerProvider({
     },
     [audio],
   );
+  const setFade = useCallback(
+    (f: number) => {
+      fadeRef.current = Math.min(1, Math.max(0, f));
+      const track = current(queueRef.current);
+      // A track not loaded yet gets the level when load() applies it.
+      if (track && track.id === loadedId.current) applyVolume(track);
+    },
+    [applyVolume],
+  );
+  const stopAfter = useRef(false);
+  const stopAfterCurrent = useCallback((on: boolean) => {
+    stopAfter.current = on;
+  }, []);
   // The queue index a prev (or offline-skip) dispatch is expected to land
   // on, set only when that dispatch will actually move the index. This
   // (not a plain boolean) is what lets the "load whatever became current"
@@ -727,10 +746,17 @@ function WebPlayerProvider({
       clearStall();
       finishListen("ended");
       const done = current(queueRef.current);
+      // The sleep timer's "end of this track": the next track is loaded but
+      // not played (go() loads with autoplay: wantPlay.current).
+      const stopHere = stopAfter.current;
+      if (stopHere) {
+        stopAfter.current = false;
+        wantPlay.current = false;
+      }
       // Repeat one: the same track again, restarted in place — no new src,
       // so nothing is fetched (it works hidden, and can't stall). A new
-      // listen, so each loop is a new play event.
-      if (modesRef.current.repeat === "one" && done && loadedId.current === done.id) {
+      // listen, so each loop is a new play event. The sleep timer wins.
+      if (!stopHere && modesRef.current.repeat === "one" && done && loadedId.current === done.id) {
         notePlayed(done, true);
         listen.current = { trackId: done.id, startedAt: Math.floor(Date.now() / 1000), seconds: 0, lastTime: 0 };
         pendingSeek.current = 0;
@@ -746,6 +772,11 @@ function WebPlayerProvider({
       if (done) notePlayed(done, true);
       dropSubstitutes();
       if (!go(choose(changeOpts()))) stop(null);
+      if (stopHere) {
+        // A real element is already paused at its end; make sure of it.
+        if (!audio.paused) audio.pause();
+        setPlaying(false);
+      }
     };
     // A track that doesn't come from the phone and isn't moving: switch to
     // one that does, if there is one.
@@ -1608,11 +1639,11 @@ function WebPlayerProvider({
     () => ({
       queue, current: cur, playing, quality, error, notice, showNotice, needsTap,
       playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
-      modes: shownModes, modesAvailable: true, setShuffle, cycleRepeat,
+      modes: shownModes, modesAvailable: true, setShuffle, cycleRepeat, setFade, stopAfterCurrent,
     }),
     [
       queue, cur, playing, quality, error, notice, showNotice, needsTap, playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove,
-      updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready, shownModes, setShuffle, cycleRepeat,
+      updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready, shownModes, setShuffle, cycleRepeat, setFade, stopAfterCurrent,
     ],
   );
   const progress = useMemo<PlayerProgress>(() => ({ position, duration }), [position, duration]);

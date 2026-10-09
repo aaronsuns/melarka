@@ -4,6 +4,7 @@ import { Cover } from "../components/Cover";
 import { duration } from "../format";
 import { useT } from "../i18n/i18n";
 import { QueueRows, entryKeys } from "../player/QueueSheet";
+import { SleepTimerMenu } from "../player/SleepTimerMenu";
 import { EPISODE_ORDERS } from "./episodeQueue";
 import { EPISODE_RATES, useEpisodes, useEpisodesProgress } from "./EpisodesProvider";
 
@@ -107,6 +108,7 @@ export function EpisodeNowPlaying({ onClose }: { onClose: () => void }) {
         <span className="badge">{t("channels.title")}</span>
         <span className="now-top-end">
           <button className="icon" aria-label={t("episodes.queue")} aria-pressed={showQueue} onClick={() => setShowQueue((s) => !s)}>☰</button>
+          <SleepTimerMenu />
         </span>
       </div>
       {showQueue ? (

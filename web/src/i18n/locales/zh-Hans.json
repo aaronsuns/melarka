@@ -130,6 +130,8 @@
   "now.radioEnd": "队列结束后会自动播放私人电台",
   "now.shuffle": "随机播放", "now.repeat.off": "循环：关", "now.repeat.all": "列表循环", "now.repeat.one": "单曲循环",
   "now.repeatAllEnd": "播完后从头再来",
+  "now.more": "更多",
+  "sleep.title": "睡眠定时", "sleep.minutes": "{n} 分钟", "sleep.endOfTrack": "播完这首", "sleep.off": "关闭定时", "sleep.chip": "睡眠定时，剩余 {time}",
   "now.editInfo": "编辑信息", "now.deleteSong": "删除歌曲", "now.confirmDelete": "确认删除",
 
   "admin.nav.title": "管理", "admin.nav.users": "用户", "admin.nav.pending": "待定",

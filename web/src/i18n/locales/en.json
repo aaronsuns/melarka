@@ -131,6 +131,8 @@
   "now.radioEnd": "My radio starts automatically when the queue ends",
   "now.shuffle": "Shuffle", "now.repeat.off": "Repeat: off", "now.repeat.all": "Repeat all", "now.repeat.one": "Repeat one",
   "now.repeatAllEnd": "The queue starts over at the end",
+  "now.more": "More",
+  "sleep.title": "Sleep timer", "sleep.minutes": "{n} minutes", "sleep.endOfTrack": "End of this track", "sleep.off": "Turn off timer", "sleep.chip": "Sleep timer, {time} left",
   "now.editInfo": "Edit info", "now.deleteSong": "Delete song", "now.confirmDelete": "Confirm delete",
 
   "admin.nav.title": "Admin", "admin.nav.users": "Users", "admin.nav.pending": "Pending",
