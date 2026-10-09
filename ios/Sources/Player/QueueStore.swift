@@ -15,6 +15,22 @@ struct QueueSnapshot: Codable, Equatable {
     var savedAt: Int
     var ownDevice: String?
     var modes: PlayModes?
+
+    private enum CodingKeys: String, CodingKey { case version, music, episodes, active, savedAt, ownDevice, modes }
+}
+
+extension QueueSnapshot {
+    /// A malformed `modes` (a damaged file) reads as none, so the queues are still restored.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? QueueSnapshot.currentVersion
+        music = try c.decode(PlaybackQueue.self, forKey: .music)
+        episodes = try c.decode(PlaybackQueue.self, forKey: .episodes)
+        active = try c.decode(Item.Kind.self, forKey: .active)
+        savedAt = try c.decode(Int.self, forKey: .savedAt)
+        ownDevice = try c.decodeIfPresent(String.self, forKey: .ownDevice)
+        modes = (try? c.decodeIfPresent(PlayModes.self, forKey: .modes)) ?? nil
+    }
 }
 
 /// Per-user files in one directory: `queues-<userId>.json` and `events-<userId>.json`. With no user nothing is

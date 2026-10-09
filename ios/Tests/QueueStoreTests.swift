@@ -100,4 +100,18 @@ final class QueueStoreTests: EngineTestCase {
         XCTAssertEqual(store.load()?.modes, PlayModes(repeatMode: .one))
         XCTAssertEqual(store.load()?.version, 1)
     }
+
+    /// A malformed `modes` field: the modes fall back to off, the saved queue is kept.
+    func testAMalformedModesFieldKeepsTheQueue() throws {
+        let item = #"{"kind":"track","id":"7","title":"T7","artist":"A","album":"B","durationMs":1000,"meta":{"id":7}}"#
+        let q = #"{"items":[\#(item)],"index":0,"positionMs":0,"source":"list"}"#
+        let empty = #"{"items":[],"index":0,"positionMs":0,"source":"list"}"#
+        for bad in ["5", "\"all\"", "[1]"] {
+            let file = #"{"version":1,"music":\#(q),"episodes":\#(empty),"active":"track","savedAt":1,"modes":\#(bad)}"#
+            try Data(file.utf8).write(to: queueFile)
+            makeEngine()
+            XCTAssertEqual(engine.music.items.map(\.id), ["7"], bad)
+            XCTAssertEqual(engine.modes, PlayModes(), bad)
+        }
+    }
 }

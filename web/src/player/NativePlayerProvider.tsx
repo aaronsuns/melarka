@@ -15,6 +15,9 @@ const NOTICE_MS = 4000;
 // Native answers hello with its queue at once; if it never does, the idle
 // mini player's shortcut still appears.
 const READY_AFTER_MS = 1500;
+// A setModes native hasn't confirmed yet: states that disagree with it are
+// taken as sent before native handled it, for at most this long.
+const MODES_PENDING_MS = 2000;
 // flushEvents gives up waiting for native's `flushed` after this long.
 const FLUSH_TIMEOUT_MS = 3000;
 // An app without shuffle/repeat (its state carries no `shuffle`): the
@@ -78,6 +81,7 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
   const firstQueue = useRef(true);
   // The modes as last sent or reported (a second tap before native answers steps on from the first).
   const modesRef = useRef<PlayModes>(NO_MODES);
+  const pendingModes = useRef<{ modes: PlayModes; at: number } | null>(null);
 
   const mirror = useCallback((q: QueueState) => {
     queueRef.current = q;
@@ -138,7 +142,14 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
             }
             const was = playingRef.current;
             playingRef.current = m.playing;
-            modesRef.current = stateModes(m) ?? NO_MODES;
+            const said = stateModes(m) ?? NO_MODES;
+            const asked = pendingModes.current;
+            // A state already on its way before native handled the last tap: the tap stands.
+            const stale = asked && (said.shuffle !== asked.modes.shuffle || said.repeat !== asked.modes.repeat) && Date.now() - asked.at < MODES_PENDING_MS;
+            if (!stale) {
+              pendingModes.current = null;
+              modesRef.current = said;
+            }
             setState(m);
             setClock({ positionMs: m.positionMs, durationMs: m.durationMs, playing: m.playing, rate: m.rate, at: Date.now() });
             // Native sounding takes the session: a web preview or video pauses.
@@ -250,6 +261,7 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
   // too): the web only asks; native answers with its queue and state.
   const postModes = useCallback((m: PlayModes) => {
     modesRef.current = m;
+    pendingModes.current = { modes: m, at: Date.now() };
     nativePost({ type: "setModes", shuffle: m.shuffle, repeat: m.repeat });
   }, []);
   const setShuffle = useCallback(

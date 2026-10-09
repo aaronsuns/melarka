@@ -104,9 +104,28 @@ describe("chooseNext with wrap (repeat all)", () => {
   test("at the end of the queue, wrap starts over instead of a favorite or none", () => {
     const favs = deps({ favs: [[9, 0]], cached: [9] });
     expect(chooseNext(q([1, 2], 1), { mustBeLocal: false, favoritesAtEnd: true, wrap: true }, favs)).toEqual({ kind: "wrap" });
-    expect(chooseNext(q([1, 2], 1), { mustBeLocal: true, favoritesAtEnd: true, wrap: true }, favs)).toEqual({ kind: "wrap" });
+    // Must be local, with nothing local in the queue: as without wrap, a cached favorite.
+    expect(chooseNext(q([1, 2], 1), { mustBeLocal: true, favoritesAtEnd: true, wrap: true }, favs)).toEqual({ kind: "favorite", track: tr(9) });
+    expect(chooseNext(q([1, 2], 1), { mustBeLocal: true, favoritesAtEnd: true, wrap: true }, deps({ cached: [1] }))).toEqual({ kind: "wrap", local: true });
     expect(chooseNext(q([1, 2], 1), { mustBeLocal: false, favoritesAtEnd: false, wrap: true }, deps())).toEqual({ kind: "wrap" });
     // Only failed tracks left: nothing to play after the current one either.
     expect(chooseNext(q([1, 2, 3], 1), { mustBeLocal: false, favoritesAtEnd: false, wrap: true }, deps({ failedIds: [3] }))).toEqual({ kind: "wrap" });
+  });
+
+  // Repeat all never loops on what can't play: with nothing playable in the
+  // whole queue, the choice is the one without wrap (a favorite, or none).
+  test("every track failed: no wrap, never-stop's choice instead", () => {
+    const s = q([1, 2, 3], 2);
+    const all = { failedIds: [1, 2, 3] };
+    expect(chooseNext(s, { mustBeLocal: false, favoritesAtEnd: true, wrap: true }, deps({ ...all, favs: [[9, 0]] }))).toEqual({ kind: "favorite", track: tr(9) });
+    expect(chooseNext(s, { mustBeLocal: false, favoritesAtEnd: false, wrap: true }, deps(all))).toEqual({ kind: "none" });
+    // The failure brake (must be local) with nothing cached: none, not a loop.
+    expect(chooseNext(s, { mustBeLocal: true, favoritesAtEnd: true, wrap: true }, deps({ failedIds: [3] }))).toEqual({ kind: "none" });
+  });
+
+  test("offline with nothing cached: no wrap", () => {
+    const off = deps({ playable: () => false });
+    expect(chooseNext(q([1, 2], 1), { mustBeLocal: false, favoritesAtEnd: true, wrap: true }, off)).toEqual({ kind: "none" });
+    expect(chooseNext(q([1, 2], 1), { mustBeLocal: false, favoritesAtEnd: true, wrap: true }, deps({ playable: (id) => id === 1 }))).toEqual({ kind: "wrap" });
   });
 });

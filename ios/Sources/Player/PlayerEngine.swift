@@ -978,9 +978,11 @@ import os
     /// The lookahead: the next 2 tracks into the cache, once the current music item sounds (so its own
     /// stream starts first), and again when the queue changes under it. The cache skips what it has or is
     /// already fetching, and downloads on any network.
+    /// Repeat one: the current track first, when it streams, so the loops after the first play from the phone.
     private func prefetchUpcoming() {
         guard let l = loaded, l.kind == .track, playing, !buffering else { return }
-        let next = Array(music.upcoming.prefix(2))
+        var next = Array(music.upcoming.prefix(2))
+        if modes.repeatMode == .one, let cur = music.current, !isLocal(cur) { next.insert(cur, at: 0) }
         if !next.isEmpty { cache.prefetch(next) }
     }
 
@@ -1083,12 +1085,13 @@ import os
         case .insert(let item):
             music.items.insert(item, at: music.index + 1)
             if modes.repeatMode == .all { substitutes.append(Substitute(id: item.id, requeue: requeue?.id)) }
-        case .wrap:
-            // Repeat all: the whole queue again from its first item (offline, from the first one on the phone).
+        case .wrap(let mustBeLocal):
+            // Repeat all: the whole queue again, from its first item that may play (not failed; on the phone
+            // offline or after failures). The chooser only wraps when there is one.
             dropSubstitutes()                 // never part of the next pass
             music = PlayModes.newPass(music, shuffle: modes.shuffle, random: random)
-            guard let first = music.current else { return false }
-            let start = network.isOnline || isLocal(first) ? 0 : (music.items.firstIndex(where: isLocal) ?? 0)
+            let local = mustBeLocal || !network.isOnline
+            guard let start = music.items.firstIndex(where: { !isFailed($0) && (!local || isLocal($0)) }) else { return false }
             load(.track, index: start, startMs: 0, autoplay: true)
             return true
         case .none:

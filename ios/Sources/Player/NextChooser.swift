@@ -11,7 +11,7 @@ enum NextChooser {
     enum Choice: Equatable {
         case queue(Int)       // play queue entry i, moved to just after the current one
         case insert(Item)     // put this cached favorite after the current one and play it
-        case wrap             // repeat all: the queue starts over from its first item
+        case wrap(mustBeLocal: Bool)   // repeat all: the queue starts over (from its first item that may play)
         case none
     }
 
@@ -19,11 +19,15 @@ enum NextChooser {
     static let history = 30
 
     /// `wrap` (repeat all): with nothing playable after the current item, start the queue over instead of a
-    /// favorite or stopping. Without it the result is exactly as before.
+    /// favorite or stopping, but only when some item in it may play: not failed, and on the phone when
+    /// `mustBeLocal` (offline, the failure brake). Otherwise, and without `wrap`, the result is as before
+    /// (a cached favorite, or none), so a queue that can't play never loops.
     static func choose(_ q: PlaybackQueue, mustBeLocal: Bool, failed: (Item) -> Bool, isLocal: (Item) -> Bool,
                        favorites: [Item], random: () -> Double, wrap: Bool = false) -> Choice {
         let cands = q.items.indices.filter { $0 > q.index && !failed(q.items[$0]) }
-        if wrap && cands.isEmpty { return .wrap }
+        if wrap && cands.isEmpty && q.items.contains(where: { !failed($0) && (!mustBeLocal || isLocal($0)) }) {
+            return .wrap(mustBeLocal: mustBeLocal)
+        }
         if !mustBeLocal, let first = cands.first { return .queue(first) }
         if let j = cands.first(where: { isLocal(q.items[$0]) }) { return .queue(j) }
         if let fav = pickFavorite(q, failed: failed, favorites: favorites, random: random) { return .insert(fav) }

@@ -601,3 +601,23 @@ it("turning shuffle on drops the queued block; native's unshuffled queue keeps i
   act(() => p.addToQueue(tr(9)));
   expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 8, 9, 2, 3, 4, 7]);
 });
+
+it("a state already in flight before native handled a tap doesn't roll the next tap back", () => {
+  vi.useFakeTimers();
+  renderPlayer();
+  n.emit({ type: "queue", kind: "track", items: [track1, track2].map(trackItem), index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true }));
+  act(() => p.cycleRepeat()); // asks for "all"
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, positionMs: 500 })); // a tick sent before that: still "off"
+  act(() => p.cycleRepeat());
+  expect(n.sent("setModes").map((m) => m.repeat)).toEqual(["all", "one"]);
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, repeat: "one" })); // confirmed
+  expect(p.modes.repeat).toBe("one");
+  // Native never confirmed a request (an old reply lost, the lock screen won): its state rules again soon.
+  act(() => p.setShuffle(true));
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, repeat: "one" }));
+  act(() => vi.advanceTimersByTime(3000));
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, repeat: "one" }));
+  act(() => p.setShuffle(true));
+  expect(n.sent("setModes").slice(-2).map((m) => m.shuffle)).toEqual([true, true]);
+});
