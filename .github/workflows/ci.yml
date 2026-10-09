@@ -122,6 +122,13 @@ jobs:
       - run: npx playwright install --with-deps webkit chromium
       - run: npm run build
       - run: npm run e2e # the test server uses web/e2e/fake-yt-dlp.sh: no network
+      - name: TEMP keep the failed tests' traces
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-test-results
+          path: web/test-results
+          retention-days: 3
 
   image:
     needs: [go, web]

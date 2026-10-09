@@ -189,15 +189,17 @@ JSON
   exit 0
 fi
 
-# Recommendations: a seed-song search (ytsearch5:) always finds one 30 s
-# video — the e2e library's tones are 30 s, so it matches any of them — and
+# Recommendations: a seed-song search (ytsearch5:) always finds a 30 s and a
+# 180 s video — the e2e library's tones are 30 s, and 甜蜜蜜 180 s, so the
+# server's ±10 s duration match finds one for any of them — and
 # every YouTube Mix (watch?v=<id>&list=RD<id>, expanded: never --no-playlist)
 # is the same canned list: two songs, a compilation the server must filter
 # out, and the e2e download fakevideo01 (filtered as already downloaded).
 if [[ "$last" == ytsearch5:* ]]; then
   cat <<'JSON'
 {"_type":"playlist","entries":[
-{"id":"fakeseed001","title":"种子歌曲","channel":"种子频道","duration":30,"thumbnails":[{"url":"https://i.ytimg.com/vi/fakeseed001/hqdefault.jpg"}]}
+{"id":"fakeseed001","title":"种子歌曲","channel":"种子频道","duration":30,"thumbnails":[{"url":"https://i.ytimg.com/vi/fakeseed001/hqdefault.jpg"}]},
+{"id":"fakeseed002","title":"种子歌曲（长）","channel":"种子频道","duration":180,"thumbnails":[{"url":"https://i.ytimg.com/vi/fakeseed002/hqdefault.jpg"}]}
 ]}
 JSON
   exit 0
