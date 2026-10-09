@@ -553,3 +553,33 @@ func TestWorkerWaitsForBusyBeforeMeasuring(t *testing.T) {
 		t.Fatalf("events %s", got)
 	}
 }
+
+// A file that times out again and again is recorded as failed on the third
+// timeout, so it waits RetryFailedAfter instead of costing a long decode
+// every hour.
+func TestWorkerRepeatedTimeoutRecordedAsFailure(t *testing.T) {
+	e := newWEnv(t)
+	id := e.add(t, "stuck.flac", 100, "")
+	m := &fakeMeasurer{block: func(ctx context.Context) { <-ctx.Done() }}
+	w := e.worker(m)
+	w.Timeout = func(time.Duration) time.Duration { return 20 * time.Millisecond }
+	for i := range timeoutsBeforeFailure - 1 {
+		if _, err := w.Step(context.Background()); !isTransient(err) {
+			t.Fatalf("timeout %d: err %v, want transient", i+1, err)
+		}
+		if r := e.row(t, id); r.checked.Valid {
+			t.Fatalf("timeout %d recorded: %+v", i+1, r)
+		}
+		e.now = e.now.Add(transientSkip + time.Second)
+	}
+	if !step(t, w) {
+		t.Fatal("the last timeout should be recorded as a measured failure")
+	}
+	if r := e.row(t, id); r.lufs.Valid || r.checked.Int64 != e.now.Unix() {
+		t.Fatalf("after %d timeouts: %+v", timeoutsBeforeFailure, r)
+	}
+	e.now = e.now.Add(transientSkip + time.Second)
+	if step(t, w) {
+		t.Fatal("a recorded failure waits RetryFailedAfter")
+	}
+}

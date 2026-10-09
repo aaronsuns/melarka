@@ -220,7 +220,8 @@ new and changed files are measured. A changed file is measured again. A song tha
 is tried again after `loudness.retry_failed_after`. A file that cannot be read (an unmounted disk),
 a missing ffmpeg or a measurement that takes too long (twice the song's length, at least a minute,
 at most 30 minutes) records nothing: that song is passed over for an hour, and after a few such
-failures in a row the worker pauses for 10 minutes. `loudness.gap` and
+failures in a row the worker pauses for 10 minutes. A song that times out three times is treated
+as failing to decode. `loudness.gap` and
 `loudness.retry_failed_after` are only checked when `loudness.enabled` is on. Music files are only
 read, never written.
 

@@ -172,6 +172,10 @@ const (
 	// transientSkip is how long a track that failed transiently is passed
 	// over, so a stuck file does not block the ones behind it.
 	transientSkip = time.Hour
+	// timeoutsBeforeFailure timeouts of the same track (counted since the
+	// server started) record it as failed, so a file that never finishes is
+	// retried only after RetryFailedAfter instead of every transientSkip.
+	timeoutsBeforeFailure = 3
 	// Per-track timeout: twice the duration, at least a minute, at most 30.
 	minTimeout = time.Minute
 	maxTimeout = 30 * time.Minute
@@ -205,8 +209,25 @@ type Worker struct {
 	Sleep   func(ctx context.Context, d time.Duration) bool // false when ctx ended
 	Timeout func(duration time.Duration) time.Duration      // per-track limit (default timeoutFor)
 
-	mu   sync.Mutex
-	skip map[int64]time.Time // transiently failed track → when it may be picked again
+	mu       sync.Mutex
+	skip     map[int64]time.Time // transiently failed track → when it may be picked again
+	timeouts map[int64]int       // timeouts per track
+}
+
+// timedOut counts a timeout of track id and reports whether it has now
+// timed out often enough to be recorded as failed.
+func (w *Worker) timedOut(id int64) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.timeouts == nil {
+		w.timeouts = map[int64]int{}
+	}
+	w.timeouts[id]++
+	if w.timeouts[id] < timeoutsBeforeFailure {
+		return false
+	}
+	delete(w.timeouts, id)
+	return true
 }
 
 func (w *Worker) now() time.Time {
@@ -390,11 +411,14 @@ func (w *Worker) Step(ctx context.Context) (measured bool, err error) {
 	if err := ctx.Err(); err != nil {
 		return false, err // shutting down: not a failure of this track
 	}
-	if timedOut || errors.Is(merr, ErrTransient) {
+	switch {
+	case timedOut && w.timedOut(id):
+		merr = fmt.Errorf("timed out %d times: %w", timeoutsBeforeFailure, context.DeadlineExceeded)
+	case timedOut:
 		w.skipFor(id)
-		if timedOut {
-			merr = fmt.Errorf("timed out: %w", context.DeadlineExceeded)
-		}
+		return false, fmt.Errorf("%w: track %d: timed out: %v", ErrTransient, id, context.DeadlineExceeded)
+	case errors.Is(merr, ErrTransient):
+		w.skipFor(id)
 		return false, fmt.Errorf("%w: track %d: %v", ErrTransient, id, merr)
 	}
 	var lufs, peak any // NULL unless measured
