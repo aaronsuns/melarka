@@ -501,10 +501,38 @@ function WebPlayerProvider({
   // background this runs inside the element's own event, the last moment
   // the page is sure to be running.
   // `requeue`: the interrupted track, put back right after the substitute.
+  // Repeat all: a cached favorite that stood in for a track that couldn't
+  // play (offline something local must still sound) plays once and leaves
+  // again — dropped, with the interrupted track's old entry (its requeued
+  // copy stays, to be tried again), when it ends or is skipped, and before
+  // a new pass. So the loop stays the queue's own. Repeat off: never set.
+  const substitutes = useRef<{ track: Track; requeue: Track | null }[]>([]);
+  const dropSubstitutes = useCallback(() => {
+    const subs = substitutes.current;
+    substitutes.current = [];
+    if (subs.length === 0 || modesRef.current.repeat !== "all") return;
+    let q = queueRef.current;
+    for (const sub of subs) {
+      const i = q.tracks.indexOf(sub.track);
+      if (i < 0) continue; // removed already
+      const k = sub.requeue ? q.tracks.indexOf(sub.requeue) : -1; // the interrupted entry (the first copy)
+      const copy = sub.requeue ? q.tracks.indexOf(sub.requeue, i + 1) : -1; // its requeued copy
+      const indexWithout = (d: Set<number>) => q.index - [...d].filter((x) => x < q.index).length - (d.has(q.index) ? 1 : 0);
+      let drop = new Set(k >= 0 && k < i ? [i, k] : [i]);
+      // Nothing left before it to stand on: keep the old entry, drop the copy.
+      if (indexWithout(drop) < 0 && copy >= 0) drop = new Set([i, copy]);
+      q = { ...q, tracks: q.tracks.filter((_, x) => !drop.has(x)), index: Math.max(0, indexWithout(drop)) };
+    }
+    if (q === queueRef.current) return;
+    queueRef.current = q;
+    dispatch({ type: "setOrder", tracks: q.tracks, index: q.index });
+  }, []);
+
   const go = useCallback(
     (c: NextChoice, notice?: string, o: { picked?: boolean; requeue?: Track | null } = {}): boolean => {
       if (c.kind === "none") return false;
       if (c.kind === "wrap") {
+        dropSubstitutes(); // never part of the next pass
         // Repeat all: the whole queue again from its first track (offline,
         // from the first one that can play).
         const nq = newPass(queueRef.current, modesRef.current.shuffle);
@@ -524,12 +552,13 @@ function WebPlayerProvider({
       const nq = queueReducer(queueRef.current, action);
       queueRef.current = nq;
       dispatch(action);
+      if (c.kind === "favorite" && modesRef.current.repeat === "all") substitutes.current.push({ track: c.track, requeue: requeue ?? null });
       load(nq.tracks[nq.index], { autoplay: wantPlay.current, index: nq.index, picked: o.picked });
       if (c.kind === "queue" && c.skippedOffline) showNotice(t("player.skippedUncached"));
       else if (notice) showNotice(notice);
       return true;
     },
-    [load, showNotice],
+    [load, showNotice, dropSubstitutes],
   );
 
   // Reload the same track at the last known position after a network error.
@@ -703,6 +732,7 @@ function WebPlayerProvider({
       // the finished one, or it would start downloading in that very gap.
       setBuffering(true);
       if (done) notePlayed(done, true);
+      dropSubstitutes();
       if (!go(choose(changeOpts()))) stop(null);
     };
     // A track that doesn't come from the phone and isn't moving: switch to
@@ -817,7 +847,7 @@ function WebPlayerProvider({
       handlers.forEach(([n, h]) => audio.removeEventListener(n, h));
       window.removeEventListener("online", onOnline);
     };
-  }, [audio, finishListen, clearNetRetry, clearStall, retryNetwork, setNeedsTap, setBuffering, choose, changeOpts, go, isLocal, acting, playOrAskTap]);
+  }, [audio, finishListen, clearNetRetry, clearStall, retryNetwork, setNeedsTap, setBuffering, choose, changeOpts, go, isLocal, acting, playOrAskTap, dropSubstitutes]);
   // A seek (from anywhere) cancels a pending stall switch.
   useEffect(() => {
     audio.addEventListener("seeking", clearStall);
@@ -923,6 +953,7 @@ function WebPlayerProvider({
       errors.current = 0;
       setError(null);
       wantPlay.current = true;
+      substitutes.current = [];
       let order = tracks;
       const m = modesRef.current;
       if (m.shuffle) {
@@ -980,11 +1011,12 @@ function WebPlayerProvider({
   // The same never-stop choice as at the end of a track (from the lock
   // screen or the car, too), loaded synchronously.
   const next = useCallback(() => {
+    dropSubstitutes();
     const c = choose(changeOpts());
     if (c.kind === "none") return; // already at the end: nothing moves
     finishListen("skip");
     go(c, undefined, { picked: true });
-  }, [finishListen, choose, changeOpts, go]);
+  }, [finishListen, choose, changeOpts, go, dropSubstitutes]);
 
   const seek = useCallback(
     (s: number) => {

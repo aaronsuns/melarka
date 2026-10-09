@@ -637,3 +637,55 @@ describe("repeat all and failures", () => {
     expect(ids(player())).toEqual([1, 2]);
   });
 });
+
+// Repeat all keeps the cached substitute (offline it must still play
+// something local) but only for that one play: the loop stays the queue's own.
+describe("repeat all and a cached substitute", () => {
+  beforeEach(() => {
+    localStorage.setItem("lark.modes", JSON.stringify({ shuffle: false, repeat: "all", original: null }));
+    favs = [{ track: tr(9), lastPlayedAt: 0 }];
+    kinds.set(9, "favorite");
+  });
+  const failNetwork = (audio: FakeAudio) => {
+    for (let i = 0; i < 4; i++) {
+      audio.error = { code: 2 };
+      act(() => audio.fire("error"));
+    }
+  };
+
+  test("a network failure on the last track plays the favorite once, then the loop is the queue again", () => {
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2)], 1));
+    failNetwork(audio);
+    expect(player().current?.id).toBe(9);
+    expect(ids(player())).toEqual([1, 2, 9, 2]);
+    act(() => audio.fire("ended"));
+    expect(ids(player())).toEqual([1, 2]);
+    expect(player().current?.id).toBe(2); // the interrupted track, tried again
+    act(() => audio.fire("ended"));
+    expect(player().current?.id).toBe(1);
+    expect(ids(player())).toEqual([1, 2]);
+  });
+
+  test("skipping the substitute drops it too", () => {
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3)], 1));
+    failNetwork(audio);
+    expect(player().current?.id).toBe(9);
+    expect(ids(player())).toEqual([1, 2, 9, 2, 3]);
+    act(() => player().next());
+    expect(ids(player())).toEqual([1, 2, 3]);
+    expect(player().current?.id).toBe(2);
+  });
+
+  test("a substitute jumped past never joins the next pass", () => {
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3)], 1));
+    failNetwork(audio);
+    act(() => player().jump(4)); // past it, to the last track
+    expect(player().current?.id).toBe(3);
+    act(() => audio.fire("ended"));
+    expect(player().current?.id).toBe(1);
+    expect(ids(player())).toEqual([1, 2, 3]);
+  });
+});
