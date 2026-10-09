@@ -126,15 +126,6 @@ jobs:
       - run: npx playwright install --with-deps webkit chromium
       - run: npm run build
       - run: npm run e2e # the test server uses web/e2e/fake-yt-dlp.sh: no network
-      - name: TEMP the whole e2e suite 3 more times, each on a fresh server
-        run: for i in 1 2 3; do echo "== e2e round $i"; npm run e2e || exit 1; done
-      - name: TEMP keep the failed tests' traces
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: e2e-test-results
-          path: web/test-results
-          retention-days: 3
 
   image:
     needs: [go, web]
@@ -210,27 +201,8 @@ jobs:
           sys.stderr.write("simulator: %s, iOS %s\n" % (best[1]["name"], ".".join(map(str, best[0]))))
           print(best[1]["udid"])
           ')
-          echo "SIM_UDID=$udid" >> "$GITHUB_ENV"
           xcodebuild test -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$udid" \
             -derivedDataPath build/dd -quiet
-      - name: TEMP stress the flaky iOS tests
-        if: always()
-        run: |
-          set +e
-          stress() {
-            xcodebuild test-without-building -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$SIM_UDID" \
-              -derivedDataPath build/dd "$@" > stress.log 2>&1
-            local rc=$?; echo "xcodebuild exit $rc"; [ $rc -eq 0 ] || bad=1
-            grep -E "error: -\[|' failed \(" stress.log | sort | uniq -c | sort -rn | head -40
-            echo "passed: $(grep -cE "' passed \(" stress.log)  failed: $(grep -cE "' failed \(" stress.log)"
-          }
-          bad=0
-          echo "== the whole suite, 5 times"
-          stress -test-iterations 5
-          echo "== the two flaky classes, 30 times, relaunched each time"
-          stress -only-testing:LarkTests/AVPlayerBackendTests -only-testing:LarkTests/BridgeWebViewTests \
-            -test-iterations 30 -test-repetition-relaunch-enabled YES
-          exit $bad
       - run: python3 -m unittest discover -s scripts
 
   # Release gate: gitleaks over the full history + the private denylist (repository secret OSS_DENYLIST).
