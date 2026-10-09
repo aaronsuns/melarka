@@ -12,6 +12,7 @@
   "settings.nativeApp": "iPhone app settings", "settings.nativeAppHint": "Offline cache, server and Shortcuts for the Melarka app on this iPhone.",
   "settings.version": "Version {v}", "settings.source": "Source code",
   "settings.carLyrics": "Car lyrics (Bluetooth)", "settings.carLyricsHint": "Shows the current lyric line as the song title in the car and on the lock screen.",
+  "settings.loudness": "Volume normalization", "settings.loudnessHint": "Plays every song at a similar loudness. Loud songs are turned down; quiet ones are never boosted.",
 
   "app.notFound": "Page not found",
 

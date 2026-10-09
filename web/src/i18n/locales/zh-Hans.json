@@ -12,6 +12,7 @@
   "settings.nativeApp": "iPhone App 设置", "settings.nativeAppHint": "本机 Melarka App 的离线缓存、服务器和快捷指令。",
   "settings.version": "版本 {v}", "settings.source": "源代码",
   "settings.carLyrics": "车载歌词（蓝牙）", "settings.carLyricsHint": "在车载屏幕和锁屏上，把当前这句歌词显示为歌名。",
+  "settings.loudness": "音量均衡", "settings.loudnessHint": "让每首歌的响度相近：只把太响的歌调低，不放大安静的歌。",
 
   "app.notFound": "页面不存在",
 

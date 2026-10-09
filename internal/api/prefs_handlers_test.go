@@ -19,7 +19,7 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	s, ts := newTestServer(t)
 	kid := loginAs(t, s, "kid", "member")
 	other := loginAs(t, s, "mum", "member")
-	if _, b := do(t, ts, kid, "GET", "/api/v1/me/preferences", nil); !strings.Contains(string(b), `"on_open":"shuffle_favorites"`) || !strings.Contains(string(b), `"car_lyrics":true`) {
+	if _, b := do(t, ts, kid, "GET", "/api/v1/me/preferences", nil); !strings.Contains(string(b), `"on_open":"shuffle_favorites"`) || !strings.Contains(string(b), `"car_lyrics":true`) || !strings.Contains(string(b), `"normalize_loudness":true`) {
 		t.Fatalf("default %s", b)
 	}
 	r, b := do(t, ts, kid, "PUT", "/api/v1/me/preferences", map[string]any{"language": "zh-Hant", "on_open": "resume"})
@@ -28,6 +28,9 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	}
 	if r, b := do(t, ts, kid, "PUT", "/api/v1/me/preferences", map[string]any{"language": "zh-Hant", "on_open": "resume", "car_lyrics": false}); r.StatusCode != 200 || !strings.Contains(string(b), `"car_lyrics":false`) {
 		t.Fatalf("put car_lyrics %d %s", r.StatusCode, b)
+	}
+	if r, b := do(t, ts, kid, "PUT", "/api/v1/me/preferences", map[string]any{"language": "zh-Hant", "on_open": "resume", "normalize_loudness": false}); r.StatusCode != 200 || !strings.Contains(string(b), `"normalize_loudness":false`) || !strings.Contains(string(b), `"car_lyrics":false`) {
+		t.Fatalf("put normalize_loudness %d %s", r.StatusCode, b)
 	}
 	if _, b := do(t, ts, other, "GET", "/api/v1/me/preferences", nil); strings.Contains(string(b), "zh-Hant") {
 		t.Fatal("leaked to another user")

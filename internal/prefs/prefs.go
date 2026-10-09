@@ -1,5 +1,6 @@
 // Package prefs stores per-user preferences (UI language, what the player
-// does when it opens, whether lyric lines go to the car/lock-screen title).
+// does when it opens, whether lyric lines go to the car/lock-screen title,
+// whether loud tracks are turned down).
 package prefs
 
 import (
@@ -25,6 +26,10 @@ type Prefs struct {
 	// title. Always set in what Get/Put return (default true); nil in a Put
 	// (a client that predates the field) keeps the stored value.
 	CarLyrics *bool `json:"car_lyrics"`
+	// NormalizeLoudness: the player turns loud tracks down by their gain_db.
+	// Same contract as CarLyrics: always set in what Get/Put return (default
+	// true); nil in a Put keeps the stored value.
+	NormalizeLoudness *bool `json:"normalize_loudness"`
 }
 
 type Store struct {
@@ -40,10 +45,10 @@ func (s *Store) now() int64 {
 }
 
 func (s *Store) Get(ctx context.Context, userID int64) (Prefs, error) {
-	car := true
-	p := Prefs{OnOpen: "shuffle_favorites", CarLyrics: &car}
+	car, loud := true, true
+	p := Prefs{OnOpen: "shuffle_favorites", CarLyrics: &car, NormalizeLoudness: &loud}
 	var lang sql.NullString
-	err := s.DB.QueryRowContext(ctx, `SELECT language, on_open, car_lyrics FROM user_prefs WHERE user_id=?`, userID).Scan(&lang, &p.OnOpen, &car)
+	err := s.DB.QueryRowContext(ctx, `SELECT language, on_open, car_lyrics, normalize_loudness FROM user_prefs WHERE user_id=?`, userID).Scan(&lang, &p.OnOpen, &car, &loud)
 	if errors.Is(err, sql.ErrNoRows) {
 		return p, nil
 	}
@@ -66,10 +71,15 @@ func (s *Store) Put(ctx context.Context, userID int64, p Prefs) (Prefs, error) {
 	if p.CarLyrics != nil {
 		car = *p.CarLyrics
 	}
-	if _, err := s.DB.ExecContext(ctx, `INSERT INTO user_prefs(user_id,language,on_open,car_lyrics,updated_at) VALUES (?1,?2,?3,COALESCE(?4,1),?5)
+	var loud any
+	if p.NormalizeLoudness != nil {
+		loud = *p.NormalizeLoudness
+	}
+	if _, err := s.DB.ExecContext(ctx, `INSERT INTO user_prefs(user_id,language,on_open,car_lyrics,normalize_loudness,updated_at) VALUES (?1,?2,?3,COALESCE(?4,1),COALESCE(?5,1),?6)
 		ON CONFLICT(user_id) DO UPDATE SET language=excluded.language, on_open=excluded.on_open,
-		car_lyrics=COALESCE(?4, user_prefs.car_lyrics), updated_at=excluded.updated_at`,
-		userID, lang, p.OnOpen, car, s.now()); err != nil {
+		car_lyrics=COALESCE(?4, user_prefs.car_lyrics), normalize_loudness=COALESCE(?5, user_prefs.normalize_loudness),
+		updated_at=excluded.updated_at`,
+		userID, lang, p.OnOpen, car, loud, s.now()); err != nil {
 		return Prefs{}, err
 	}
 	return s.Get(ctx, userID)

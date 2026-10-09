@@ -12,6 +12,7 @@
   "settings.nativeApp": "Inställningar för iPhone-appen", "settings.nativeAppHint": "Offlinecache, server och Genvägar för Melarka-appen på den här iPhonen.",
   "settings.version": "Version {v}", "settings.source": "Källkod",
   "settings.carLyrics": "Låttext i bilen (Bluetooth)", "settings.carLyricsHint": "Visar den aktuella textraden som låttitel i bilen och på låsskärmen.",
+  "settings.loudness": "Volymutjämning", "settings.loudnessHint": "Spelar alla låtar på ungefär samma ljudnivå. Höga låtar sänks, tysta förstärks aldrig.",
 
   "app.notFound": "Sidan hittades inte",
 

@@ -31,6 +31,9 @@ type Track struct {
 	AddedAt      int64  `json:"added_at"`
 	TrackNo      *int64 `json:"track_no"`
 	DiscNo       *int64 `json:"disc_no"`
+	// GainDB is the playback attenuation for loudness normalization (see
+	// GainDB); null until the track's loudness has been measured.
+	GainDB *float64 `json:"gain_db"`
 }
 
 type Album struct {
@@ -82,7 +85,7 @@ const visible = `t.status!='trashed' AND t.missing_since IS NULL`
 const trackSelect = `SELECT t.id, COALESCE(NULLIF(o.title,''), t.tag_title), t.rel_path,
 	COALESCE(NULLIF(o.artist,''), t.tag_artist), t.artist_id, COALESCE(al.name,''), t.album_id,
 	NULLIF(COALESCE(o.year, t.tag_year), 0), t.duration_ms, t.codec, t.lossless, t.bitrate, t.status, t.broken, t.broken_reason,
-	t.library_id, t.added_at, t.track_no, t.disc_no,
+	t.library_id, t.added_at, t.track_no, t.disc_no, t.loudness_lufs, t.true_peak_db,
 	EXISTS(SELECT 1 FROM favorites f WHERE f.user_id=? AND f.track_id=t.id),
 	EXISTS(SELECT 1 FROM dislikes d WHERE d.user_id=? AND d.track_id=t.id)
 	FROM tracks t LEFT JOIN track_overrides o ON o.track_id=t.id LEFT JOIN albums al ON al.id=t.album_id`
@@ -92,11 +95,13 @@ func scanTracks(rows *sql.Rows) ([]Track, error) {
 	out := []Track{}
 	for rows.Next() {
 		var tr Track
+		var lufs, peak sql.NullFloat64
 		if err := rows.Scan(&tr.ID, &tr.Title, &tr.Path, &tr.Artist, &tr.ArtistID, &tr.Album, &tr.AlbumID, &tr.Year,
 			&tr.DurationMS, &tr.Codec, &tr.Lossless, &tr.Bitrate, &tr.Status, &tr.Broken, &tr.BrokenReason, &tr.LibraryID, &tr.AddedAt,
-			&tr.TrackNo, &tr.DiscNo, &tr.Favorite, &tr.Disliked); err != nil {
+			&tr.TrackNo, &tr.DiscNo, &lufs, &peak, &tr.Favorite, &tr.Disliked); err != nil {
 			return nil, err
 		}
+		tr.GainDB = GainDB(lufs, peak)
 		if tr.Title == "" {
 			tr.Title = titleFromPath(tr.Path, tr.Artist) // before the artist fallback below
 		}

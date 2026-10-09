@@ -64,3 +64,29 @@ func TestCarLyricsDefaultsOnAndSurvivesOlderClients(t *testing.T) {
 		t.Fatalf("first put without the field must default on: %+v %v", p, err)
 	}
 }
+
+func TestNormalizeLoudnessDefaultsOnAndSurvivesOlderClients(t *testing.T) {
+	d := testutil.DB(t)
+	d.Exec(`INSERT INTO users(id,username,password_hash,role,created_at) VALUES (1,'a','h','member',0)`)
+	s := &Store{DB: d}
+	ctx := context.Background()
+	if p, err := s.Get(ctx, 1); err != nil || p.NormalizeLoudness == nil || !*p.NormalizeLoudness {
+		t.Fatalf("loudness normalization must default on: %+v %v", p, err)
+	}
+	off := false
+	p, err := s.Put(ctx, 1, Prefs{OnOpen: "resume", NormalizeLoudness: &off})
+	if err != nil || p.NormalizeLoudness == nil || *p.NormalizeLoudness {
+		t.Fatalf("put off: %+v %v", p, err)
+	}
+	if p.CarLyrics == nil || !*p.CarLyrics {
+		t.Fatalf("turning loudness off must not touch car lyrics: %+v", p)
+	}
+	// A client that predates the field omits it: the stored choice stays.
+	if p, err := s.Put(ctx, 1, Prefs{OnOpen: "nothing"}); err != nil || *p.NormalizeLoudness || p.OnOpen != "nothing" {
+		t.Fatalf("omitted normalize_loudness must keep the stored value: %+v %v", p, err)
+	}
+	d.Exec(`INSERT INTO users(id,username,password_hash,role,created_at) VALUES (2,'b','h','member',0)`)
+	if p, err := s.Put(ctx, 2, Prefs{OnOpen: "resume"}); err != nil || !*p.NormalizeLoudness {
+		t.Fatalf("first put without the field must default on: %+v %v", p, err)
+	}
+}

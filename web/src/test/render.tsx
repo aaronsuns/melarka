@@ -12,11 +12,11 @@ import { FakeAudio, mockFetch } from "./setup";
 
 type MockRoutes = Parameters<typeof mockFetch>[0];
 
-// Like App: the live car-lyrics preference reaches the player.
+// Like App: the live car-lyrics and loudness preferences reach the player.
 function PlayerWithPrefs({ audio, episodeAudio, previewAudio, onOpen, children }: { audio: HTMLAudioElement; episodeAudio: HTMLAudioElement; previewAudio: HTMLAudioElement; onOpen?: OnOpen; children: ReactElement }) {
   const { prefs } = usePrefs();
   return (
-    <PlayerProvider audio={audio} userId={1} onOpen={onOpen} carLyrics={prefs.car_lyrics !== false}>
+    <PlayerProvider audio={audio} userId={1} onOpen={onOpen} carLyrics={prefs.car_lyrics !== false} loudness={prefs.normalize_loudness !== false}>
       <EpisodesProvider audio={episodeAudio}>
         <DownloadsProvider><PreviewProvider audio={previewAudio}>{children}</PreviewProvider></DownloadsProvider>
       </EpisodesProvider>

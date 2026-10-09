@@ -61,6 +61,20 @@ test("car lyrics is on by default, explained, and saves car_lyrics", async () =>
   await waitFor(() => expect(box.checked).toBe(false));
 });
 
+test("volume normalization is on by default, explained, and saves normalize_loudness", async () => {
+  const { f } = renderWithApp(<SettingsPage />, {
+    routes: { "PUT /api/v1/me/preferences": (init) => ({ body: JSON.parse(init.body as string) }) },
+  });
+  const box = (await screen.findByRole("checkbox", { name: "音量均衡" })) as HTMLInputElement;
+  expect(box.checked).toBe(true);
+  expect(screen.getByText(/不放大安静的歌/)).toBeInTheDocument();
+  fireEvent.click(box);
+  await waitFor(() => expect(f.mock.calls.some((c) => String(c[0]).endsWith("/me/preferences") && c[1]?.method === "PUT")).toBe(true));
+  const put = f.mock.calls.find((c) => String(c[0]).endsWith("/me/preferences") && c[1]?.method === "PUT")!;
+  expect(JSON.parse(put[1]!.body as string)).toEqual({ language: null, on_open: "resume", normalize_loudness: false });
+  await waitFor(() => expect(box.checked).toBe(false));
+});
+
 test("the footer shows the server version and links to the source (AGPL §13)", async () => {
   renderWithApp(<SettingsPage />, {
     routes: { "GET /api/v1/info": () => ({ body: { name: "Melarka", version: "0.1.0", language: "zh-Hans", languages: [] } }) },

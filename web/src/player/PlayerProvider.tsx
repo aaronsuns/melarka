@@ -14,6 +14,7 @@ import { BlobPreloader, BLOB_MAX_BYTES, estimateHighBytes } from "./preload";
 import { claimSession, onSessionClaim, ownsSession } from "./sessionOwner";
 import { appendable, current, emptyQueue, needsRefill, queueReducer, upcoming, type QueueAction, type QueueState } from "./queue";
 import { hasNative } from "../native/bridge";
+import { gainFactor } from "./gain";
 import { NativePlayerProvider } from "./NativePlayerProvider";
 
 export interface Player {
@@ -205,6 +206,7 @@ function WebPlayerProvider({
   userId,
   onOpen,
   carLyrics = true,
+  loudness = true,
 }: {
   children: ReactNode;
   audio?: HTMLAudioElement;
@@ -215,6 +217,10 @@ function WebPlayerProvider({
   // Bluetooth displays and the lock screen show only title/artist/album).
   // Unlike onOpen this is live: toggling it applies at once. Default on.
   carLyrics?: boolean;
+  // Loudness normalization: scale audio.volume by the track's gain_db
+  // (attenuation only). Live like carLyrics. Default on. iOS Safari ignores
+  // audio.volume, so there it has no audible effect.
+  loudness?: boolean;
 }) {
   const [audio] = useState<HTMLAudioElement>(() => injected ?? new Audio());
   const [queue, dispatch] = useReducer(queueReducer, emptyQueue);
@@ -250,6 +256,19 @@ function WebPlayerProvider({
   qualityRef.current = quality;
   const loadedId = useRef<number | null>(null);
   const loadedIndex = useRef<number>(-1);
+  const loudnessRef = useRef(loudness);
+  loudnessRef.current = loudness;
+  // Multiplies the track's gain; a fade (sleep timer) lowers it. There is no
+  // volume slider here: the device volume is the user's and is untouched.
+  // Whatever changes it (the sleep-timer fade) must call applyVolume after,
+  // or the new level is not heard until the next track loads.
+  const fadeRef = useRef(1);
+  const applyVolume = useCallback(
+    (track: Track) => {
+      audio.volume = gainFactor(track.gain_db, loudnessRef.current) * fadeRef.current;
+    },
+    [audio],
+  );
   // The queue index a prev (or offline-skip) dispatch is expected to land
   // on, set only when that dispatch will actually move the index. This
   // (not a plain boolean) is what lets the "load whatever became current"
@@ -430,9 +449,10 @@ function WebPlayerProvider({
       setBuffering(autoplay);
       notePlayed(track, false);
       audio.src = srcFor(track);
+      applyVolume(track);
       if (autoplay) playOrAskTap(track.id);
     },
-    [audio, finishListen, clearNetRetry, clearStall, setBuffering, srcFor, playOrAskTap, markAct],
+    [audio, finishListen, clearNetRetry, clearStall, setBuffering, srcFor, playOrAskTap, markAct, applyVolume],
   );
 
   // The never-stop choice of what plays next (see nextTrack.ts).
@@ -495,6 +515,11 @@ function WebPlayerProvider({
 
   // Load whatever became current (next/prev/jump/remove/ended), keeping play state.
   const cur = current(queue);
+  // The switch flipped, or the loaded track's metadata changed (updateTrack):
+  // re-apply its volume without reloading it. load() covers new tracks.
+  useEffect(() => {
+    if (cur && cur.id === loadedId.current) applyVolume(cur);
+  }, [loudness, cur, applyVolume]);
   useEffect(() => {
     if (!cur) return;
     // Already loaded exactly this instance (e.g. jump() already loaded it

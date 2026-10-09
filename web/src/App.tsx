@@ -90,7 +90,7 @@ function Signed({ user }: { user: User }) {
     // pending-events buffer), never the previous user's state. on_open is
     // only read when the player mounts, so changing it in Settings takes
     // effect the next time Lark opens.
-    <PlayerProvider key={user.id} userId={user.id} onOpen={prefs.on_open} carLyrics={prefs.car_lyrics !== false}>
+    <PlayerProvider key={user.id} userId={user.id} onOpen={prefs.on_open} carLyrics={prefs.car_lyrics !== false} loudness={prefs.normalize_loudness !== false}>
       <EpisodesProvider userId={user.id}>
       <DownloadsProvider>
       <PreviewProvider>

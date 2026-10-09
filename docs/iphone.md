@@ -100,6 +100,12 @@ You don't need the app to use Melarka on an iPhone. Open your Melarka address in
 offline cache. Background playback is less reliable than in the app, because iOS can pause web
 pages in the background.
 
+**Volume normalization** (Settings) has no audible effect in Safari on an iPhone: iOS Safari
+ignores a web page's volume control (`HTMLMediaElement.volume`), so every song plays at its own
+level there. It works in desktop browsers. Melarka
+deliberately does not route playback through Web Audio to work around this: iOS suspends that when
+the phone is locked, which would stop the music.
+
 ## Troubleshooting
 
 - **"Can't connect" on first launch**: open `https://<your server>/api/v1/info` in Safari on the
