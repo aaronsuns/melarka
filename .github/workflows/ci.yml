@@ -201,22 +201,11 @@ jobs:
           sys.stderr.write("simulator: %s, iOS %s\n" % (best[1]["name"], ".".join(map(str, best[0]))))
           print(best[1]["udid"])
           ')
-          echo "SIM_UDID=$udid" >> "$GITHUB_ENV"
           xcodebuild test -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$udid" \
             -derivedDataPath build/dd -resultBundlePath build/tests.xcresult -quiet
       - name: Why the unit tests failed
         if: failure()
         run: scripts/xcresult-failures.sh build/tests.xcresult
-      - name: TEMP stress BridgeWebViewTests
-        run: |
-          set +e
-          xcodebuild test-without-building -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$SIM_UDID" \
-            -derivedDataPath build/dd -resultBundlePath build/stress.xcresult -quiet \
-            -only-testing:LarkTests/BridgeWebViewTests -only-testing:LarkTests/AVPlayerBackendTests \
-            -test-iterations 40 -test-repetition-relaunch-enabled YES > /dev/null 2>&1
-          rc=$?; echo "xcodebuild exit $rc"
-          scripts/xcresult-failures.sh build/stress.xcresult
-          exit $rc
       - run: python3 -m unittest discover -s scripts
 
   # Release gate: gitleaks over the full history + the private denylist (repository secret OSS_DENYLIST).
