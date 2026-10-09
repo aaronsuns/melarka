@@ -128,6 +128,8 @@
   "now.ariaLabel": "Spelas nu", "now.close": "Stäng", "now.queue": "Kö", "now.position": "Position",
   "now.lossless": "Förlustfri", "now.high": "Hög", "now.saver": "Datasparläge",
   "now.radioEnd": "Min radio startar automatiskt när kön tar slut",
+  "now.shuffle": "Blanda", "now.repeat.off": "Upprepa: av", "now.repeat.all": "Upprepa alla", "now.repeat.one": "Upprepa en",
+  "now.repeatAllEnd": "Kön börjar om när den tar slut",
   "now.editInfo": "Redigera information", "now.deleteSong": "Radera låt", "now.confirmDelete": "Bekräfta radering",
 
   "admin.nav.title": "Admin", "admin.nav.users": "Användare", "admin.nav.pending": "Väntande",

@@ -20,6 +20,8 @@ export type QueueAction =
   | { type: "advanceInsert"; track: Track; requeue?: Track }
   | { type: "remove"; trackId: number }
   | { type: "restore"; tracks: Track[]; index: number }
+  // A new order (shuffle on/off, a repeat-all pass); unlike restore, keeps the source.
+  | { type: "setOrder"; tracks: Track[]; index: number }
   | { type: "updateTrack"; track: Track };
 
 export const emptyQueue: QueueState = { tracks: [], index: 0, source: "list" };
@@ -32,6 +34,8 @@ export function queueReducer(s: QueueState, a: QueueAction): QueueState {
       return { tracks: a.tracks, index: clamp(a.start, a.tracks.length), source: a.source ?? "list" };
     case "restore":
       return { tracks: a.tracks, index: clamp(a.index, a.tracks.length), source: "restored" };
+    case "setOrder":
+      return { ...s, tracks: a.tracks, index: clamp(a.index, a.tracks.length) };
     case "next":
       return { ...s, index: clamp(s.index + 1, s.tracks.length) };
     case "prev":

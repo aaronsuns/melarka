@@ -15,6 +15,7 @@ import { claimSession, onSessionClaim, ownsSession } from "./sessionOwner";
 import { appendable, current, emptyQueue, needsRefill, queueReducer, upcoming, type QueueAction, type QueueState } from "./queue";
 import { hasNative } from "../native/bridge";
 import { gainFactor } from "./gain";
+import { loadModes, newPass, nextRepeat, saveModes, shuffleUpcoming, unshuffleUpcoming, type PlayModes, type StoredModes } from "./modes";
 import { NativePlayerProvider } from "./NativePlayerProvider";
 
 export interface Player {
@@ -70,6 +71,14 @@ export interface Player {
   // False until the boot (resume / shuffle on open) has settled: the idle
   // mini player must not offer a shortcut that would race the restore.
   ready: boolean;
+  // Shuffle and repeat. With repeat off the queue never stops (refills), as
+  // without modes; repeat all loops the queue instead; repeat one replays a
+  // track at its natural end (next/previous still move).
+  modes: PlayModes;
+  // False where the engine can't do modes (an iPhone app older than this web): the buttons are hidden.
+  modesAvailable: boolean;
+  setShuffle(on: boolean): void;
+  cycleRepeat(): void;
 }
 
 export interface PlayerProgress {
@@ -252,6 +261,19 @@ function WebPlayerProvider({
 
   const queueRef = useRef(queue);
   queueRef.current = queue;
+  // Shuffle/repeat, per device and user. Read in event handlers through the
+  // ref (an "ended" must see a change made a moment before).
+  const [modes, setModesState] = useState<StoredModes>(() => loadModes(userId));
+  const modesRef = useRef(modes);
+  modesRef.current = modes;
+  const updateModes = useCallback(
+    (m: StoredModes) => {
+      modesRef.current = m;
+      setModesState(m);
+      saveModes(userId, m);
+    },
+    [userId],
+  );
   const qualityRef = useRef(quality);
   qualityRef.current = quality;
   const loadedId = useRef<number | null>(null);
@@ -472,28 +494,71 @@ function WebPlayerProvider({
   // track already on the phone, when there is one.
   const changeOpts = useCallback((): ChooseOpts => {
     const away = isHidden() || !isOnline();
-    return { mustBeLocal: away, favoritesAtEnd: away };
+    return { mustBeLocal: away, favoritesAtEnd: away, wrap: modesRef.current.repeat === "all" };
   }, []);
 
   // Plays a choice synchronously — no render round-trip, no timer: in the
   // background this runs inside the element's own event, the last moment
   // the page is sure to be running.
   // `requeue`: the interrupted track, put back right after the substitute.
+  // Repeat all: a cached favorite that stood in for a track that couldn't
+  // play (offline something local must still sound) plays once and leaves
+  // again — dropped, with the interrupted track's old entry (its requeued
+  // copy stays, to be tried again), when it ends or is skipped, and before
+  // a new pass. So the loop stays the queue's own. Repeat off: never set.
+  const substitutes = useRef<{ track: Track; requeue: Track | null }[]>([]);
+  const dropSubstitutes = useCallback(() => {
+    const subs = substitutes.current;
+    substitutes.current = [];
+    if (subs.length === 0 || modesRef.current.repeat !== "all") return;
+    let q = queueRef.current;
+    for (const sub of subs) {
+      const i = q.tracks.indexOf(sub.track);
+      if (i < 0) continue; // removed already
+      const k = sub.requeue ? q.tracks.indexOf(sub.requeue) : -1; // the interrupted entry (the first copy)
+      const copy = sub.requeue ? q.tracks.indexOf(sub.requeue, i + 1) : -1; // its requeued copy
+      const indexWithout = (d: Set<number>) => q.index - [...d].filter((x) => x < q.index).length - (d.has(q.index) ? 1 : 0);
+      let drop = new Set(k >= 0 && k < i ? [i, k] : [i]);
+      // Nothing left before it to stand on: keep the old entry, drop the copy.
+      if (indexWithout(drop) < 0 && copy >= 0) drop = new Set([i, copy]);
+      q = { ...q, tracks: q.tracks.filter((_, x) => !drop.has(x)), index: Math.max(0, indexWithout(drop)) };
+    }
+    if (q === queueRef.current) return;
+    queueRef.current = q;
+    dispatch({ type: "setOrder", tracks: q.tracks, index: q.index });
+  }, []);
+
   const go = useCallback(
     (c: NextChoice, notice?: string, o: { picked?: boolean; requeue?: Track | null } = {}): boolean => {
       if (c.kind === "none") return false;
+      if (c.kind === "wrap") {
+        dropSubstitutes(); // never part of the next pass
+        // Repeat all: the whole queue again from its first track (offline,
+        // from the first one that can play).
+        const nq = newPass(queueRef.current, modesRef.current.shuffle);
+        if (nq.tracks.length === 0) return false;
+        const j = playableNow(nq.tracks[0].id) ? 0 : firstPlayable(nq.tracks, 0);
+        const i = j >= 0 ? j : 0;
+        queueRef.current = { ...nq, index: i };
+        dispatch({ type: "setOrder", tracks: nq.tracks, index: i });
+        load(nq.tracks[i], { autoplay: wantPlay.current, index: i, picked: o.picked });
+        if (i > 0) showNotice(t("player.skippedUncached"));
+        else if (notice) showNotice(notice);
+        return true;
+      }
       const requeue = o.requeue ?? undefined;
       const action: QueueAction =
         c.kind === "queue" ? { type: "advance", to: c.index, requeue } : { type: "advanceInsert", track: c.track, requeue };
       const nq = queueReducer(queueRef.current, action);
       queueRef.current = nq;
       dispatch(action);
+      if (c.kind === "favorite" && modesRef.current.repeat === "all") substitutes.current.push({ track: c.track, requeue: requeue ?? null });
       load(nq.tracks[nq.index], { autoplay: wantPlay.current, index: nq.index, picked: o.picked });
       if (c.kind === "queue" && c.skippedOffline) showNotice(t("player.skippedUncached"));
       else if (notice) showNotice(notice);
       return true;
     },
-    [load, showNotice],
+    [load, showNotice, dropSubstitutes],
   );
 
   // Reload the same track at the last known position after a network error.
@@ -650,10 +715,24 @@ function WebPlayerProvider({
       clearStall();
       finishListen("ended");
       const done = current(queueRef.current);
+      // Repeat one: the same track again, restarted in place — no new src,
+      // so nothing is fetched (it works hidden, and can't stall). A new
+      // listen, so each loop is a new play event.
+      if (modesRef.current.repeat === "one" && done && loadedId.current === done.id) {
+        notePlayed(done, true);
+        listen.current = { trackId: done.id, startedAt: Math.floor(Date.now() / 1000), seconds: 0, lastTime: 0 };
+        pendingSeek.current = 0;
+        knownPos.current = 0;
+        audio.currentTime = 0;
+        setPosition(0);
+        playOrAskTap(done.id);
+        return;
+      }
       // The next track is about to buffer: say so before the cache hears of
       // the finished one, or it would start downloading in that very gap.
       setBuffering(true);
       if (done) notePlayed(done, true);
+      dropSubstitutes();
       if (!go(choose(changeOpts()))) stop(null);
     };
     // A track that doesn't come from the phone and isn't moving: switch to
@@ -709,7 +788,8 @@ function WebPlayerProvider({
       if (!isOnline()) return;
       netSkips.current += 1;
       listen.current = null;
-      const c: NextChoice = netSkips.current < MAX_CONSECUTIVE_ERRORS ? choose({ mustBeLocal: false, favoritesAtEnd: true }) : { kind: "none" };
+      const wrap = modesRef.current.repeat === "all"; // repeat all: start over, never a favorite into the loop
+      const c: NextChoice = netSkips.current < MAX_CONSECUTIVE_ERRORS ? choose({ mustBeLocal: false, favoritesAtEnd: true, wrap }) : { kind: "none" };
       if (go(c)) {
         setError(null);
         return;
@@ -732,7 +812,7 @@ function WebPlayerProvider({
       errors.current += 1;
       const track = current(queueRef.current);
       const tooMany = errors.current >= MAX_CONSECUTIVE_ERRORS;
-      const c = choose({ mustBeLocal: tooMany || isHidden(), favoritesAtEnd: true });
+      const c = choose({ mustBeLocal: tooMany || isHidden(), favoritesAtEnd: true, wrap: modesRef.current.repeat === "all" });
       listen.current = null;
       // Several in a row: only a track from the phone is worth trying.
       if ((tooMany && !isLocalChoice(c)) || !go(c)) {
@@ -767,7 +847,7 @@ function WebPlayerProvider({
       handlers.forEach(([n, h]) => audio.removeEventListener(n, h));
       window.removeEventListener("online", onOnline);
     };
-  }, [audio, finishListen, clearNetRetry, clearStall, retryNetwork, setNeedsTap, setBuffering, choose, changeOpts, go, isLocal, acting]);
+  }, [audio, finishListen, clearNetRetry, clearStall, retryNetwork, setNeedsTap, setBuffering, choose, changeOpts, go, isLocal, acting, playOrAskTap, dropSubstitutes]);
   // A seek (from anywhere) cancels a pending stall switch.
   useEffect(() => {
     audio.addEventListener("seeking", clearStall);
@@ -873,10 +953,19 @@ function WebPlayerProvider({
       errors.current = 0;
       setError(null);
       wantPlay.current = true;
-      dispatch({ type: "playList", tracks, start: i, source: opts?.source });
-      load(tracks[i], { autoplay: true, index: i, picked: true }); // synchronous play(): iOS only allows it inside the tap handler
+      substitutes.current = [];
+      let order = tracks;
+      const m = modesRef.current;
+      if (m.shuffle) {
+        // Shuffle stays on for a new list: what follows the chosen track is shuffled.
+        const s = shuffleUpcoming({ tracks, index: i, source: "list" });
+        order = s.queue.tracks;
+        updateModes({ ...m, original: s.original });
+      }
+      dispatch({ type: "playList", tracks: order, start: i, source: opts?.source });
+      load(order[i], { autoplay: true, index: i, picked: true }); // synchronous play(): iOS only allows it inside the tap handler
     },
-    [load, showNotice],
+    [load, showNotice, updateModes],
   );
 
   const shuffleAll = useCallback(async () => {
@@ -922,11 +1011,12 @@ function WebPlayerProvider({
   // The same never-stop choice as at the end of a track (from the lock
   // screen or the car, too), loaded synchronously.
   const next = useCallback(() => {
+    dropSubstitutes();
     const c = choose(changeOpts());
     if (c.kind === "none") return; // already at the end: nothing moves
     finishListen("skip");
     go(c, undefined, { picked: true });
-  }, [finishListen, choose, changeOpts, go]);
+  }, [finishListen, choose, changeOpts, go, dropSubstitutes]);
 
   const seek = useCallback(
     (s: number) => {
@@ -974,6 +1064,30 @@ function WebPlayerProvider({
     [load, showNotice],
   );
   const enqueueNext = useCallback((t: Track) => dispatch({ type: "enqueueNext", track: t }), []);
+  // Neither touches the element: the current track plays on.
+  const setShuffle = useCallback(
+    (on: boolean) => {
+      const m = modesRef.current;
+      if (m.shuffle === on) return;
+      const q = queueRef.current;
+      if (on) {
+        const { queue: nq, original } = shuffleUpcoming(q);
+        queueRef.current = nq;
+        dispatch({ type: "setOrder", tracks: nq.tracks, index: nq.index });
+        updateModes({ ...m, shuffle: true, original });
+      } else {
+        const nq = unshuffleUpcoming(q, m.original ?? []);
+        queueRef.current = nq;
+        dispatch({ type: "setOrder", tracks: nq.tracks, index: nq.index });
+        updateModes({ ...m, shuffle: false, original: null });
+      }
+    },
+    [updateModes],
+  );
+  const cycleRepeat = useCallback(() => {
+    const m = modesRef.current;
+    updateModes({ ...m, repeat: nextRepeat(m.repeat) });
+  }, [updateModes]);
   const updateTrack = useCallback((t: Track) => dispatch({ type: "updateTrack", track: t }), []);
   const remove = useCallback(
     (trackId: number) => {
@@ -1039,7 +1153,9 @@ function WebPlayerProvider({
   // means the source is exhausted; for favorites only an empty answer does.
   // A failed request (e.g. no signal) is retried on the next queue change,
   // or after RADIO_RETRY_MS.
+  // Repeat all loops the queue as it is: no refill.
   useEffect(() => {
+    if (modes.repeat === "all") return;
     if (queue.tracks.length === 0 || !needsRefill(queue, isFailed) || refilling.current || radioExhausted.current) return;
     refilling.current = true;
     // Only the most recent ids: enough to avoid near repeats, and the
@@ -1069,7 +1185,7 @@ function WebPlayerProvider({
       .finally(() => {
         refilling.current = false;
       });
-  }, [queue, radioTick, isFailed]);
+  }, [queue, radioTick, isFailed, modes.repeat]);
 
   // While this track plays: the lyrics of the next one; the next few
   // transcoded on the server and downloaded to the phone (the offline
@@ -1395,14 +1511,16 @@ function WebPlayerProvider({
     };
   }, [audio]);
 
+  const shownModes = useMemo<PlayModes>(() => ({ shuffle: modes.shuffle, repeat: modes.repeat }), [modes.shuffle, modes.repeat]);
   const value = useMemo<Player>(
     () => ({
       queue, current: cur, playing, quality, error, notice, showNotice, needsTap,
       playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
+      modes: shownModes, modesAvailable: true, setShuffle, cycleRepeat,
     }),
     [
       queue, cur, playing, quality, error, notice, showNotice, needsTap, playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove,
-      updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
+      updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready, shownModes, setShuffle, cycleRepeat,
     ],
   );
   const progress = useMemo<PlayerProgress>(() => ({ position, duration }), [position, duration]);

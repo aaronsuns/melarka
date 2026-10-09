@@ -127,6 +127,8 @@
   "now.ariaLabel": "正在播放", "now.close": "收起", "now.queue": "队列", "now.position": "进度",
   "now.lossless": "无损", "now.high": "高品质", "now.saver": "省流量",
   "now.radioEnd": "队列结束后会自动播放私人电台",
+  "now.shuffle": "随机播放", "now.repeat.off": "循环：关", "now.repeat.all": "列表循环", "now.repeat.one": "单曲循环",
+  "now.repeatAllEnd": "播完后从头再来",
   "now.editInfo": "编辑信息", "now.deleteSong": "删除歌曲", "now.confirmDelete": "确认删除",
 
   "admin.nav.title": "管理", "admin.nav.users": "用户", "admin.nav.pending": "待定",

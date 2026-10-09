@@ -47,6 +47,20 @@ export const ShuffleIcon = ({ size = 16 }: { size?: number }) => (
     <path d="M4 7h3.5c4.5 0 4.5 10 9 10H20M4 17h3.5c1.6 0 2.6-1.2 3.4-2.8M13.1 9.8C13.9 8.2 14.9 7 16.5 7H20M17.5 4.5 20 7l-2.5 2.5M17.5 14.5 20 17l-2.5 2.5" />
   </Svg>
 );
+const REPEAT_PATH = "M17 3.5l3 3-3 3M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5l-3-3 3-3M20 12.5v1a4 4 0 0 1-4 4H4";
+/** Repeat (all): two arrows chasing each other round a loop. */
+export const RepeatIcon = ({ size = 16 }: { size?: number }) => (
+  <Svg size={size}>
+    <path d={REPEAT_PATH} />
+  </Svg>
+);
+/** Repeat one: the repeat loop with a "1" in the middle. */
+export const RepeatOneIcon = ({ size = 16 }: { size?: number }) => (
+  <Svg size={size}>
+    <path d={REPEAT_PATH} />
+    <text className="repeat-one-badge" x="12" y="15" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="currentColor" stroke="none">1</text>
+  </Svg>
+);
 /** 关注频道: a person with a plus. */
 export const FollowIcon = ({ size }: { size?: number }) => (
   <Svg size={size}>

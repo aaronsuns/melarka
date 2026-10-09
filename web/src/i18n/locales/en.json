@@ -128,6 +128,8 @@
   "now.ariaLabel": "Now playing", "now.close": "Close", "now.queue": "Queue", "now.position": "Position",
   "now.lossless": "Lossless", "now.high": "High", "now.saver": "Data saver",
   "now.radioEnd": "My radio starts automatically when the queue ends",
+  "now.shuffle": "Shuffle", "now.repeat.off": "Repeat: off", "now.repeat.all": "Repeat all", "now.repeat.one": "Repeat one",
+  "now.repeatAllEnd": "The queue starts over at the end",
   "now.editInfo": "Edit info", "now.deleteSong": "Delete song", "now.confirmDelete": "Confirm delete",
 
   "admin.nav.title": "Admin", "admin.nav.users": "Users", "admin.nav.pending": "Pending",
