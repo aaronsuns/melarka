@@ -1,150 +1,1248 @@
 {
-  "sourceLanguage": "zh-Hans",
-  "strings": {
-    "在后台从上次的位置继续播放；队列为空时随机播放收藏。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resumes where you left off, in the background; with an empty queue, shuffles your favorites."
+  "sourceLanguage" : "en",
+  "strings" : {
+    "About" : {
+      "comment" : "Settings: section header",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在后台从上次的位置继续播放；队列为空时随机播放收藏。"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关于"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关于"
           }
         }
       }
     },
-    "在后台随机播放收藏的歌曲；没有网络时播放已缓存的收藏。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shuffles your favorites in the background; with no network, the cached ones play."
+    "Address" : {
+      "comment" : "Settings: the server address in use",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Address"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在后台随机播放收藏的歌曲；没有网络时播放已缓存的收藏。"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地址"
           }
         }
       }
     },
-    "已在播放": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Already playing"
+    "Already playing" : {
+      "comment" : "Shortcuts: result",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already playing"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已在播放"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在播放"
           }
         }
       }
     },
-    "未登录": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not signed in"
+    "Cache" : {
+      "comment" : "Settings: how much of the offline cache is used",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cache"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未登录"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缓存"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缓存"
           }
         }
       }
     },
-    "正在随机播放收藏": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shuffling favorites"
+    "Cache Limit" : {
+      "comment" : "Settings: picker",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cache Limit"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在随机播放收藏"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缓存上限"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缓存上限"
           }
         }
       }
     },
-    "离线且没有缓存的歌曲": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Offline, and no songs are cached"
+    "Cache cleared" : {
+      "comment" : "Settings: after Clear Cache",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cache cleared"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "离线且没有缓存的歌曲"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缓存已清空"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缓存已清空"
           }
         }
       }
     },
-    "继续播放": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resume"
+    "Cached songs are deleted; favorites are cached again on Wi‑Fi." : {
+      "comment" : "Settings: confirmation message",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cached songs are deleted; favorites are cached again on Wi‑Fi."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "继续播放"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已缓存的歌曲会被删除，收藏会在连上 Wi‑Fi 时重新缓存。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已缓存的歌曲会被删除，收藏会在连上 Wi‑Fi 时重新缓存。"
           }
         }
       }
     },
-    "请先打开 Melarka 并设置服务器": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Melarka and set the server first"
+    "Can't Connect to the Server" : {
+      "comment" : "The web page could not load",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't Connect to the Server"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请先打开 Melarka 并设置服务器"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接服务器"
           }
         }
       }
     },
-    "随机播放收藏": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shuffle Favorites"
+    "Can't connect to this server" : {
+      "comment" : "First launch: the server did not answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't connect to this server"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "随机播放收藏"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接到这个服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接到这个服务器"
+          }
+        }
+      }
+    },
+    "Can't play" : {
+      "comment" : "Player error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't play"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法播放"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "comment" : "Web page confirm button",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "Car Autoplay" : {
+      "comment" : "Settings: section header and the guide's title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Car Autoplay"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "车载自动播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "车载自动播放"
+          }
+        }
+      }
+    },
+    "Change Server" : {
+      "comment" : "Settings: button and confirmation",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change Server"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更换服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更换服务器"
+          }
+        }
+      }
+    },
+    "Change server?" : {
+      "comment" : "Settings: confirmation title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change server?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更换服务器？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更换服务器？"
+          }
+        }
+      }
+    },
+    "Clear Cache" : {
+      "comment" : "Settings: button and confirmation",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Cache"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空缓存"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空缓存"
+          }
+        }
+      }
+    },
+    "Clear the offline cache?" : {
+      "comment" : "Settings: confirmation title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear the offline cache?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空离线缓存？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空离线缓存？"
+          }
+        }
+      }
+    },
+    "Connect" : {
+      "comment" : "First launch: button",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接"
+          }
+        }
+      }
+    },
+    "Couldn't get favorites; try again later" : {
+      "comment" : "Player notice",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't get favorites; try again later"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法获取收藏，请稍后再试"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法获取收藏，请稍后再试"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "comment" : "Settings: closes the sheet",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
+    },
+    "Enter an address that starts with https:// (for development, http://…local or localhost also works)" : {
+      "comment" : "First launch: invalid address",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter an address that starts with https:// (for development, http://…local or localhost also works)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入 https:// 开头的地址（开发时可用 http://…local 或 localhost）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入 https:// 开头的地址（开发时可用 http://…local 或 localhost）"
+          }
+        }
+      }
+    },
+    "Episode can't play: playing music instead" : {
+      "comment" : "Player notice",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Episode can't play: playing music instead"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "节目无法播放：改为播放音乐"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "节目无法播放：改为播放音乐"
+          }
+        }
+      }
+    },
+    "Favorites are cached automatically on Wi‑Fi and play without a network." : {
+      "comment" : "Settings: offline cache footer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorites are cached automatically on Wi‑Fi and play without a network."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收藏的歌会在连上 Wi‑Fi 时自动缓存，没有网络也能播放。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收藏的歌会在连上 Wi‑Fi 时自动缓存，没有网络也能播放。"
+          }
+        }
+      }
+    },
+    "How to Set Up" : {
+      "comment" : "Settings: opens the car autoplay guide",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How to Set Up"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如何设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如何设置"
+          }
+        }
+      }
+    },
+    "Melarka Settings" : {
+      "comment" : "Settings: title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melarka Settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melarka 设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melarka 设置"
+          }
+        }
+      }
+    },
+    "Network too slow: playing cached songs first" : {
+      "comment" : "Player notice",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Network too slow: playing cached songs first"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络太慢：先播放已缓存的歌曲"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络太慢：先播放已缓存的歌曲"
+          }
+        }
+      }
+    },
+    "No favorites yet: shuffling all songs" : {
+      "comment" : "Player notice",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No favorites yet: shuffling all songs"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有收藏：随机播放全部歌曲"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有收藏：随机播放全部歌曲"
+          }
+        }
+      }
+    },
+    "Not set" : {
+      "comment" : "Settings: no server address yet",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not set"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未设置"
+          }
+        }
+      }
+    },
+    "Not signed in" : {
+      "comment" : "Shortcuts: signed out",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not signed in"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未登录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未登录"
+          }
+        }
+      }
+    },
+    "Not signed in · limit %@" : {
+      "comment" : "Settings: cache line when signed out; %@ is the limit, e.g. 2 GB",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not signed in · limit %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未登录 · 上限 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未登录 · 上限 %@"
+          }
+        }
+      }
+    },
+    "OK" : {
+      "comment" : "Web page alert and confirm button",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好"
+          }
+        }
+      }
+    },
+    "Offline Cache" : {
+      "comment" : "Settings: section header",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline Cache"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线缓存"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线缓存"
+          }
+        }
+      }
+    },
+    "Offline, and no favorites are cached" : {
+      "comment" : "Player notice",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline, and no favorites are cached"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线且没有已缓存的收藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线且没有已缓存的收藏"
+          }
+        }
+      }
+    },
+    "Offline, and no songs are cached" : {
+      "comment" : "Shortcuts: nothing to play",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline, and no songs are cached"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线且没有缓存的歌曲"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线且没有缓存的歌曲"
+          }
+        }
+      }
+    },
+    "Offline: no cached songs to play" : {
+      "comment" : "Player error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline: no cached songs to play"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线：没有已缓存的歌曲可播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线：没有已缓存的歌曲可播放"
+          }
+        }
+      }
+    },
+    "Offline: playing cached favorites" : {
+      "comment" : "Player notice",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline: playing cached favorites"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线：正在播放已缓存的收藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线：正在播放已缓存的收藏"
+          }
+        }
+      }
+    },
+    "Open Melarka and set the server first" : {
+      "comment" : "Shortcuts: no server yet",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Melarka and set the server first"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先打开 Melarka 并设置服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先打开 Melarka 并设置服务器"
+          }
+        }
+      }
+    },
+    "Play Offline Favorites" : {
+      "comment" : "Page error: plays cached favorites",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play Offline Favorites"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放离线收藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放离线收藏"
+          }
+        }
+      }
+    },
+    "Playback stops and you are signed out; then you enter the server address again." : {
+      "comment" : "Settings: confirmation message",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playback stops and you are signed out; then you enter the server address again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会停止播放并退出登录，然后重新输入服务器地址。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会停止播放并退出登录，然后重新输入服务器地址。"
+          }
+        }
+      }
+    },
+    "Resume" : {
+      "comment" : "Shortcuts action title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续播放"
+          }
+        }
+      }
+    },
+    "Resumes where you left off, in the background; with an empty queue, shuffles your favorites." : {
+      "comment" : "Shortcuts action description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resumes where you left off, in the background; with an empty queue, shuffles your favorites."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在后台从上次的位置继续播放；队列为空时随机播放收藏。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在后台从上次的位置继续播放；队列为空时随机播放收藏。"
+          }
+        }
+      }
+    },
+    "Retry" : {
+      "comment" : "Page error: reload",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
+          }
+        }
+      }
+    },
+    "Server" : {
+      "comment" : "Settings: section header",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器"
+          }
+        }
+      }
+    },
+    "Server Address" : {
+      "comment" : "First launch: field label",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server Address"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器地址"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "comment" : "Page error: opens the settings sheet",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
+          }
+        }
+      }
+    },
+    "Shuffle Favorites" : {
+      "comment" : "Shortcuts action title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shuffle Favorites"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随机播放收藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随机播放收藏"
+          }
+        }
+      }
+    },
+    "Shuffles your favorites in the background; with no network, the cached ones play." : {
+      "comment" : "Shortcuts action description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shuffles your favorites in the background; with no network, the cached ones play."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在后台随机播放收藏的歌曲；没有网络时播放已缓存的收藏。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在后台随机播放收藏的歌曲；没有网络时播放已缓存的收藏。"
+          }
+        }
+      }
+    },
+    "Shuffling favorites" : {
+      "comment" : "Shortcuts: result",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shuffling favorites"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在随机播放收藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在随机播放收藏"
+          }
+        }
+      }
+    },
+    "Signing out…" : {
+      "comment" : "Settings: while changing server",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signing out…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在退出登录…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在退出登录…"
+          }
+        }
+      }
+    },
+    "Sync Favorites Now" : {
+      "comment" : "Settings: button",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync Favorites Now"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即同步收藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即同步收藏"
+          }
+        }
+      }
+    },
+    "Syncing favorites (downloads only on Wi‑Fi)" : {
+      "comment" : "Settings: after Sync Favorites Now",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Syncing favorites (downloads only on Wi‑Fi)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在同步收藏（仅在 Wi‑Fi 下下载）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在同步收藏（仅在 Wi‑Fi 下下载）"
+          }
+        }
+      }
+    },
+    "Test: Shuffle Favorites" : {
+      "comment" : "Settings: runs what the Shortcuts automation runs",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test: Shuffle Favorites"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试：随机播放收藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试：随机播放收藏"
+          }
+        }
+      }
+    },
+    "Used %@ / limit %@" : {
+      "comment" : "Settings: cache line; used size, then the limit",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used %@ / limit %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已用 %@ / 上限 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已用 %@ / 上限 %@"
+          }
+        }
+      }
+    },
+    "Version" : {
+      "comment" : "Settings: app version",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "版本"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "版本"
+          }
+        }
+      }
+    },
+    "shortcutsGuide.text" : {
+      "comment" : "The car autoplay guide in the settings sheet",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start Melarka favorites automatically when the car's Bluetooth connects\n\nOption 1 (most cars need no setup): once you have played music in Melarka, the car usually sends a \"play\" command when its Bluetooth connects, and the iPhone passes it to the app that played last. Melarka then plays the last queue from the cache, in the background; with an empty queue, it shuffles your favorites. Note: if you swipe Melarka away in the app switcher, iOS may not wake it again.\n\nOption 2 (a Shortcuts automation, the most reliable):\n1. Open the Shortcuts app and tap \"Automation\" at the bottom.\n2. Tap \"+\" at the top right and choose \"Bluetooth\".\n3. Under \"Device\", choose your car (for example \"My Car\") and tick \"Is Connected\".\n4. Choose \"Run Immediately\", and turn off \"Notify When Run\" (optional).\n5. Tap \"Next\" (if you see \"New Blank Automation\" first, tap it, then tap \"Add Action\") → search for \"Melarka\" → choose \"Shuffle Favorites\" (to continue where you left off, choose \"Resume\").\n6. Tap \"Done\". From then on, whenever the car's Bluetooth connects, Melarka starts playing in the background, with no unlocking and no tapping.\n\nTip: favorites are cached on the phone automatically on Wi‑Fi and play without a network; set the cache size in \"Settings → Offline Cache\"."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连上车载蓝牙就自动播放 Melarka 收藏\n\n方式一（大多数车不用设置）：用 Melarka 播放过音乐后，连上车载蓝牙时，车机通常会发送\"播放\"命令，iPhone 会把它交给最后播放的 App——Melarka 会在后台直接从缓存播放上次的队列；队列为空时随机播放收藏。注意：如果在多任务界面里把 Melarka 划掉，iOS 可能不会再唤醒它。\n\n方式二（快捷指令自动化，最可靠）：\n1. 打开\"快捷指令\" App，点底部的\"自动化\"。\n2. 点右上角\"+\"，选择\"蓝牙\"。\n3. 在\"设备\"里选你的车（例如 \"My Car\"），勾选\"已连接\"。\n4. 选择\"立即运行\"，并关闭\"运行时通知\"（可选）。\n5. 点\"下一步\"（如果先看到\"新建空白自动化\"，点它，再点\"添加操作\"）→ 搜索\"Melarka\" → 选择\"随机播放收藏\"（想接着上次听，就选\"继续播放\"）。\n6. 点\"完成\"。以后一连上车载蓝牙，Melarka 就会在后台开始播放，不用解锁、不用点。\n\n小贴士：收藏的歌会在连上 Wi‑Fi 时自动缓存到手机，没有网络也能播放；缓存大小在\"设置 → 离线缓存\"里调整。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连上车载蓝牙就自动播放 Melarka 收藏\n\n方式一（大多数车不用设置）：用 Melarka 播放过音乐后，连上车载蓝牙时，车机通常会发送\"播放\"命令，iPhone 会把它交给最后播放的 App——Melarka 会在后台直接从缓存播放上次的队列；队列为空时随机播放收藏。注意：如果在多任务界面里把 Melarka 划掉，iOS 可能不会再唤醒它。\n\n方式二（快捷指令自动化，最可靠）：\n1. 打开\"快捷指令\" App，点底部的\"自动化\"。\n2. 点右上角\"+\"，选择\"蓝牙\"。\n3. 在\"设备\"里选你的车（例如 \"My Car\"），勾选\"已连接\"。\n4. 选择\"立即运行\"，并关闭\"运行时通知\"（可选）。\n5. 点\"下一步\"（如果先看到\"新建空白自动化\"，点它，再点\"添加操作\"）→ 搜索\"Melarka\" → 选择\"随机播放收藏\"（想接着上次听，就选\"继续播放\"）。\n6. 点\"完成\"。以后一连上车载蓝牙，Melarka 就会在后台开始播放，不用解锁、不用点。\n\n小贴士：收藏的歌会在连上 Wi‑Fi 时自动缓存到手机，没有网络也能播放；缓存大小在\"设置 → 离线缓存\"里调整。"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

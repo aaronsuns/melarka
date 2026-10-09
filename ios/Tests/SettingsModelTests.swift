@@ -231,13 +231,34 @@ import WebKit
         XCTAssertEqual(SettingsModel.versionText, "\(v) (\(b))")
     }
 
-    func testGuideTextNamesTheSteps() {
-        for s in ["快捷指令", "自动化", "蓝牙", "随机播放收藏", "立即运行"] { XCTAssertTrue(ShortcutsGuide.text.contains(s), s) }
+    func testGuideTextNamesTheSteps() throws {
+        let zh = try XCTUnwrap(localized("shortcutsGuide.text", "zh-Hans"))
+        for s in ["快捷指令", "自动化", "蓝牙", "随机播放收藏", "立即运行"] { XCTAssertTrue(zh.contains(s), s) }
+        let en = try XCTUnwrap(localized("shortcutsGuide.text", "en"))
+        for s in ["Shortcuts", "Automation", "Bluetooth", "Shuffle Favorites", "Run Immediately"] { XCTAssertTrue(en.contains(s), s) }
     }
 
-    func testGuideTextIsTheAgreedText() {
-        XCTAssertTrue(ShortcutsGuide.text.hasPrefix("连上车载蓝牙就自动播放 Melarka 收藏\n\n方式一（大多数车不用设置）"))
-        XCTAssertTrue(ShortcutsGuide.text.contains("5. 点\"下一步\"（如果先看到\"新建空白自动化\"，点它，再点\"添加操作\"）→ 搜索\"Melarka\" → 选择\"随机播放收藏\"（想接着上次听，就选\"继续播放\"）。"))
-        XCTAssertTrue(ShortcutsGuide.text.hasSuffix("缓存大小在\"设置 → 离线缓存\"里调整。"))
+    /// The Chinese text is the agreed one, unchanged; the English one says the same.
+    func testGuideTextIsTheAgreedText() throws {
+        let zh = try XCTUnwrap(localized("shortcutsGuide.text", "zh-Hans"))
+        XCTAssertTrue(zh.hasPrefix("连上车载蓝牙就自动播放 Melarka 收藏\n\n方式一（大多数车不用设置）"))
+        XCTAssertTrue(zh.contains("5. 点\"下一步\"（如果先看到\"新建空白自动化\"，点它，再点\"添加操作\"）→ 搜索\"Melarka\" → 选择\"随机播放收藏\"（想接着上次听，就选\"继续播放\"）。"))
+        XCTAssertTrue(zh.hasSuffix("缓存大小在\"设置 → 离线缓存\"里调整。"))
+        let en = try XCTUnwrap(localized("shortcutsGuide.text", "en"))
+        XCTAssertTrue(en.hasPrefix("Start Melarka favorites automatically when the car's Bluetooth connects\n\nOption 1 (most cars need no setup)"))
+        XCTAssertTrue(en.contains("→ search for \"Melarka\" → choose \"Shuffle Favorites\" (to continue where you left off, choose \"Resume\")."))
+        XCTAssertTrue(en.hasSuffix("set the cache size in \"Settings → Offline Cache\"."))
+        // The guide's "Settings → Offline Cache" is the settings sheet's own section name, in each language.
+        XCTAssertEqual(localized("Offline Cache", "en"), "Offline Cache")
+        XCTAssertEqual(localized("Offline Cache", "zh-Hans"), "离线缓存")
+    }
+
+    /// The settings texts that SettingsModel builds, per language.
+    func testUsageTextPerLanguage() {
+        XCTAssertEqual(localized("Used %@ / limit %@", "zh-Hans"), "已用 %@ / 上限 %@")
+        XCTAssertEqual(localized("Not signed in · limit %@", "zh-Hans"), "未登录 · 上限 %@")
+        XCTAssertEqual(localized("Not signed in · limit %@", "en"), "Not signed in · limit %@")
+        XCTAssertEqual(localized("Cache cleared", "zh-Hans"), "缓存已清空")
+        XCTAssertEqual(localized("Syncing favorites (downloads only on Wi‑Fi)", "zh-Hans"), "正在同步收藏（仅在 Wi‑Fi 下下载）")
     }
 }

@@ -2,7 +2,7 @@ import Foundation
 
 /// What the settings sheet shows and does. Everything goes through `AppServices`: the cap
 /// (`setCacheCap(gb:)`), the cache (`cacheStore`), the sync (`syncFavorites()`), the server change
-/// (`changeServer()`), and the test button through the same path as the 随机播放收藏 intent.
+/// (`changeServer()`), and the test button through the same path as the Shuffle Favorites intent.
 @MainActor final class SettingsModel: ObservableObject {
     static let capChoices = [1, 2, 5, 10]
     static let defaultCapGB = 2
@@ -19,15 +19,16 @@ import Foundation
         refresh()
     }
 
-    var server: String { services.serverURL?.absoluteString ?? "未设置" }
+    var server: String { services.serverURL?.absoluteString ?? String(localized: "Not set") }
     var capBytes: Int64 { Int64(capGB) << 30 }
     var signedIn: Bool { services.cacheStore != nil }
 
-    /// "已用 12.3 MB / 上限 2 GB"; signed out, only the cap.
+    /// "Used 12.3 MB / limit 2 GB" (in the phone's language); signed out, only the cap.
     var usageText: String {
         let cap = "\(capGB) GB"
-        guard signedIn else { return "未登录 · 上限 \(cap)" }
-        return "已用 \(ByteCountFormatter.string(fromByteCount: usedBytes, countStyle: .binary)) / 上限 \(cap)"
+        guard signedIn else { return String(localized: "Not signed in · limit \(cap)") }
+        let used = ByteCountFormatter.string(fromByteCount: usedBytes, countStyle: .binary)
+        return String(localized: "Used \(used) / limit \(cap)")
     }
 
     /// "0.1.0 (42)": the version and the build.
@@ -49,16 +50,16 @@ import Foundation
 
     func syncNow() {
         services.syncFavorites()
-        message = "正在同步收藏（仅在 Wi‑Fi 下下载）"
+        message = String(localized: "Syncing favorites (downloads only on Wi‑Fi)")
     }
 
     func clearCache() {
         services.cacheStore?.clear()
         refresh()
-        message = "缓存已清空"
+        message = String(localized: "Cache cleared")
     }
 
-    /// The 测试 button: exactly what the Shortcuts automation runs.
+    /// The Test button: exactly what the Shortcuts automation runs.
     func testShuffle() async {
         do {
             let outcome = try await IntentRun.shuffleFavorites(services.intentPlayer)
@@ -70,7 +71,7 @@ import Foundation
         }
     }
 
-    /// 更换服务器: signs out of this server and goes back to the server screen.
+    /// Change Server: signs out of this server and goes back to the server screen.
     func changeServer() async {
         await services.changeServer()
     }

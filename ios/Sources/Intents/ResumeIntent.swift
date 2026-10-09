@@ -1,9 +1,9 @@
 import AppIntents
 
-/// 继续播放: the saved queue where it stopped (from the cache first); with no queue, shuffled favorites.
+/// Resume (继续播放): the saved queue where it stopped (from the cache first); with no queue, shuffled favorites.
 struct ResumeIntent: AudioPlaybackIntent {
-    static let title: LocalizedStringResource = "继续播放"
-    static let description = IntentDescription("在后台从上次的位置继续播放；队列为空时随机播放收藏。")
+    static let title: LocalizedStringResource = "Resume"
+    static let description = IntentDescription("Resumes where you left off, in the background; with an empty queue, shuffles your favorites.")
     static let openAppWhenRun = false
 
     @MainActor func perform() async throws -> some IntentResult {

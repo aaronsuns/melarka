@@ -28,16 +28,17 @@ import os
     static let restartPrevMs = 3000
     /// An episode saved this close to its end starts from the beginning (the web's `resumeAt`).
     static let nearEndS = 30
-    static let offlineNotice = "离线：正在播放已缓存的收藏"
-    static let noFavoritesNotice = "还没有收藏：随机播放全部歌曲"
-    static let cannotPlay = "无法播放"
-    static let stallNotice = "网络太慢：先播放已缓存的歌曲"
-    static let offlineStopped = "离线：没有已缓存的歌曲可播放"
+    /// The notices and errors the web page shows, in the phone's language (Localizable.xcstrings).
+    static let offlineNotice = String(localized: "Offline: playing cached favorites")
+    static let noFavoritesNotice = String(localized: "No favorites yet: shuffling all songs")
+    static let cannotPlay = String(localized: "Can't play")
+    static let stallNotice = String(localized: "Network too slow: playing cached songs first")
+    static let offlineStopped = String(localized: "Offline: no cached songs to play")
     /// A remote track buffering this long while playing gives way to one on the phone (the web's STALL_MS).
     static let stallSeconds: Double = 6
-    static let episodeFallbackNotice = "节目无法播放：改为播放音乐"
-    static let nothingCachedNotice = "离线且没有已缓存的收藏"
-    static let shuffleFailedNotice = "无法获取收藏，请稍后再试"
+    static let episodeFallbackNotice = String(localized: "Episode can't play: playing music instead")
+    static let nothingCachedNotice = String(localized: "Offline, and no favorites are cached")
+    static let shuffleFailedNotice = String(localized: "Couldn't get favorites; try again later")
     /// Car lyrics that could not be fetched are asked again after this, then twice as long each time.
     static let lyricsRetryS: Double = 30
     static let lyricsRetryMaxS: Double = 600

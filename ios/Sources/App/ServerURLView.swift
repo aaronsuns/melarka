@@ -40,8 +40,8 @@ struct ServerURLView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Melarka").font(.largeTitle.bold())
-            Text("服务器地址").font(.headline)
+            Text(verbatim: "Melarka").font(.largeTitle.bold())
+            Text("Server Address").font(.headline)
             TextField(ServerURLValidator.placeholder, text: $text)
                 .textFieldStyle(.roundedBorder)
                 .keyboardType(.URL).textContentType(.URL)
@@ -49,7 +49,7 @@ struct ServerURLView: View {
                 .onSubmit(connect)
             if let error { Text(error).foregroundStyle(.red).font(.footnote) }
             Button(action: connect) {
-                if checking { ProgressView() } else { Text("连接").frame(maxWidth: .infinity) }
+                if checking { ProgressView() } else { Text("Connect").frame(maxWidth: .infinity) }
             }
             .buttonStyle(.borderedProminent)
             .disabled(checking)
@@ -60,14 +60,14 @@ struct ServerURLView: View {
 
     private func connect() {
         guard let url = ServerURLValidator.normalize(text) else {
-            error = "请输入 https:// 开头的地址（开发时可用 http://…local 或 localhost）"
+            error = String(localized: "Enter an address that starts with https:// (for development, http://…local or localhost also works)")
             return
         }
         checking = true; error = nil
         Task {
             let ok = await ServerURLValidator.check(url)
             checking = false
-            if ok { onConnected(url) } else { error = "无法连接到这个服务器" }
+            if ok { onConnected(url) } else { error = String(localized: "Can't connect to this server") }
         }
     }
 }

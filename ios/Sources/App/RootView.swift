@@ -34,14 +34,14 @@ struct PageErrorView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "wifi.exclamationmark").font(.system(size: 44)).foregroundStyle(.secondary)
-            Text("无法连接服务器").font(.title3.bold())
+            Text("Can't Connect to the Server").font(.title3.bold())
             Text(server.host ?? server.absoluteString).font(.footnote).foregroundStyle(.secondary)
-            Button { services.retryPage() } label: { Text("重试").frame(maxWidth: 220) }
+            Button { services.retryPage() } label: { Text("Retry").frame(maxWidth: 220) }
                 .buttonStyle(.borderedProminent)
-            Button { services.openSettings() } label: { Text("设置").frame(maxWidth: 220) }
+            Button { services.openSettings() } label: { Text("Settings").frame(maxWidth: 220) }
                 .buttonStyle(.bordered)
             if services.hasOfflineFavorites {
-                Button { Task { await services.playOfflineFavorites() } } label: { Text("播放离线收藏").frame(maxWidth: 220) }
+                Button { Task { await services.playOfflineFavorites() } } label: { Text("Play Offline Favorites").frame(maxWidth: 220) }
                     .buttonStyle(.bordered)
             }
         }
