@@ -870,3 +870,43 @@ test("prime ignores taps inside [data-no-music-prime]", async () => {
   expect(audio.play).toHaveBeenCalled(); // any other tap still primes
   box.remove();
 });
+
+test("loudness normalization: each track's gain_db sets the volume, an unmeasured one plays at unity", async () => {
+  const { audio, player } = setup();
+  act(() => player().playList([tr(1, { gain_db: -6 }), tr(2, { gain_db: null }), tr(3)], 0));
+  expect(audio.volume).toBeCloseTo(0.501, 3);
+  act(() => audio.fire("ended"));
+  await waitFor(() => expect(player().current?.id).toBe(2));
+  expect(audio.volume).toBe(1);
+  act(() => player().prev());
+  await waitFor(() => expect(player().current?.id).toBe(1));
+  expect(audio.volume).toBeCloseTo(0.501, 3);
+  act(() => player().next());
+  act(() => player().next());
+  await waitFor(() => expect(player().current?.id).toBe(3));
+  expect(audio.volume).toBe(1); // a track from an older server, without the field
+});
+
+test("loudness normalization off plays at unity, and the switch applies at once to the loaded track", () => {
+  mockFetch({
+    "GET /api/v1/queue": () => ({ body: { queue: { track_ids: [], current_index: 0, position_ms: 0, version: 0, updated_by: "", updated_at: 0 }, tracks: [] } }),
+    "PUT /api/v1/queue": () => ({ status: 200, body: {} }),
+    "GET /api/v1/radio/next": () => ({ body: [] }),
+  });
+  const audio = new FakeAudio();
+  let p!: Player;
+  function Probe() {
+    p = usePlayer();
+    return null;
+  }
+  const ui = (loudness: boolean) => (
+    <PlayerProvider audio={audio as unknown as HTMLAudioElement} loudness={loudness}><Probe /></PlayerProvider>
+  );
+  const { rerender } = render(ui(false));
+  act(() => p.playList([tr(1, { gain_db: -6 })], 0));
+  expect(audio.volume).toBe(1);
+  rerender(ui(true));
+  expect(audio.volume).toBeCloseTo(0.501, 3);
+  rerender(ui(false));
+  expect(audio.volume).toBe(1);
+});

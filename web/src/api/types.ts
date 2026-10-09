@@ -30,6 +30,10 @@ export interface Track {
   added_at: number;
   track_no: number | null;
   disc_no: number | null;
+  // Loudness normalization: the attenuation (dB, never positive) that brings
+  // this track to a common level; null until measured, absent from an older
+  // server (or an older offline copy) — both play at unity.
+  gain_db?: number | null;
 }
 
 export interface Album {
@@ -209,6 +213,9 @@ export interface Prefs {
   // The current lyric line as the Bluetooth/lock-screen title. Absent from
   // an older server's answer: treat that as on (the default).
   car_lyrics?: boolean;
+  // Turn loud tracks down by their gain_db. Absent from an older server's
+  // answer: treat that as on (the default).
+  normalize_loudness?: boolean;
 }
 
 export type TagKind = "genre" | "mood" | "scene" | "era" | "language" | "other";
