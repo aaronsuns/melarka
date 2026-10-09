@@ -66,6 +66,8 @@ export function unshuffleUpcoming(q: QueueState, original: number[]): QueueState
   const rest = q.tracks.slice(q.index + 1);
   const wanted = new Map<number, number>();
   for (const id of original) wanted.set(id, (wanted.get(id) ?? 0) + 1);
+  // A play-next track whose id is also among the shuffled ones counts as
+  // that one (it can't be told apart), so it goes back to its original slot.
   const firstOriginal = rest.findIndex((t) => wanted.has(t.id));
   if (firstOriginal < 0) return q; // none of the shuffled tracks is left
   const front = rest.slice(0, firstOriginal);
@@ -93,7 +95,20 @@ export function unshuffleUpcoming(q: QueueState, original: number[]): QueueState
   return { ...q, tracks: [...head, ...front, ...restored, ...added] };
 }
 
-/** Repeat all at the end: the whole queue again from its first track; reshuffled when shuffle is on. */
+/**
+ * Repeat all at the end: the whole queue again from its first track; reshuffled when shuffle is on (never
+ * starting with the track that just ended, when there is another).
+ */
 export function newPass(q: QueueState, shuffle: boolean, rand: () => number = Math.random): QueueState {
-  return { ...q, tracks: shuffle ? shuffled(q.tracks, rand) : q.tracks, index: 0 };
+  if (!shuffle) return { ...q, index: 0 };
+  const tracks = shuffled(q.tracks, rand);
+  const ended = q.tracks[q.index]?.id;
+  if (tracks.length > 1 && tracks[0].id === ended) {
+    const others = tracks.flatMap((t, i) => (t.id !== ended ? [i] : []));
+    if (others.length > 0) {
+      const j = others[Math.min(others.length - 1, Math.floor(rand() * others.length))];
+      [tracks[0], tracks[j]] = [tracks[j], tracks[0]];
+    }
+  }
+  return { ...q, tracks, index: 0 };
 }

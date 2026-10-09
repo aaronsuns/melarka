@@ -686,15 +686,23 @@ function WebPlayerProvider({
       clearStall();
       finishListen("ended");
       const done = current(queueRef.current);
+      // Repeat one: the same track again, restarted in place — no new src,
+      // so nothing is fetched (it works hidden, and can't stall). A new
+      // listen, so each loop is a new play event.
+      if (modesRef.current.repeat === "one" && done && loadedId.current === done.id) {
+        notePlayed(done, true);
+        listen.current = { trackId: done.id, startedAt: Math.floor(Date.now() / 1000), seconds: 0, lastTime: 0 };
+        pendingSeek.current = 0;
+        knownPos.current = 0;
+        audio.currentTime = 0;
+        setPosition(0);
+        playOrAskTap(done.id);
+        return;
+      }
       // The next track is about to buffer: say so before the cache hears of
       // the finished one, or it would start downloading in that very gap.
       setBuffering(true);
       if (done) notePlayed(done, true);
-      // Repeat one: the same track again — a new listen, so a new play event.
-      if (modesRef.current.repeat === "one" && done) {
-        load(done, { autoplay: true, index: queueRef.current.index });
-        return;
-      }
       if (!go(choose(changeOpts()))) stop(null);
     };
     // A track that doesn't come from the phone and isn't moving: switch to
@@ -750,7 +758,8 @@ function WebPlayerProvider({
       if (!isOnline()) return;
       netSkips.current += 1;
       listen.current = null;
-      const c: NextChoice = netSkips.current < MAX_CONSECUTIVE_ERRORS ? choose({ mustBeLocal: false, favoritesAtEnd: true }) : { kind: "none" };
+      const wrap = modesRef.current.repeat === "all"; // repeat all: start over, never a favorite into the loop
+      const c: NextChoice = netSkips.current < MAX_CONSECUTIVE_ERRORS ? choose({ mustBeLocal: false, favoritesAtEnd: true, wrap }) : { kind: "none" };
       if (go(c)) {
         setError(null);
         return;
@@ -773,7 +782,7 @@ function WebPlayerProvider({
       errors.current += 1;
       const track = current(queueRef.current);
       const tooMany = errors.current >= MAX_CONSECUTIVE_ERRORS;
-      const c = choose({ mustBeLocal: tooMany || isHidden(), favoritesAtEnd: true });
+      const c = choose({ mustBeLocal: tooMany || isHidden(), favoritesAtEnd: true, wrap: modesRef.current.repeat === "all" });
       listen.current = null;
       // Several in a row: only a track from the phone is worth trying.
       if ((tooMany && !isLocalChoice(c)) || !go(c)) {
@@ -808,7 +817,7 @@ function WebPlayerProvider({
       handlers.forEach(([n, h]) => audio.removeEventListener(n, h));
       window.removeEventListener("online", onOnline);
     };
-  }, [audio, finishListen, clearNetRetry, clearStall, retryNetwork, setNeedsTap, setBuffering, choose, changeOpts, go, isLocal, acting]);
+  }, [audio, finishListen, clearNetRetry, clearStall, retryNetwork, setNeedsTap, setBuffering, choose, changeOpts, go, isLocal, acting, playOrAskTap]);
   // A seek (from anywhere) cancels a pending stall switch.
   useEffect(() => {
     audio.addEventListener("seeking", clearStall);

@@ -41,6 +41,15 @@ describe("shuffle", () => {
     expect(unshuffleUpcoming(q([1, 2, 3, 2], 0), [3, 2, 2]).tracks.map(id)).toEqual([1, 3, 2, 2]);
   });
 
+  test("a shuffled new pass never starts with the track that just ended", () => {
+    // Without the guard this rand puts 4 (just ended) first: [4, 2, 3, 1].
+    const pass = newPass(q([1, 2, 3, 4], 3), true, seq(0, 0.99, 0.99));
+    expect(pass.tracks[0].id).not.toBe(4);
+    expect([...pass.tracks.map(id)].sort()).toEqual([1, 2, 3, 4]);
+    for (let i = 0; i < 200; i++) expect(newPass(q([1, 2, 3], 2), true).tracks[0].id).not.toBe(3);
+    expect(newPass(q([5], 0), true).tracks.map(id)).toEqual([5]); // nothing else to start with
+  });
+
   test("unshuffle with nothing remembered keeps the current order", () => {
     expect(unshuffleUpcoming(q([1, 3, 2], 0), []).tracks.map(id)).toEqual([1, 3, 2]);
   });

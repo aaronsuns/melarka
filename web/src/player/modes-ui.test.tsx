@@ -34,9 +34,8 @@ test("the repeat button cycles off → all → one → off, and says which", asy
   await userEvent.click(screen.getByRole("button", { name: "列表循环" }));
   const one = screen.getByRole("button", { name: "单曲循环" });
   expect(one).toHaveAttribute("aria-pressed", "true");
-  expect(one).toHaveTextContent("🔂");
   await userEvent.click(one);
-  expect(screen.getByRole("button", { name: "循环：关" })).toHaveTextContent("🔁");
+  expect(screen.getByRole("button", { name: "循环：关" })).toHaveAttribute("data-repeat", "off");
   expect(p.modes.repeat).toBe("off");
 });
 
@@ -77,4 +76,25 @@ test("in the iPhone app (no modes in the native engine yet) the buttons are hidd
     n.uninstall();
     resetSessionOwner();
   }
+});
+
+test("the mode buttons draw line icons; repeat one adds a 1 badge", async () => {
+  renderWithApp(<><Grab /><MiniPlayer /></>);
+  act(() => p.playList([tr(1), tr(2)], 0));
+  const dialog = await openNowPlaying("歌1");
+  const shuffle = within(dialog).getByRole("button", { name: "随机播放" });
+  expect(shuffle.querySelector("svg")).not.toBeNull();
+  expect(shuffle).not.toHaveTextContent(/🔀/u);
+  const off = within(dialog).getByRole("button", { name: "循环：关" });
+  expect(off.querySelector("svg")).not.toBeNull();
+  expect(off.querySelector(".repeat-one-badge")).toBeNull();
+  await userEvent.click(off);
+  const all = within(dialog).getByRole("button", { name: "列表循环" });
+  expect(all.querySelector("svg")).not.toBeNull();
+  expect(all.querySelector(".repeat-one-badge")).toBeNull();
+  await userEvent.click(all);
+  const one = within(dialog).getByRole("button", { name: "单曲循环" });
+  expect(one).toHaveAttribute("data-repeat", "one");
+  expect(one.querySelector(".repeat-one-badge")).toHaveTextContent("1");
+  expect(one).not.toHaveTextContent(/[🔁🔂]/u);
 });

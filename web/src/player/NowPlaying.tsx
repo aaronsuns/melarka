@@ -8,6 +8,7 @@ import { LyricsPicker } from "../components/LyricsPicker";
 import { duration, qualityLabel } from "../format";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
+import { RepeatIcon, RepeatOneIcon, ShuffleIcon } from "../components/icons";
 import type { Lyrics } from "../api/types";
 import { hasLyrics, LyricStrip, LyricsView, syncedLines } from "./Lyrics";
 import { usePlayer, usePlayerProgress } from "./PlayerProvider";
@@ -240,7 +241,9 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
       <div className="now-times muted small"><span>{duration(pos * 1000)}</span><span>-{duration(Math.max(0, progress.duration - pos) * 1000)}</span></div>
       <div className="now-controls">
         {p.modesAvailable && (
-          <button className="icon mode" aria-label={t("now.shuffle")} aria-pressed={p.modes.shuffle} onClick={() => p.setShuffle(!p.modes.shuffle)}>🔀</button>
+          <button className="icon mode" aria-label={t("now.shuffle")} aria-pressed={p.modes.shuffle} onClick={() => p.setShuffle(!p.modes.shuffle)}>
+            <ShuffleIcon size={22} />
+          </button>
         )}
         <button className="icon big" aria-label={t("common.previous")} onClick={p.prev}>⏮</button>
         <button className="icon huge" aria-label={p.playing ? t("common.pause") : t("common.play")} onClick={p.toggle}>{p.playing ? "⏸" : "▶"}</button>
@@ -253,7 +256,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
             data-repeat={p.modes.repeat}
             onClick={p.cycleRepeat}
           >
-            {p.modes.repeat === "one" ? "🔂" : "🔁"}
+            {p.modes.repeat === "one" ? <RepeatOneIcon size={22} /> : <RepeatIcon size={22} />}
           </button>
         )}
       </div>

@@ -946,6 +946,19 @@ describe("shuffle and repeat", () => {
     });
   });
 
+  test("repeat one restarts in place: no new src, so no network fetch", () => {
+    storeModes({ shuffle: false, repeat: "one", original: null });
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2)], 0));
+    const srcSet = vi.spyOn(audio, "src", "set");
+    audio.currentTime = 199;
+    act(() => audio.fire("ended"));
+    expect(srcSet).not.toHaveBeenCalled();
+    expect(audio.currentTime).toBe(0);
+    expect(audio.play).toHaveBeenCalledTimes(2);
+    expect(player().current?.id).toBe(1);
+  });
+
   test("repeat one: next() still moves to the next track", () => {
     storeModes({ shuffle: false, repeat: "one", original: null });
     const { audio, player } = setup();

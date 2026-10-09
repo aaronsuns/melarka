@@ -605,3 +605,35 @@ describe("with play modes stored as off", () => {
     expect(player().playing).toBe(false);
   });
 });
+
+// Repeat all loops the queue as it is: a failing last track starts it over
+// rather than adding a favorite to the loop.
+describe("repeat all and failures", () => {
+  beforeEach(() => {
+    localStorage.setItem("lark.modes", JSON.stringify({ shuffle: false, repeat: "all", original: null }));
+    favs = [{ track: tr(9), lastPlayedAt: 0 }];
+    kinds.set(9, "favorite");
+  });
+
+  test("a last track that won't play wraps to the first", () => {
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2)], 1));
+    act(() => audio.fire("error"));
+    expect(player().current?.id).toBe(1);
+    expect(ids(player())).toEqual([1, 2]);
+  });
+
+  // (With a cached favorite on the phone the capped retry plays it first, to
+  // keep sound going, as before; here there is none.)
+  test("a last track whose network keeps failing wraps to the first, rather than stopping", () => {
+    favs = [];
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2)], 1));
+    for (let i = 0; i < 4; i++) {
+      audio.error = { code: 2 };
+      act(() => audio.fire("error"));
+    }
+    expect(player().current?.id).toBe(1);
+    expect(ids(player())).toEqual([1, 2]);
+  });
+});
