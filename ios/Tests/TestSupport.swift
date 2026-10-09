@@ -4,18 +4,25 @@ import WebKit
 
 struct WaitTimeout: Error, CustomStringConvertible {
     let seconds: TimeInterval
-    var description: String { "condition not met within \(seconds) s" }
+    let file: StaticString
+    let line: UInt
+    let state: String?
+    var description: String {
+        "condition not met within \(seconds) s (\((("\(file)" as NSString).lastPathComponent)):\(line))" + (state.map { "; \($0)" } ?? "")
+    }
 }
 
-/// Polls `condition` every 50 ms until it is true, or throws after `timeout` seconds.
-@MainActor func waitUntil(timeout: TimeInterval = 5, _ condition: () async throws -> Bool) async throws {
+/// Polls `condition` every 50 ms until it is true, or throws after `timeout` seconds. The error names the
+/// call site and, when `state` is given, what it describes at that moment.
+@MainActor func waitUntil(timeout: TimeInterval = 5, file: StaticString = #filePath, line: UInt = #line,
+                          state: (@MainActor () -> String)? = nil, _ condition: () async throws -> Bool) async throws {
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
         if try await condition() { return }
         try await Task.sleep(nanoseconds: 50_000_000)
     }
     if try await condition() { return }
-    throw WaitTimeout(seconds: timeout)
+    throw WaitTimeout(seconds: timeout, file: file, line: line, state: state?())
 }
 
 extension XCTestCase {
