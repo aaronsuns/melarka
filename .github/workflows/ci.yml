@@ -126,6 +126,8 @@ jobs:
       - run: npx playwright install --with-deps webkit chromium
       - run: npm run build
       - run: npm run e2e # the test server uses web/e2e/fake-yt-dlp.sh: no network
+      - name: TEMP the whole e2e suite 5 more times, each on a fresh server
+        run: for i in 1 2 3 4 5; do echo "== e2e round $i"; npm run e2e -- --output "test-results/round-$i" || exit 1; done
       # A failed run's traces and page snapshots, to see why without a rerun.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()

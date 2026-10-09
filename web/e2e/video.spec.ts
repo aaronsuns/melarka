@@ -1,5 +1,4 @@
 import { expect, test, type Page, type TestInfo } from "./fixtures";
-import { login, loginWith } from "./playback";
 
 // The card grid under a 视频 section heading.
 const grid = (page: Page, heading: string) => page.locator("h2", { hasText: heading }).locator("xpath=following-sibling::div[1]");
@@ -14,20 +13,28 @@ function ids(info: TestInfo) {
   return { query: `测试 ${info.project.name}`, watch: second ? "fakevideo11" : "fakevideo01", keep: second ? "fakevideo12" : "fakevideo02" };
 }
 
+// Signs this project's member in without ever opening the shared admin in a page.
+// The admin's on_open is "resume": a page signed in as the admin starts streaming
+// its queue, and navigating that page while the stream (and the requests that the
+// cleared cookies turn into 401s) is still loading sometimes makes WebKit on
+// Linux fail the navigation itself ("WebKit encountered an internal error").
+// So everything up to the member's first page load goes through the API, and the
+// first page this test opens is the member's, set to open on nothing.
 async function loginAsProjectMember(page: Page, info: TestInfo) {
-  await login(page);
+  const signIn = async (username: string, password: string) =>
+    expect((await page.request.post("/api/v1/auth/login", { data: { username, password, device_name: "e2e" } })).ok()).toBe(true);
+  await signIn("admin", process.env.LARK_E2E_PW!);
   const username = `v-${info.project.name}`;
   const password = "video-e2e-pass";
   const r = await page.request.post("/api/v1/users", { data: { username, password, role: "member" } });
   expect([201, 409]).toContain(r.status()); // 409: a retry of this test
   await page.context().clearCookies();
-  await loginWith(page, username, password);
+  await signIn(username, password);
   // A new user opens on a shuffle of favorites: music that starts on a tap
-  // here would take the session from the video. Open on nothing, like the
-  // shared admin's "resume" with an empty queue (global-setup.ts).
+  // here would take the session from the video. Open on nothing.
   const prefs = await (await page.request.get("/api/v1/me/preferences")).json();
   expect((await page.request.put("/api/v1/me/preferences", { data: { ...prefs, on_open: "nothing" } })).ok()).toBe(true);
-  await page.reload();
+  await page.goto("/");
   await expect(page.locator("nav.tabs a").first()).toBeVisible();
 }
 
