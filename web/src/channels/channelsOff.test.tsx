@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, test } from "vitest";
 import App from "../App";
@@ -17,7 +17,9 @@ const latestCalls = (f: ReturnType<typeof mockFetch>) => f.mock.calls.filter(([u
 test("channels on: the 频道 tab shows with its badge", async () => {
   const f = signedIn();
   render(<MemoryRouter initialEntries={["/library"]}><App /></MemoryRouter>);
-  expect(await screen.findByRole("link", { name: "频道" })).toBeInTheDocument();
+  const tab = await screen.findByRole("link", { name: "频道" });
+  // The unplayed count is fetched after the tab renders: wait for the badge it fills in, not for a fixed moment.
+  await waitFor(() => expect(tab.querySelector(".tab-badge")).toHaveTextContent("3"));
   expect(latestCalls(f)).toBeGreaterThan(0);
 });
 

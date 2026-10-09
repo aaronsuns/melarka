@@ -62,9 +62,13 @@ func prepSetup(t *testing.T) (*Service, *library.Store, int64, *fakeRunner) {
 	return svc, lib, l.ID, cacheRunner
 }
 
+// waitDeadline bounds a wait for something that must happen: only a broken
+// test ever waits that long, so it is generous for a loaded CI runner.
+const waitDeadline = 30 * time.Second
+
 func waitFor(t *testing.T, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(waitDeadline)
 	for !cond() {
 		if time.Now().After(deadline) {
 			t.Fatal("condition never became true")
@@ -174,31 +178,46 @@ func TestPreparerLeavesASlotForPlayback(t *testing.T) {
 	svc.Cache.Runner = play
 	a := insertTrack(t, lib, libID, "a.flac", "flac", 900)
 	b := insertTrack(t, lib, libID, "b.flac", "flac", 900)
-	go svc.Resolve(context.Background(), a, High) // playback holds one of the 2 slots
+	played := make(chan struct{})
+	go func() { // playback holds one of the 2 slots
+		defer close(played)
+		svc.Resolve(context.Background(), a, High)
+	}()
 	<-play.started
 
 	r := &countingRunner{}
-	p := &Preparer{Service: svc, Runner: r, Max: 8, Log: svc.Log}
+	busy := make(chan PrepJob, 16)
+	p := &Preparer{Service: svc, Runner: r, Max: 8, Log: svc.Log, onBusy: func(j PrepJob) { busy <- j }}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go p.Run(ctx)
 	p.Enqueue([]int64{b}, High)
-	time.Sleep(100 * time.Millisecond)
+	// Wait for the preparer to have tried b and put it back, not for a fixed
+	// time: a slow machine may not have got to it yet after any sleep.
+	select {
+	case j := <-busy:
+		if j.ID != b {
+			t.Fatalf("busy job %+v, want track %d", j, b)
+		}
+	case <-time.After(waitDeadline):
+		t.Fatal("the preparer never tried the job")
+	}
+	// A wake left over from the Enqueue may make it try once more; either way
+	// it settles with b pending and nothing running, until the next Enqueue.
+	waitFor(t, func() bool {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return p.running == nil && len(p.pending) == 1 && p.pending[0].ID == b
+	})
 	if r.calls.Load() != 0 {
 		t.Fatal("a prepare took the last free slot")
 	}
-	if got := p.pendingIDs(); !equal(got, []int64{b}) {
-		t.Fatalf("pending %v, want the job kept for a retry", got)
-	}
 	close(play.release)
-	// The next request retries it. Playback gives its slot back a moment
-	// after its release, so keep asking until the retry finds the slot free.
-	waitFor(t, func() bool {
-		if r.calls.Load() == 0 {
-			p.Enqueue(nil, High)
-		}
-		return r.calls.Load() == 1 && p.Idle()
-	})
+	// The transcode gives its slot back before its result reaches the caller:
+	// once Resolve has returned, the slot is free. The next request retries.
+	<-played
+	p.Enqueue(nil, High)
+	waitFor(t, func() bool { return r.calls.Load() == 1 && p.Idle() })
 }
 
 // A playback request that joins a prepare which gave up for lack of a slot

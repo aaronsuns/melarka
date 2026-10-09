@@ -156,6 +156,27 @@ func makeSilentFile(seconds: Double) throws -> URL {
         try await waitUntil(timeout: 10) { d.has("finished:2") }
     }
 
+    /// The same seek asked for twice (an item's ready status arriving after an adopt already started its seek):
+    /// the second cancels the first, and only the second's completion ends the pending seek. Before, the
+    /// cancelled one cleared it and started playback from the old position, before the second had landed.
+    func testARepeatedSeekWaitsForTheNewestOne() async throws {
+        let url = try silent(3)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(url), startMs: 0, autoplay: true, rate: 1, generation: 1)
+        let item = try XCTUnwrap(b.player.currentItem as? LarkPlayerItem)
+        try await waitUntil(timeout: 10) { item.status == .readyToPlay && b.player.rate != 0 }
+        // Stopped under the backend, as an adopt does before its seek: the seek's completion is what plays it.
+        b.player.pause()
+        b.seek(ms: 2000)
+        b.seek(ms: 2000)
+        XCTAssertEqual(item.pendingSeekMs, 2000)
+        XCTAssertEqual(b.positionMs, 2000)
+        // Playback resumes only once the newest seek has landed: never from the old position.
+        try await waitUntil(timeout: 10) { b.player.rate != 0 }
+        XCTAssertGreaterThanOrEqual(item.currentTime().seconds, 1.95)
+        XCTAssertNil(item.pendingSeekMs)
+    }
+
     /// A media services reset: a new player, nothing of the old one reports again, and the next load plays.
     func testRebuildGivesAFreshPlayer() async throws {
         let a = try silent(3), c = try silent(1)

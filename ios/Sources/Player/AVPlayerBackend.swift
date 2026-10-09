@@ -11,6 +11,8 @@ final class LarkPlayerItem: AVPlayerItem {
     var failed = false
     /// A seek asked for and not done yet (before the item is ready, or in flight): the position reads this.
     var pendingSeekMs: Int?
+    /// Counts the seeks handed to AVFoundation: only the newest one's completion may clear `pendingSeekMs`.
+    var seekCount = 0
     var statusObservation: NSKeyValueObservation?
 
     init(source: MediaSource, asset: AVAsset) {
@@ -245,9 +247,14 @@ final class LarkPlayerItem: AVPlayerItem {
 
     private func performSeek(_ item: LarkPlayerItem) {
         guard let ms = item.pendingSeekMs else { return }
+        item.seekCount += 1
+        let n = item.seekCount
         item.seek(to: CMTime(value: CMTimeValue(ms), timescale: 1000), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
             performOnMain {
-                guard item.pendingSeekMs == ms else { return }      // a newer seek is on its way
+                // A newer seek is on its way. Its target may be the same: the item's ready status can arrive
+                // after an adopt already started the seek, and the second seek cancels the first, whose
+                // completion would otherwise start playback from the old position before the second lands.
+                guard item.seekCount == n, item.pendingSeekMs == ms else { return }
                 item.pendingSeekMs = nil
                 guard let self, self.isCurrent(item), self.wantsPlay, self.player.rate == 0 else { return }
                 self.player.play()

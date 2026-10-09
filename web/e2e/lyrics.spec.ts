@@ -88,6 +88,11 @@ test("the lyrics view's shift, align and wrong-lyrics controls fit a phone, and 
   const row = page.locator(".track-main", { hasText: "甜蜜蜜" });
   await expect(row).toBeVisible({ timeout: 15_000 });
   const trackId = await trackIdByTitle(page, "甜蜜蜜");
+  // Start from no shift, whatever an earlier (failed) run left on the server.
+  const shown = await (await page.request.get(`/api/v1/tracks/${trackId}/lyrics`)).json();
+  if (shown.offset_ms) {
+    expect((await page.request.put(`/api/v1/tracks/${trackId}/lyrics/offset`, { data: { offset_ms: 0, lyrics_id: shown.id } })).ok()).toBe(true);
+  }
   await verifyPlaybackStarted(page, info, () => row.click(), { trackId });
   await page.locator(".mini-info").click();
   const now = page.getByRole("dialog", { name: "正在播放" });
@@ -109,15 +114,27 @@ test("the lyrics view's shift, align and wrong-lyrics controls fit a phone, and 
   await put;
   expect(await offsetOnServer()).toBe(1000);
 
-  // Long-press a line: aligned to now, saved at once.
+  // Long-press a line: aligned to now, saved at once. The new shift is the
+  // playback position minus the line's time (0.5 s), so first move playback
+  // well past that line: aligned right at 0.5 s, the shift would come out 0.0
+  // and leave nothing for 复位 to reset, however fast the test got there.
+  await now.getByRole("button", { name: "甜蜜蜜第三句" }).click();
+  await expect(async () => {
+    const shown = (await now.locator(".now-times span").first().textContent()) ?? "";
+    const [m, s] = shown.split(":").map(Number);
+    expect(m * 60 + s).toBeGreaterThanOrEqual(4);
+  }).toPass({ timeout: 5_000 });
   const line = now.getByRole("button", { name: "甜蜜蜜第一句" });
-  const box = (await line.boundingBox())!;
   const aligned = page.waitForResponse((r) => r.url().endsWith(`/tracks/${trackId}/lyrics/offset`) && r.request().method() === "PUT");
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  // hover waits for the line to stop moving: the list scrolls (smoothly) to
+  // the line just tapped, and a press on a moving line lands elsewhere.
+  await line.hover();
+  // Held until the alignment is saved, not for a fixed time: a busy page may
+  // run its long-press timer late, and a release before it fires is a tap.
   await page.mouse.down();
-  await page.waitForTimeout(700);
+  const alignedRes = await aligned;
   await page.mouse.up();
-  await aligned;
+  expect(JSON.parse(alignedRes.request().postData() ?? "{}").offset_ms).toBeGreaterThanOrEqual(3000);
   await expect(now.getByText("已对齐")).toBeVisible();
 
   // Wrong lyrics asks first; keep them here.

@@ -30,6 +30,11 @@ type Preparer struct {
 	pending []PrepJob
 	running *PrepJob
 	wake    chan struct{}
+
+	// onBusy, if set, is called each time a job found no free slot and was
+	// put back to wait for the next Enqueue. Tests only: it lets them wait
+	// for that to have happened instead of sleeping. Set before Run starts.
+	onBusy func(PrepJob)
 }
 
 // NewPreparer gives a Preparer that transcodes with a niced ffmpeg.
@@ -153,6 +158,9 @@ func (p *Preparer) Run(ctx context.Context) {
 				}
 			}
 			p.mu.Unlock()
+			if p.onBusy != nil {
+				p.onBusy(j)
+			}
 			select {
 			case <-ctx.Done():
 				return

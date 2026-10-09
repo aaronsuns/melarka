@@ -13,7 +13,7 @@ test("login, pinyin search, play, favorite, queue survives reload", async ({ pag
   // "current" track (another e2e test left a queue behind), the browser
   // would resume it from cache without firing a new /stream request at all
   // — a naive waitForResponse gate would hang until the track naturally
-  // finishes (~30s) and the queue auto-advances elsewhere. Its own fallback
+  // finishes (3 min) and the queue auto-advances elsewhere. Its own fallback
   // is scoped to this track's id and registered before the click, so it
   // can't be satisfied — or blocked — by an unrelated background request.
   const trackId = await trackIdByTitle(page, "甜蜜蜜");

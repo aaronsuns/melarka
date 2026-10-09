@@ -6,7 +6,7 @@ final class BridgeWebViewTests: XCTestCase {
     @MainActor func testUserScriptAndRoundTrip() async throws {
         var got: [WebMessage] = []
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { got.append($0) }
-        let web = WKWebView(frame: .zero, configuration: bridge.makeConfiguration())
+        let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
         let loaded = expectation(description: "loaded"); let nav = OneShotNavDelegate { loaded.fulfill() }; web.navigationDelegate = nav
         web.loadHTMLString("<html><body>t</body></html>", baseURL: URL(string: "https://lark.test/")!)
@@ -32,7 +32,7 @@ final class BridgeWebViewTests: XCTestCase {
     @MainActor func testMessagesFromOtherOriginsAreDropped() async throws {
         var got: [WebMessage] = []
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { got.append($0) }
-        let web = WKWebView(frame: .zero, configuration: bridge.makeConfiguration())
+        let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
         await load(web, "<html><body>t</body></html>", base: "https://evil.test/")
         _ = try await web.evaluateJavaScript("window.larkNative.post({type:'openSettings'}); 0")
@@ -49,7 +49,7 @@ final class BridgeWebViewTests: XCTestCase {
         // only the isMainFrame guard stops it.
         var got: [WebMessage] = []
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { got.append($0) }
-        let web = WKWebView(frame: .zero, configuration: bridge.makeConfiguration())
+        let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
         await load(web, """
             <html><body><iframe srcdoc="<script>webkit.messageHandlers.lark.postMessage({type:'openSettings'}); parent.__ran = 1</script>"></iframe></body></html>
@@ -62,7 +62,7 @@ final class BridgeWebViewTests: XCTestCase {
 
     @MainActor func testUserScriptCannotBeReplaced() async throws {
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { _ in }
-        let web = WKWebView(frame: .zero, configuration: bridge.makeConfiguration())
+        let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
         let loaded = expectation(description: "loaded"); let nav = OneShotNavDelegate { loaded.fulfill() }; web.navigationDelegate = nav
         web.loadHTMLString("<html><body>t</body></html>", baseURL: URL(string: "https://lark.test/")!)
@@ -75,7 +75,7 @@ final class BridgeWebViewTests: XCTestCase {
 
     @MainActor func testSendIsANoOpWhileInactive() async throws {
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { _ in }
-        let web = WKWebView(frame: .zero, configuration: bridge.makeConfiguration())
+        let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
         let loaded = expectation(description: "loaded"); let nav = OneShotNavDelegate { loaded.fulfill() }; web.navigationDelegate = nav
         web.loadHTMLString("<html><body>t</body></html>", baseURL: URL(string: "https://lark.test/")!)
