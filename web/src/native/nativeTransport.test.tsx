@@ -406,10 +406,11 @@ it("auth: sign-in posts auth{signedIn:true,userId}, sign-out posts signedIn:fals
   });
   render(<AuthProvider><AuthProbe /></AuthProvider>);
   expect(await screen.findByText("in:5")).toBeInTheDocument();
-  expect(n.sent("auth")).toEqual([{ type: "auth", signedIn: true, userId: 5 }]); // nothing while loading
+  // The post comes from an effect that runs after the render shows in:5: wait for it.
+  await waitFor(() => expect(n.sent("auth")).toEqual([{ type: "auth", signedIn: true, userId: 5 }])); // nothing while loading
   await userEvent.click(screen.getByRole("button", { name: "logout" }));
   await screen.findByText("out");
-  expect(n.sent("auth").at(-1)).toEqual({ type: "auth", signedIn: false });
+  await waitFor(() => expect(n.sent("auth").at(-1)).toEqual({ type: "auth", signedIn: false }));
 });
 
 it("auth: native's authRequired signs the web out", async () => {
