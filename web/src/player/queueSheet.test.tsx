@@ -3,26 +3,23 @@ import { afterEach, expect, test, vi } from "vitest";
 import type { Track } from "../api/types";
 import { t } from "../i18n/i18n";
 import { PlayerCtx, type Player } from "./PlayerProvider";
-import { QueueSheet } from "./QueueSheet";
+import { QueueRows, QueueSheet } from "./QueueSheet";
 
 const tr = (id: number) => ({ id, title: `song ${id}`, artist: "a", album: "b", duration_ms: 200_000 }) as Track;
 const ROW_H = 50;
 
 function renderSheet(index = 0, tracks = [1, 2, 3, 4, 5].map(tr)) {
-  const p = {
-    queue: { tracks, index, source: "list" },
-    current: tracks[index],
-    modes: { shuffle: false, repeat: "off" },
-    jump: vi.fn(),
-    move: vi.fn(),
-    removeAt: vi.fn(),
-  } as unknown as Player;
+  const fns = { jump: vi.fn(), move: vi.fn(), removeAt: vi.fn() };
+  const player = (i: number) =>
+    ({ queue: { tracks, index: i, source: "list" }, current: tracks[i], modes: { shuffle: false, repeat: "off" }, ...fns }) as unknown as Player;
   // Rows measure as 50 px tall and 300 px wide (jsdom lays nothing out).
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
     x: 0, y: 0, top: 0, left: 0, bottom: ROW_H, right: 300, width: 300, height: ROW_H, toJSON: () => ({}),
   } as DOMRect);
-  render(<PlayerCtx.Provider value={p}><QueueSheet /></PlayerCtx.Provider>);
-  return p;
+  const r = render(<PlayerCtx.Provider value={player(index)}><QueueSheet /></PlayerCtx.Provider>);
+  // The queue moved on (the current track ended) with the sheet open.
+  const advanceTo = (i: number) => r.rerender(<PlayerCtx.Provider value={player(i)}><QueueSheet /></PlayerCtx.Provider>);
+  return Object.assign(fns, { advanceTo }) as unknown as Player & { advanceTo(i: number): void };
 }
 const handle = (n: number) => screen.getByRole("button", { name: t("queue.drag", { title: `song ${n}` }) });
 const row = (n: number) => screen.getByRole("button", { name: new RegExp(`^song ${n}`) }).closest("li")!;
@@ -57,13 +54,36 @@ test("dragging a row's handle by two rows up moves it there", () => {
   expect(row(4).style.transform).toBe("");
 });
 
-test("the current track can be dragged too, with indexes in queue terms", () => {
-  const p = renderSheet(2);
+test("the current track stays on top: it has no handle, and a drop above the next row lands on it", () => {
+  const p = renderSheet(2); // rows: song 3 (current), song 4, song 5
+  expect(screen.queryByRole("button", { name: t("queue.drag", { title: "song 3" }) })).toBeNull();
+  const h = handle(5);
+  fireEvent.pointerDown(h, { pointerId: 1, clientY: 200, button: 0 });
+  fireEvent.pointerMove(h, { pointerId: 1, clientY: 50 });
+  expect(row(4).style.transform).toBe(`translateY(${ROW_H}px)`); // makes room
+  expect(row(3).style.transform).toBe(""); // the current row doesn't
+  fireEvent.pointerUp(h, { pointerId: 1, clientY: 50 });
+  expect(p.move).toHaveBeenCalledWith(4, 3); // just after the current track, never before it
+});
+
+test("a drag follows its track when the queue moves on under it", () => {
+  const p = renderSheet(0);
+  const h = handle(4); // row 3
+  fireEvent.pointerDown(h, { pointerId: 1, clientY: 400, button: 0 });
+  p.advanceTo(1); // song 1 ended: song 4 is row 2 now
+  fireEvent.pointerMove(h, { pointerId: 1, clientY: 350 });
+  fireEvent.pointerUp(h, { pointerId: 1, clientY: 350 }); // one row up
+  expect(p.move).toHaveBeenCalledWith(3, 2); // song 4 (entry 3) in front of song 3
+});
+
+test("a drag whose track left the queue moves nothing", () => {
+  const tracks = [1, 2, 3].map(tr);
+  const p = renderSheet(0, tracks);
   const h = handle(3);
-  fireEvent.pointerDown(h, { pointerId: 1, clientY: 100, button: 0 });
-  fireEvent.pointerMove(h, { pointerId: 1, clientY: 200 });
-  fireEvent.pointerUp(h, { pointerId: 1, clientY: 200 });
-  expect(p.move).toHaveBeenCalledWith(2, 4);
+  fireEvent.pointerDown(h, { pointerId: 1, clientY: 400, button: 0 });
+  p.advanceTo(2); // song 3 is current now: not a draggable row
+  fireEvent.pointerUp(h, { pointerId: 1, clientY: 300 });
+  expect(p.move).not.toHaveBeenCalled();
 });
 
 test("a drag back to where it began, or one the browser cancels, moves nothing", () => {
@@ -84,7 +104,6 @@ test("✕ removes a row; the current row has no ✕", () => {
   fireEvent.click(screen.getByRole("button", { name: t("queue.remove", { title: "song 4" }) }));
   expect(p.removeAt).toHaveBeenCalledWith(3);
   expect(screen.queryByRole("button", { name: t("queue.remove", { title: "song 2" }) })).toBeNull();
-  expect(handle(2)).toBeInTheDocument(); // but it has a handle
 });
 
 test("a left swipe past 35% of the row removes it; a shorter one springs back and plays nothing", () => {
@@ -123,16 +142,33 @@ test("a vertical move on a row is a scroll, not a swipe", () => {
   expect(p.removeAt).not.toHaveBeenCalled();
 });
 
-test("ArrowUp / ArrowDown on a handle move the row by one", () => {
+test("ArrowUp / ArrowDown on a handle move the row by one, never above the current track", () => {
   const p = renderSheet(0);
+  expect(handle(3)).toHaveAttribute("aria-keyshortcuts", "ArrowUp ArrowDown");
   fireEvent.keyDown(handle(3), { key: "ArrowUp" });
   expect(p.move).toHaveBeenLastCalledWith(2, 1);
   fireEvent.keyDown(handle(3), { key: "ArrowDown" });
   expect(p.move).toHaveBeenLastCalledWith(2, 3);
   (p.move as ReturnType<typeof vi.fn>).mockClear();
   fireEvent.keyDown(handle(5), { key: "ArrowDown" }); // already last
-  fireEvent.keyDown(handle(1), { key: "ArrowUp" }); // already first
+  fireEvent.keyDown(handle(2), { key: "ArrowUp" }); // already right after the current track
   expect(p.move).not.toHaveBeenCalled();
+});
+
+// The episode sheet shows the whole list (played ones too) with the current
+// episode in place: there it moves like any row.
+test("in the episode rows the current one has a handle and any row can go above it", () => {
+  const onMove = vi.fn();
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ height: ROW_H, width: 300 } as DOMRect);
+  const items = ["a", "b", "c"].map((k, i) => ({ key: k, title: `ep ${k}`, sub: "", current: i === 1 }));
+  render(<QueueRows items={items} label="q" onJump={vi.fn()} onMove={onMove} onRemove={vi.fn()} />);
+  const h = screen.getByRole("button", { name: t("queue.drag", { title: "ep b" }) });
+  fireEvent.keyDown(h, { key: "ArrowUp" });
+  expect(onMove).toHaveBeenLastCalledWith(1, 0);
+  const hc = screen.getByRole("button", { name: t("queue.drag", { title: "ep c" }) });
+  fireEvent.pointerDown(hc, { pointerId: 1, clientY: 100, button: 0 });
+  fireEvent.pointerUp(hc, { pointerId: 1, clientY: 0 });
+  expect(onMove).toHaveBeenLastCalledWith(2, 0);
 });
 
 test("with nothing up next it says what happens at the end", () => {

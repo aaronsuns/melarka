@@ -188,6 +188,24 @@ it("queue sheet edits and add to queue keep the current item playing (setQueue w
   expect("positionMs" in added).toBe(false);
 });
 
+it("the app's first queue gets the block stored on this device when it is the same queue", () => {
+  localStorage.setItem("lark.upNext.1", JSON.stringify({ ids: [1, 7, 2], index: 0, upNext: 1 }));
+  renderPlayer();
+  n.emit({ type: "queue", kind: "track", items: [track1, tr(7), track2].map(trackItem), index: 0, source: "list" });
+  act(() => p.addToQueue(tr(9)));
+  expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 7, 9, 2]);
+  localStorage.removeItem("lark.upNext.1");
+});
+
+it("a stored block for another queue is not applied to the app's first queue", () => {
+  localStorage.setItem("lark.upNext.1", JSON.stringify({ ids: [1, 7, 3], index: 0, upNext: 1 }));
+  renderPlayer();
+  n.emit({ type: "queue", kind: "track", items: [track1, tr(7), track2].map(trackItem), index: 0, source: "list" });
+  act(() => p.addToQueue(tr(9)));
+  expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 9, 7, 2]);
+  localStorage.removeItem("lark.upNext.1");
+});
+
 it("native's echo of an edited queue keeps the queued tracks, so a second add goes after the first", () => {
   renderPlayer();
   const [t3, t7, t8] = [tr(3), tr(7), tr(8)];

@@ -1125,6 +1125,49 @@ describe("queue editing", () => {
     await waitFor(() => expect(player().current?.id).toBe(4));
   });
 
+  test("shuffle on: a moved track keeps where it was dropped after shuffle off", () => {
+    const { player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3), tr(4), tr(5)], 0));
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    act(() => player().setShuffle(true));
+    expect(ids(player())).toEqual([1, 3, 4, 5, 2]);
+    act(() => player().move(3, 1)); // 5 dragged up, in front of 3
+    expect(ids(player())).toEqual([1, 5, 3, 4, 2]);
+    act(() => player().setShuffle(false));
+    expect(ids(player())).toEqual([1, 2, 5, 3, 4]); // still just before 3
+  });
+
+  const serverQueue = (trackIds: number[], index: number) => ({
+    "GET /api/v1/queue": () => ({
+      body: { queue: { track_ids: trackIds, current_index: index, position_ms: 0, version: 1, updated_by: "", updated_at: 0 }, tracks: trackIds.map((id) => tr(id)) },
+    }),
+  });
+
+  test("a reload keeps the tracks queued before it ahead of a new add", async () => {
+    localStorage.setItem("lark.upNext", JSON.stringify({ ids: [1, 7, 2, 3], index: 0, upNext: 1 }));
+    const { player } = setup(serverQueue([1, 7, 2, 3], 0));
+    await waitFor(() => expect(player().current?.id).toBe(1));
+    act(() => player().addToQueue(tr(9)));
+    expect(ids(player())).toEqual([1, 7, 9, 2, 3]);
+  });
+
+  test("a stored block for another queue (or index) is not applied", async () => {
+    localStorage.setItem("lark.upNext", JSON.stringify({ ids: [1, 7, 2, 3], index: 1, upNext: 1 }));
+    const { player } = setup(serverQueue([1, 7, 2, 3], 0));
+    await waitFor(() => expect(player().current?.id).toBe(1));
+    act(() => player().addToQueue(tr(9)));
+    expect(ids(player())).toEqual([1, 9, 7, 2, 3]);
+  });
+
+  test("the queued block is saved per user as the queue changes", async () => {
+    const { player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3)], 0));
+    act(() => player().addToQueue(tr(7)));
+    await waitFor(() => expect(JSON.parse(localStorage.getItem("lark.upNext") ?? "null")).toEqual({ ids: [1, 7, 2, 3], index: 0, upNext: 1 }));
+    act(() => player().next());
+    await waitFor(() => expect(localStorage.getItem("lark.upNext")).toBeNull());
+  });
+
   test("shuffle on: a track added or removed keeps where the user put it after shuffle off", () => {
     const { player } = setup();
     act(() => player().playList([tr(1), tr(2), tr(3), tr(4), tr(5)], 0));

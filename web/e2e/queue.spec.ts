@@ -56,22 +56,29 @@ test("queue sheet: drag to reorder, swipe to remove, add to queue", async ({ pag
   await expect.poll(() => titles(list)).toEqual([a, c]);
   await expect(page.locator(".mini")).toContainText(a); // nothing was played by the swipe
 
-  // ✕ only where there is hover (a desktop), never on the current row.
-  const hover = await page.evaluate(() => matchMedia("(hover: hover)").matches);
-  await expect(list.getByRole("button", { name: `移除 ${c}` })).toBeVisible({ visible: hover });
-  await expect(list.getByRole("button", { name: `移除 ${a}` })).toHaveCount(0);
-  if (hover) {
-    await list.getByRole("button", { name: `移除 ${c}` }).click();
-    await expect.poll(() => titles(list)).toEqual([a]);
-  }
-  await page.screenshot({ path: info.outputPath("queue.png") });
   await page.getByRole("button", { name: "收起" }).click();
 
-  // ⋯ → 添加到队列 from search: after the current track (nothing else was queued).
+  // ⋯ → 添加到队列 from search, of b (swiped out above): right after the
+  // current track, ahead of c — not appended after c (or a refill).
   await page.getByRole("link", { name: "搜索" }).click();
-  await page.getByRole("searchbox").fill("tmm");
-  await page.getByRole("button", { name: "更多：甜蜜蜜" }).click();
+  await page.getByRole("searchbox").fill("Faded");
+  await page.getByRole("button", { name: `更多：${b}` }).click();
   await page.getByRole("menuitem", { name: "添加到队列" }).click();
   list = await openQueue(page);
-  await expect.poll(() => titles(list)).toEqual([a, c]); // a copy already queued moves there
+  const rows = list.locator(".queue-row .queue-title");
+  await expect(rows.nth(0)).toHaveText(a);
+  await expect(rows.nth(1)).toHaveText(b);
+  await expect(rows.nth(2)).toHaveText(c);
+
+  // ✕ only where there is hover (a desktop), never on the current row,
+  // and the current row has no handle either.
+  const hover = await page.evaluate(() => matchMedia("(hover: hover)").matches);
+  await expect(list.getByRole("button", { name: `移除 ${b}` })).toBeVisible({ visible: hover });
+  await expect(list.getByRole("button", { name: `移除 ${a}` })).toHaveCount(0);
+  await expect(list.getByRole("button", { name: `移动 ${a}` })).toHaveCount(0);
+  if (hover) {
+    await list.getByRole("button", { name: `移除 ${b}` }).click();
+    await expect.poll(() => titles(list)).toEqual([a, c]);
+  }
+  await page.screenshot({ path: info.outputPath("queue.png") });
 });

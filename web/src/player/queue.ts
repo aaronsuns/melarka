@@ -24,7 +24,8 @@ export type QueueAction =
   // Advance onto this track, inserted after the current one.
   | { type: "advanceInsert"; track: Track; requeue?: Track }
   | { type: "remove"; trackId: number }
-  | { type: "restore"; tracks: Track[]; index: number }
+  // `upNext`: the queued block stored on this device for this very queue (see storedUpNext).
+  | { type: "restore"; tracks: Track[]; index: number; upNext?: number }
   // A new order (shuffle on/off, a repeat-all pass); unlike restore, keeps the source.
   // `upNext`: how many queued entries follow the current one in the new order (default: as before).
   | { type: "setOrder"; tracks: Track[]; index: number; upNext?: number }
@@ -46,8 +47,10 @@ export function queueReducer(s: QueueState, a: QueueAction): QueueState {
   switch (a.type) {
     case "playList":
       return { tracks: a.tracks, index: clamp(a.start, a.tracks.length), source: a.source ?? "list" };
-    case "restore":
-      return { tracks: a.tracks, index: clamp(a.index, a.tracks.length), source: "restored" };
+    case "restore": {
+      const index = clamp(a.index, a.tracks.length);
+      return withUpNext({ tracks: a.tracks, index, source: "restored" }, Math.min(a.upNext ?? 0, a.tracks.length - index - 1));
+    }
     case "setOrder": {
       const index = clamp(a.index, a.tracks.length);
       return withUpNext({ ...s, tracks: a.tracks, index }, Math.min(a.upNext ?? n, a.tracks.length - index - 1));
@@ -101,6 +104,8 @@ export function queueReducer(s: QueueState, a: QueueAction): QueueState {
       if (!m) return s;
       const flags = moveEntry(queuedFlags(s), s.index, a.from, a.to)!.list;
       // The moved entry is queued when dropped among queued ones (just before or after one).
+      // Dropped right after the current entry with nothing queued, it is just reordered, not
+      // queued: a later add to queue goes ahead of it, as it would have before the move.
       flags[a.to] = a.to > m.index && (flags[a.to + 1] === true || (a.to - 1 > m.index && flags[a.to - 1] === true));
       return withUpNext({ ...s, tracks: m.list, index: m.index }, countQueued(flags, m.index));
     }
@@ -150,6 +155,33 @@ function countQueued(flags: boolean[], index: number): number {
   let k = 0;
   while (flags[index + 1 + k]) k++;
   return k;
+}
+
+// The queued block (upNext) is kept per user on this device, with the queue it
+// belongs to: the server's /queue doesn't carry it, so a reload restores it
+// only for that very queue (same ids, same current index).
+export function upNextKey(userId?: number): string {
+  return userId === undefined ? "lark.upNext" : `lark.upNext.${userId}`;
+}
+
+export function saveUpNext(userId: number | undefined, q: QueueState): void {
+  try {
+    if (!q.upNext) localStorage.removeItem(upNextKey(userId));
+    else localStorage.setItem(upNextKey(userId), JSON.stringify({ ids: q.tracks.map((t) => t.id), index: q.index, upNext: q.upNext }));
+  } catch {
+    // not remembered; this session still has it
+  }
+}
+
+export function storedUpNext(userId: number | undefined, ids: number[], index: number): number {
+  try {
+    const v = JSON.parse(localStorage.getItem(upNextKey(userId)) ?? "null") as { ids?: unknown; index?: unknown; upNext?: unknown } | null;
+    if (!v || !Array.isArray(v.ids) || v.index !== index || typeof v.upNext !== "number") return 0;
+    if (v.ids.length !== ids.length || v.ids.some((id, i) => id !== ids[i])) return 0;
+    return Math.max(0, Math.floor(v.upNext));
+  } catch {
+    return 0;
+  }
 }
 
 // appendable is what an append of `tracks` actually adds: never a track twice

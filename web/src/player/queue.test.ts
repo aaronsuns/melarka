@@ -1,4 +1,4 @@
-import { appendable, current, emptyQueue, needsRefill, queueReducer as r, shuffled, upcoming } from "./queue";
+import { appendable, current, emptyQueue, needsRefill, queueReducer as r, saveUpNext, shuffled, storedUpNext, upcoming } from "./queue";
 import type { Track } from "../api/types";
 
 const tr = (id: number) => ({ id, title: `t${id}` }) as Track;
@@ -276,4 +276,30 @@ test("setOrder can reset the queued block (a reshuffle)", () => {
   let k = r(q([1, 2, 3], 0), { type: "addToQueue", track: tr(7) });
   k = r(k, { type: "setOrder", tracks: [tr(1), tr(7), tr(3), tr(2)], index: 0 }); // kept by default
   expect(ids(r(k, { type: "addToQueue", track: tr(8) }))).toEqual([1, 7, 8, 3, 2]);
+});
+
+// The queued block is saved per user on this device: a reload (a restore of
+// the same queue) keeps add to queue after the tracks queued before it.
+describe("stored upNext", () => {
+  afterEach(() => localStorage.clear());
+
+  test("restore takes upNext", () => {
+    const s = r(emptyQueue, { type: "restore", tracks: [tr(1), tr(2), tr(3)], index: 0, upNext: 1 });
+    expect(ids(r(s, { type: "addToQueue", track: tr(9) }))).toEqual([1, 2, 9, 3]);
+    expect(r(emptyQueue, { type: "restore", tracks: [tr(1)], index: 0, upNext: 4 }).upNext).toBeUndefined(); // clamped
+  });
+
+  test("saved with the queue, given back only for the same ids and index", () => {
+    const s = r(q([1, 2, 3], 0), { type: "addToQueue", track: tr(7) }); // [1,7,2,3], upNext 1
+    saveUpNext(5, s);
+    expect(JSON.parse(localStorage.getItem("lark.upNext.5")!)).toEqual({ ids: [1, 7, 2, 3], index: 0, upNext: 1 });
+    expect(storedUpNext(5, [1, 7, 2, 3], 0)).toBe(1);
+    expect(storedUpNext(5, [1, 7, 2, 3], 1)).toBe(0); // another index
+    expect(storedUpNext(5, [1, 2, 3], 0)).toBe(0); // another queue
+    expect(storedUpNext(6, [1, 7, 2, 3], 0)).toBe(0); // another user
+    saveUpNext(5, q([1, 2], 0)); // nothing queued: forgotten
+    expect(localStorage.getItem("lark.upNext.5")).toBeNull();
+    localStorage.setItem("lark.upNext.5", "{bad");
+    expect(storedUpNext(5, [1], 0)).toBe(0);
+  });
 });

@@ -12,7 +12,7 @@ import { activeLine, getLyrics, isBlankLine, onLyrics, prefetchLyrics } from "./
 import { chooseNext, isLocalChoice, type ChooseOpts, type NextChoice } from "./nextTrack";
 import { BlobPreloader, BLOB_MAX_BYTES, estimateHighBytes } from "./preload";
 import { claimSession, onSessionClaim, ownsSession } from "./sessionOwner";
-import { appendable, current, emptyQueue, needsRefill, queueReducer, upcoming, type QueueAction, type QueueState } from "./queue";
+import { appendable, current, emptyQueue, needsRefill, queueReducer, saveUpNext, storedUpNext, upcoming, type QueueAction, type QueueState } from "./queue";
 import { hasNative } from "../native/bridge";
 import { gainFactor } from "./gain";
 import { loadModes, newPass, nextRepeat, saveModes, shuffleUpcoming, unshuffleUpcoming, type PlayModes, type StoredModes } from "./modes";
@@ -584,6 +584,12 @@ function WebPlayerProvider({
     if (wantPlay.current) playOrAskTap(track.id);
   }, [audio, srcFor, playOrAskTap]);
 
+  // The queued block, kept on this device for a reload of this very queue
+  // (an empty queue is the state before restore: nothing to say yet).
+  useEffect(() => {
+    if (queue.tracks.length > 0) saveUpNext(userId, queue);
+  }, [queue, userId]);
+
   // Load whatever became current (next/prev/jump/remove/ended), keeping play state.
   const cur = current(queue);
   // The switch flipped, or the loaded track's metadata changed (updateTrack):
@@ -1111,7 +1117,28 @@ function WebPlayerProvider({
     },
     [edit, forgetOriginal],
   );
-  const move = useCallback((from: number, to: number) => void edit({ type: "move", from, to }), [edit]);
+  const move = useCallback(
+    (from: number, to: number) => {
+      const q = edit({ type: "move", from, to });
+      const m = modesRef.current;
+      if (!q || !m.shuffle || !m.original) return;
+      // Shuffle on: the dropped track keeps its new neighbour on shuffle off —
+      // in the pre-shuffle order it goes just before the first track that now
+      // follows it and is still in that order (or last).
+      const id = q.tracks[from].id;
+      const k = m.original.indexOf(id);
+      if (k < 0) return; // added while shuffled: it already stays where the user puts it
+      const original = [...m.original.slice(0, k), ...m.original.slice(k + 1)];
+      const nq = queueRef.current;
+      if (to > nq.index) {
+        const after = nq.tracks.slice(to + 1).find((t) => original.includes(t.id));
+        const at = after ? original.indexOf(after.id) : original.length;
+        original.splice(at, 0, id);
+      }
+      updateModes({ ...m, original });
+    },
+    [edit, updateModes],
+  );
   const removeAt = useCallback(
     (index: number) => {
       const q = edit({ type: "removeAt", index });
@@ -1298,7 +1325,7 @@ function WebPlayerProvider({
         // the first copy regardless of which one the server says is current.
         const idx = tracks[q.current_index]?.id === curId ? q.current_index : Math.max(0, tracks.findIndex((t) => t.id === curId));
         skipNextSave.current = true;
-        dispatch({ type: "restore", tracks, index: idx });
+        dispatch({ type: "restore", tracks, index: idx, upNext: storedUpNext(userId, tracks.map((t) => t.id), idx) });
         load(tracks[idx], { autoplay: false, startAt: tracks[idx].id === curId ? q.position_ms / 1000 : 0, index: idx });
       });
     const shuffleOnOpen = () =>

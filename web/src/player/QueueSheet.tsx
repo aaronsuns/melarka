@@ -46,10 +46,19 @@ interface Swipe {
  * Queue rows that reorder and remove, shared by the music and episode sheets.
  * The handle on the right drags (pointer events, so mouse, touch and pen) and
  * answers ArrowUp/ArrowDown; a row swipes left to go, or on a desktop shows ✕.
- * The current row moves but never goes. Indexes are row numbers.
+ * The current row never goes. Indexes are row numbers.
+ *
+ * `fixedCurrent` (music, whose sheet starts at the current track): the current
+ * row is first and stays there — no handle, and nothing drops above it.
+ * Without it (episodes, the whole list with the current one in place) the
+ * current row moves like any other.
+ *
+ * The list doesn't scroll by itself during a drag (the handle takes the
+ * touch): a long move is made one screenful at a time.
  */
-export function QueueRows({ items, label, id, onJump, onMove, onRemove, footer }: {
+export function QueueRows({ items, label, id, onJump, onMove, onRemove, footer, fixedCurrent = false }: {
   items: QueueRowItem[];
+  fixedCurrent?: boolean;
   label: string;
   id?: string;
   onJump(row: number): void;
@@ -58,9 +67,19 @@ export function QueueRows({ items, label, id, onJump, onMove, onRemove, footer }
   footer?: ReactNode;
 }) {
   const t = useT();
-  const [drag, setDrag] = useState<{ s: DragState; dy: number } | null>(null);
+  // A drag follows its entry by key, not by row: the queue may move on (the
+  // current track ends) or grow (a refill) while a finger holds it.
+  const [drag, setDrag] = useState<{ key: string; startY: number; rowH: number; dy: number } | null>(null);
   const [swipe, setSwipe] = useState<{ row: number; dx: number } | null>(null);
-  const dragRef = useRef<DragState | null>(null);
+  const dragRef = useRef<{ key: string; startY: number; rowH: number } | null>(null);
+  const minRow = fixedCurrent ? 1 : 0;
+  // Where a drag of the entry with `key` is now, and the row it would land on at `y`.
+  const resolve = (d: { key: string; startY: number; rowH: number }, y: number): { from: number; to: number } | null => {
+    const from = items.findIndex((it) => it.key === d.key);
+    if (from < minRow) return null; // gone, or now the fixed current row
+    const s: DragState = { from, startY: d.startY, rowH: d.rowH, count: items.length };
+    return { from, to: Math.max(minRow, targetIndex(s, y)) };
+  };
   const swipeRef = useRef<Swipe | null>(null);
   // The click that ends a swipe must not also play the row.
   const swallowClick = useRef(false);
@@ -78,24 +97,24 @@ export function QueueRows({ items, label, id, onJump, onMove, onRemove, footer }
     e.preventDefault();
     e.stopPropagation(); // the row's swipe never starts from its handle
     const li = e.currentTarget.closest("li");
-    const s = { from: row, startY: e.clientY, rowH: li?.getBoundingClientRect().height ?? 0, count: items.length };
-    dragRef.current = s;
+    const d = { key: items[row].key, startY: e.clientY, rowH: li?.getBoundingClientRect().height ?? 0 };
+    dragRef.current = d;
     capture(e);
-    setDrag({ s, dy: 0 });
+    setDrag({ ...d, dy: 0 });
   }
   function handleMove(e: ReactPointerEvent) {
-    const s = dragRef.current;
-    if (!s) return;
+    const d = dragRef.current;
+    if (!d) return;
     e.preventDefault();
-    setDrag({ s, dy: e.clientY - s.startY });
+    setDrag({ ...d, dy: e.clientY - d.startY });
   }
   function handleUp(e: ReactPointerEvent) {
-    const s = dragRef.current;
-    if (!s) return;
+    const d = dragRef.current;
+    if (!d) return;
     dragRef.current = null;
     setDrag(null);
-    const to = targetIndex(s, e.clientY);
-    if (to !== s.from) onMove(s.from, to);
+    const r = resolve(d, e.clientY);
+    if (r && r.to !== r.from) onMove(r.from, r.to);
   }
   function handleCancel() {
     dragRef.current = null;
@@ -105,7 +124,7 @@ export function QueueRows({ items, label, id, onJump, onMove, onRemove, footer }
     const to = e.key === "ArrowUp" ? row - 1 : e.key === "ArrowDown" ? row + 1 : null;
     if (to === null) return;
     e.preventDefault();
-    if (to >= 0 && to < items.length) onMove(row, to);
+    if (to >= minRow && to < items.length) onMove(row, to);
   }
 
   function rowDown(e: ReactPointerEvent<HTMLLIElement>, row: number) {
@@ -144,12 +163,12 @@ export function QueueRows({ items, label, id, onJump, onMove, onRemove, footer }
 
   function rowStyle(row: number): CSSProperties | undefined {
     if (swipe && swipe.row === row) return { transform: `translateX(${swipe.dx}px)` };
-    if (!drag) return undefined;
-    const { s, dy } = drag;
-    if (row === s.from) return { transform: `translateY(${dy}px)`, zIndex: 1, position: "relative" };
-    const to = targetIndex(s, s.startY + dy);
-    if (s.from < to && row > s.from && row <= to) return { transform: `translateY(${-s.rowH}px)` };
-    if (s.from > to && row >= to && row < s.from) return { transform: `translateY(${s.rowH}px)` };
+    const r = drag && resolve(drag, drag.startY + drag.dy);
+    if (!drag || !r) return undefined;
+    const { from, to } = r;
+    if (row === from) return { transform: `translateY(${drag.dy}px)`, zIndex: 1, position: "relative" };
+    if (from < to && row > from && row <= to) return { transform: `translateY(${-drag.rowH}px)` };
+    if (from > to && row >= to && row < from) return { transform: `translateY(${drag.rowH}px)` };
     return undefined;
   }
 
@@ -158,7 +177,7 @@ export function QueueRows({ items, label, id, onJump, onMove, onRemove, footer }
       {items.map((it, row) => (
         <li
           key={it.key}
-          className={`queue-row${drag?.s.from === row ? " lifted" : ""}`}
+          className={`queue-row${drag?.key === it.key ? " lifted" : ""}`}
           style={rowStyle(row)}
           onPointerDown={(e) => rowDown(e, row)}
           onPointerMove={(e) => rowMove(e, row)}
@@ -185,9 +204,10 @@ export function QueueRows({ items, label, id, onJump, onMove, onRemove, footer }
           {!it.current && (
             <button className="icon queue-remove" aria-label={t("queue.remove", { title: it.title })} onClick={() => onRemove(row)}>✕</button>
           )}
-          <button
+          {!(fixedCurrent && it.current) && <button
             className="icon queue-handle"
             aria-label={t("queue.drag", { title: it.title })}
+            aria-keyshortcuts="ArrowUp ArrowDown"
             onPointerDown={(e) => handleDown(e, row)}
             onPointerMove={handleMove}
             onPointerUp={handleUp}
@@ -197,7 +217,7 @@ export function QueueRows({ items, label, id, onJump, onMove, onRemove, footer }
             <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
               <path d="M5 8h14M5 12h14M5 16h14" />
             </svg>
-          </button>
+          </button>}
         </li>
       ))}
       {footer}
@@ -217,6 +237,7 @@ export function QueueSheet() {
     <QueueRows
       items={items}
       label={t("now.queue")}
+      fixedCurrent
       onJump={(row) => p.jump(index + row)}
       onMove={(from, to) => p.move(index + from, index + to)}
       onRemove={(row) => p.removeAt(index + row)}
