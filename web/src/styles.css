@@ -1,0 +1,422 @@
+:root {
+  --bg: #121212;
+  --surface: #1e1e1e;
+  --surface-2: #2a2a2a;
+  --text: #f2f2f2;
+  --muted: #9a9a9a;
+  --accent: #1ed760;
+  --danger: #ff5a5f;
+  --radius: 10px;
+  --tab-h: 56px;
+  --mini-h: 64px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; min-height: 44px; }
+a { color: inherit; text-decoration: none; }
+.ellipsis { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+.muted { color: var(--muted); }
+
+.splash, .login { min-height: 100%; display: grid; place-items: center; }
+.login { align-content: center; gap: 24px; padding: 24px; }
+/* Home-screen mode (black-translucent status bar) draws the page under the
+   status bar: keep top-level screens clear of it. */
+.splash, .login { padding-top: calc(12px + env(safe-area-inset-top)); }
+.login-title { font-size: 40px; margin: 0; letter-spacing: 1px; }
+.login-form { display: grid; gap: 14px; width: min(340px, 100%); }
+.login-form label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
+input, select {
+  font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid #333;
+  border-radius: var(--radius); padding: 12px; min-height: 44px; width: 100%;
+}
+/* iOS Safari zooms the page when focusing a field under 16px. */
+input, select, textarea { font-size: 16px; }
+.primary { background: var(--accent); color: #000; font-weight: 600; border-radius: 999px; padding: 0 20px; }
+.primary:disabled { opacity: .6; }
+.error { color: var(--danger); margin: 0; }
+.shell { display: grid; grid-template-rows: 1fr auto auto; height: 100%; }
+.content { overflow-y: auto; padding: calc(12px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+.page-title { font-size: 26px; margin: 8px 0 16px; }
+.tabs {
+  display: grid; grid-template-columns: repeat(4, 1fr); height: calc(var(--tab-h) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom); background: #0c0c0c; border-top: 1px solid #222;
+}
+.tabs a { display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+.tabs a.active { color: var(--text); font-weight: 600; }
+
+.cover { position: relative; overflow: hidden; display: grid; place-items: center; flex: none; color: rgba(255,255,255,.85); font-weight: 600; }
+/* The cover fades in over the initials tile, which keeps its size: no layout shift. */
+.cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s; }
+.cover-img.loaded { opacity: 1; }
+.tracks { list-style: none; margin: 0; padding: 0; }
+.track { position: relative; display: flex; align-items: center; border-radius: var(--radius); }
+.track.current .track-title { color: var(--accent); }
+.track.broken { opacity: .4; }
+.track-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 6px 0; text-align: left; }
+.track-text { flex: 1; min-width: 0; display: grid; }
+.track-sub { font-size: 13px; }
+.track-meta { display: grid; justify-items: end; font-size: 12px; gap: 2px; }
+.badge { font-size: 10px; border: 1px solid #444; border-radius: 4px; padding: 0 4px; }
+.heart { color: var(--accent); }
+.track-more { width: 44px; font-size: 20px; color: var(--muted); }
+.menu {
+  position: absolute; right: 8px; top: 100%; z-index: 20; display: grid; min-width: 200px;
+  background: var(--surface-2); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.5); overflow: hidden;
+}
+.menu button { text-align: left; padding: 0 16px; border-bottom: 1px solid #333; }
+.danger { color: var(--danger); }
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 50; display: grid; align-items: end; }
+.sheet {
+  background: var(--surface); border-radius: 16px 16px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  display: grid; gap: 4px; max-height: 80vh; overflow-y: auto;
+}
+.sheet h2 { font-size: 17px; margin: 0 0 8px; }
+.sheet-row { display: flex; justify-content: space-between; gap: 12px; padding: 0 4px; text-align: left; }
+.sheet-new { display: flex; gap: 8px; margin-top: 8px; }
+.sheet-cancel { color: var(--muted); }
+
+.small { font-size: 12px; }
+.section-title { font-size: 18px; margin: 20px 0 8px; }
+.resume { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); padding: 12px; border-radius: var(--radius); }
+/* Home's quick-play row: three equal pill buttons; a long label (en, sv) wraps inside its button. */
+.quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 4px 0 8px; }
+.secondary.quick {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 56px; padding: 6px 6px; border-radius: 14px; background: var(--surface);
+  font-size: 13px; line-height: 1.2; text-align: center;
+}
+.quick-icon { font-size: 18px; line-height: 1; }
+/* A tab's own action row (Library → 歌曲 / 收藏 shuffle). */
+.tab-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.tab-actions .secondary { padding: 0 14px; font-size: 14px; }
+.mini-empty { position: relative; display: flex; align-items: center; justify-content: center; height: var(--mini-h); padding: 0 8px; background: var(--surface); border-top: 1px solid #222; }
+.mini-shuffle { min-height: 44px; padding: 0 16px; border: 1px solid #444; border-radius: 999px; font-size: 14px; }
+.search-input { margin: 4px 0 12px; }
+.cards { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x mandatory; }
+.card { flex: none; width: 120px; display: grid; gap: 4px; scroll-snap-align: start; }
+.card-title { font-size: 14px; }
+.card-sub { font-size: 12px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: flex; align-items: center; gap: 8px; max-width: 100%; background: var(--surface); border-radius: 999px; padding: 8px 12px 8px 4px; min-height: 44px; }
+
+.segmented { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }
+.segmented > * { flex: none; padding: 0 14px; min-height: 44px; display: grid; place-items: center; border-radius: 999px; background: var(--surface); color: var(--muted); }
+.segmented [aria-selected="true"], .segmented [aria-pressed="true"] { background: var(--text); color: #000; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px 12px; }
+.grid .card { width: auto; }
+.grid .cover { width: 100% !important; height: auto !important; aspect-ratio: 1; }
+.more { display: grid; place-items: center; padding: 12px; }
+.hero { display: flex; gap: 16px; align-items: flex-end; margin: 8px 0 16px; }
+.hero-text { display: grid; gap: 4px; min-width: 0; }
+.hero-title { font-size: 22px; margin: 0; overflow-wrap: anywhere; }
+.actions { display: flex; gap: 10px; margin-bottom: 12px; }
+.secondary { border: 1px solid #444; border-radius: 999px; padding: 0 18px; }
+
+.inline-form { display: flex; gap: 8px; margin-bottom: 12px; }
+.inline-form .primary { flex: none; }
+.rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.row-with-actions { display: flex; align-items: center; }
+.row-with-actions > .row { flex: 1; min-width: 0; }
+.row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; min-height: 56px; }
+.page-title-btn { display: flex; align-items: center; width: 100%; text-align: left; font: inherit; font-size: 26px; padding: 0; }
+
+.icon { min-width: 44px; font-size: 20px; }
+.icon.big { font-size: 28px; }
+.icon.huge { font-size: 44px; width: 72px; height: 72px; border-radius: 50%; background: var(--text); color: #000; }
+.mini {
+  position: relative; display: flex; align-items: center; gap: 4px; height: var(--mini-h); padding: 0 8px;
+  background: var(--surface); border-top: 1px solid #222;
+}
+.mini-progress { position: absolute; top: 0; left: 0; height: 2px; background: var(--accent); }
+.mini-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left; }
+/* Autoplay was refused: a full-width strip on top of the mini player. */
+.mini-tap {
+  position: absolute; left: 0; right: 0; bottom: 100%; min-height: 44px; padding: 0 16px;
+  background: var(--surface); border-top: 1px solid #222; color: var(--accent); font-weight: 600;
+}
+.now {
+  position: fixed; inset: 0; z-index: 40; background: linear-gradient(180deg, #2b2b2b, var(--bg) 60%);
+  display: flex; flex-direction: column; gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+}
+.now-top { display: flex; justify-content: space-between; align-items: center; }
+.now-art { flex: 1; display: grid; place-items: center; min-height: 0; }
+.now-art .cover { width: min(320px, 40vh, calc(100vw - 64px)) !important; height: min(320px, 40vh, calc(100vw - 64px)) !important; }
+.now-queue { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 0; }
+.now-top-end { display: flex; align-items: center; }
+button.now-art { padding: 0; width: 100%; }
+/* Lyrics take the cover's place; the active synced line is bright and centred. */
+.lyrics { flex: 1; min-height: 0; overflow-y: auto; text-align: center; }
+.lyrics-note { margin-top: 30%; }
+.lyrics-plain p { margin: 0; padding: 6px 0; font-size: 17px; line-height: 1.5; color: var(--muted); }
+.lyrics-synced { list-style: none; margin: 0; padding: 30% 0; }
+.lyrics-synced button { width: 100%; padding: 6px 8px; font-size: 18px; line-height: 1.4; color: var(--muted); transition: color .2s, transform .2s; }
+.lyrics-synced button.active { color: var(--text); font-weight: 600; transform: scale(1.06); }
+/* Long-press aligns a line: no text selection or iOS callout on hold. */
+.lyrics-synced button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.lyrics-synced button.aligned { color: var(--accent); }
+.lyrics-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; padding: 4px 0; }
+.lyrics-tools button { padding: 4px 10px; min-height: 32px; }
+.lyrics-offset-group { display: inline-flex; gap: 6px; align-items: center; }
+.lyrics-offset { min-width: 3.5em; text-align: center; font-variant-numeric: tabular-nums; }
+.lyrics-notice { flex-basis: 100%; display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; color: var(--accent); }
+.lyrics-rejected-list { margin-top: 12px; }
+.lyrics-rejected-list h3 { margin: 8px 0 0; font-size: 15px; }
+.lyrics-search { display: flex; gap: 8px; flex-wrap: wrap; }
+.lyrics-cand { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 4px; border-bottom: 1px solid #333; }
+.lyrics-cand-pick { display: grid; gap: 2px; text-align: left; min-width: 0; background: none; border: 0; color: inherit; padding: 0; }
+.lyrics-cand.selected .lyrics-cand-pick { color: var(--accent); }
+.lyrics-cand-confirm { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.lyrics-none { margin-top: 12px; }
+.lyrics-cand-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.lyrics-cand-preview { white-space: pre-line; }
+.now-meta h2 { margin: 0; font-size: 22px; }
+.now-meta p { margin: 4px 0 0; }
+.now input[type="range"] { padding: 0; height: 44px; accent-color: var(--accent); background: none; border: 0; }
+.now-times { display: flex; justify-content: space-between; margin-top: -8px; }
+.now-controls { display: flex; justify-content: space-around; align-items: center; }
+.now-actions { display: flex; justify-content: center; gap: 24px; }
+.field { display: grid; gap: 6px; margin: 16px 0; color: var(--muted); }
+.field-check-row { display: flex; align-items: center; gap: 10px; color: var(--text); }
+.field-check input[type="checkbox"] { width: 22px; height: 22px; margin: 0; }
+
+.settings-link { min-height: 44px; display: flex; align-items: center; }
+.user-row { display: grid; gap: 6px; padding: 8px 0; border-bottom: 1px solid #222; }
+.user-row-main { display: flex; align-items: center; gap: 10px; }
+.user-row-main .ellipsis { flex: 1; }
+.yt-thumb { flex: none; border-radius: 8px; object-fit: cover; }
+.yt-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.job-actions { display: flex; gap: 8px; justify-self: end; }
+
+.check-row { display: flex; align-items: center; gap: 2px; min-height: 56px; padding: 4px 0; border-bottom: 1px solid #222; }
+.check-tap { flex: none; width: 44px; height: 44px; display: grid; place-items: center; }
+.check-tap input[type="checkbox"] { width: 22px; height: 22px; }
+.check-row .track-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; text-align: left; }
+.lib-row { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid #222; }
+.lib-row-main { display: flex; align-items: center; gap: 10px; }
+.lib-row-main .ellipsis { flex: 1; }
+.link-card { display: grid; gap: 8px; }
+.link-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.list-added { display: grid; gap: 2px; justify-items: end; }
+.playlist-card .job-actions, .playlist-card .list-added { flex: none; }
+
+.tag-chip { padding: 8px 14px; }
+.tag-remove { min-width: 44px; min-height: 44px; margin: -8px -14px -8px -6px; color: var(--muted); }
+.chip-clear { opacity: .7; }
+.now-lyric-strip { text-align: center; min-height: 3.2em; }
+.now-lyric-strip p { margin: 0; padding: 2px 0; font-size: 15px; line-height: 1.4; color: var(--muted); }
+.now-lyric-strip p.active { color: var(--text); font-weight: 600; }
+
+.offline-usage { display: grid; gap: 4px; }
+.offline-usage progress { width: 100%; height: 8px; accent-color: var(--accent); }
+.offline-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.cached-mark { color: var(--muted); font-size: 11px; }
+.mini-notice { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 6px); margin: 0; padding: 8px 12px; border-radius: 10px; background: #2a2a2a; color: var(--text); font-size: 13px; text-align: center; }
+
+.status-link { display: inline-flex; align-items: center; min-height: 36px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.job-highlight { background: rgba(255,255,255,.12); border-radius: 10px; transition: background .5s; }
+.toast { position: fixed; left: 12px; right: 12px; bottom: calc(var(--tab-h) + var(--mini-h) + 16px + env(safe-area-inset-bottom)); z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-radius: 12px; background: #2a2a2a; color: var(--text); font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+.toast .secondary { flex: none; }
+
+/* 为你推荐 */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+
+/* The episode mini player: the music one's layout, a hint of the channel colour. */
+.episode-mini { border-top-color: var(--accent); }
+.episode-mini .icon { font-size: 18px; }
+
+/* Channels */
+.tabs { grid-template-columns: repeat(5, 1fr); }
+.tabs a { position: relative; }
+/* 视频: six tabs while Channels is on (≈ 60 px each at 360 px). */
+.tabs.tabs-6 { grid-template-columns: repeat(6, 1fr); }
+.tabs.tabs-6 a { font-size: 12px; }
+.tab-badge { position: absolute; top: 6px; left: calc(50% + 14px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #000; font-size: 10px; line-height: 16px; text-align: center; }
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.episode-row .episode-link { display: flex; align-items: center; gap: 12px; min-width: 0; grid-column: 1 / 3; }
+.unplayed-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
+.episode-progress { display: block; height: 3px; background: #333; border-radius: 2px; overflow: hidden; }
+.episode-progress > span { display: block; height: 100%; background: var(--accent); }
+.channel-item .channel-settings, .channel-item .danger { margin: 8px 0 12px 60px; }
+.channel-settings { display: grid; gap: 10px; }
+.channel-settings fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.channel-settings .radio, .channel-settings .check, .channel-settings .field { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.channel-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; }
+.clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.episode-page { display: grid; gap: 10px; }
+.episode-video { width: 100%; max-height: 50vh; background: #000; border-radius: var(--radius); }
+.episode-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.notice-strip { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: 10px; background: #2a2a2a; }
+.pre-line { white-space: pre-line; margin: 0; }
+.secondary.primary { background: var(--text); color: #000; border-color: var(--text); }
+.secondary.danger { border-color: var(--danger); } /* .danger (existing) sets the colour */
+.link { padding: 0; min-height: 44px; color: var(--accent); background: none; border: 0; }
+.search-form { display: flex; gap: 8px; margin-bottom: 12px; }
+.search-form input { flex: 1; min-width: 0; }
+.page-head a.secondary { display: inline-grid; place-items: center; min-height: 44px; flex: none; }
+/* A longer label where there is room (关注频道), the short one on a phone (关注). */
+.narrow-only { display: none; }
+@media (max-width: 479px) {
+  .wide-only { display: none; }
+  .narrow-only { display: inline; }
+}
+
+/* ▶ 试听: the preview sheet, above the mini players */
+.preview-sheet { position: fixed; left: 8px; right: 8px; bottom: calc(var(--tab-h) + var(--mini-h) + 8px + env(safe-area-inset-bottom)); z-index: 40;
+  display: grid; gap: 8px; padding: 12px; border-radius: 14px; background: #1c1c1c; box-shadow: 0 6px 24px rgba(0,0,0,.6); }
+.preview-head { display: flex; align-items: center; gap: 8px; }
+.preview-controls { display: flex; align-items: center; gap: 8px; }
+.preview-controls input[type="range"] { flex: 1; }
+.preview-video { width: 100%; max-height: 40vh; background: #000; border-radius: 10px; }
+.preview-problem { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.preview-problem .error { flex: 1 1 100%; margin: 0; }
+.episode-row .job-actions { align-items: center; gap: 4px; }
+.episode-row .job-actions .secondary { padding: 0 12px; font-size: 14px; }
+
+/* 最新's sort/filter, play-all, 按频道 sections, the episode Now Playing and its queue. */
+.channel-group { margin: 8px 0 20px; }
+.channel-group-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.channel-group-head h2 { margin: 0; font-size: 17px; }
+.channel-group-head h2 a { color: inherit; }
+.episode-now .now-art .cover { border-radius: var(--radius); }
+.episode-now .now-meta a { color: inherit; }
+.episode-now .now-speed { justify-content: center; margin-bottom: 0; }
+.episode-queue { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+.now-queue [aria-current="true"] { color: var(--accent); font-weight: 600; }
+.episode-queue .now-queue .row { width: 100%; text-align: left; }
+.icon:disabled { opacity: 0.35; }
+.shell-player { min-width: 0; }
+.episode-resume button { width: 100%; min-height: 40px; padding: 0 16px; background: var(--surface); border: 0; border-top: 1px solid #222; color: var(--accent); font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 视频: cards in a 16:9 grid (two columns on a phone), and the watch page. */
+.video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 10px; }
+.video-grid > * { min-width: 0; }
+.video-card a { display: grid; gap: 4px; min-width: 0; }
+.video-thumb { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: var(--surface); }
+.video-thumb .cover { width: 100% !important; height: 100% !important; border-radius: 0 !important; }
+.video-duration { position: absolute; right: 4px; bottom: 4px; padding: 1px 5px; border-radius: 4px; background: rgba(0,0,0,.75); color: #fff; font-size: 12px; }
+.video-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: 14px; line-height: 1.3; }
+.video-reason { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.watch-page { display: grid; gap: 10px; min-width: 0; }
+.watch-page > * { min-width: 0; }
+.watch-video { display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 50vh; background: #000; border-radius: var(--radius); }
+.watch-placeholder { display: grid; gap: 6px; }
+.watch-title { font-size: 18px; line-height: 1.3; margin: 0; overflow-wrap: anywhere; }
+.watch-channel { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.watch-kept { display: inline-grid; place-items: center; min-height: 44px; color: var(--accent); }
+.watch-page .pre-line { overflow-wrap: anywhere; }
+/* Six tabs at 360 px are 60 px each: "99+" next to the label would cross the cell; pin it to the cell's corner. */
+.tabs.tabs-6 .tab-badge { left: auto; right: 2px; top: 3px; }
+
+/* UI polish (2026-10): 频道's header, tabs and toolbar; round icon actions on result rows. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.svg-icon { display: block; flex: none; }
+
+/* Page header: the title and its one action, centred on one line. */
+.page-head .page-title { margin: 8px 0 12px; }
+.page-head a.secondary.head-action { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+@media (max-width: 479px) {
+  .page-head a.secondary.head-action { min-height: 32px; padding: 0 12px 0 10px; }
+}
+
+/* Sub-tabs: one row of pills; on a phone it scrolls sideways under a soft edge. */
+.pill-tabs { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 14px; scrollbar-width: none; }
+.pill-tabs::-webkit-scrollbar { display: none; }
+.pill-tabs > button {
+  flex: none; min-height: 34px; height: 34px; padding: 0 14px; border-radius: 999px; white-space: nowrap;
+  background: var(--surface); color: var(--muted); font-size: 14px; font-weight: 500; transition: background .15s, color .15s;
+}
+.pill-tabs > button[aria-selected="true"] { background: var(--text); color: #000; font-weight: 600; }
+@media (max-width: 479px) {
+  .pill-tabs { margin-right: -16px; padding-right: 28px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+}
+
+/* A segmented control: one shared track, the chosen segment raised. */
+.seg { display: inline-flex; flex: none; padding: 2px; gap: 2px; border-radius: 10px; background: var(--surface); }
+.seg > button {
+  min-height: 30px; height: 30px; padding: 0 12px; border-radius: 8px; white-space: nowrap;
+  color: var(--muted); font-size: 13px; font-weight: 500; transition: background .15s, color .15s;
+}
+.seg > button[aria-pressed="true"] { background: #3a3a3a; color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+
+/* An iOS-style switch (a native checkbox, so it keeps its role and keyboard). */
+.check { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; white-space: nowrap; cursor: pointer; font-size: 14px; }
+input.switch {
+  -webkit-appearance: none; appearance: none; flex: none; position: relative; width: 40px; height: 24px; min-height: 0; margin: 0; padding: 0;
+  border: 0; border-radius: 12px; background: #3d3d3d; cursor: pointer; transition: background .2s;
+}
+input.switch::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: transform .2s;
+}
+input.switch:checked { background: var(--accent); }
+input.switch:checked::before { transform: translateX(16px); }
+input.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.channel-settings .check { white-space: normal; }
+
+/* 最新's toolbar: sort + switch, then ▶ 全部播放 / 🔀 随机 (right on wide screens, a row of halves on a phone). */
+.list-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 10px; }
+.list-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
+.list-tools .play-all { margin: 0 0 0 auto; }
+.play-all { display: flex; gap: 8px; margin: 6px 0 10px; }
+.pill-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; height: 34px; padding: 0 14px;
+  border-radius: 999px; background: var(--surface); font-size: 14px; font-weight: 600; white-space: nowrap;
+}
+.pill-btn:first-child { background: var(--text); color: #000; }
+.pill-btn:disabled { opacity: .45; cursor: default; }
+@media (max-width: 479px) {
+  .list-tools .play-all { margin: 0; flex-basis: 100%; }
+  .play-all .pill-btn { flex: 1 1 0; }
+}
+.episode-queue .seg, .episode-queue .check { align-self: flex-start; }
+
+/* Result rows (为你推荐, YouTube, 推荐): 48 px art, a two-line title, round icon actions. */
+.yt-results .row, .recs .row { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; padding: 4px 0; }
+.row-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.3; }
+.row-error { color: #ff8a8d; }
+/* The error replaces the meta line: up to two lines, so a phone still reads it all. */
+.yt-text > .row-error { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; line-height: 1.3; }
+.secondary.compact { min-height: 34px; padding: 0 16px; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+.row-actions { display: flex; flex: none; align-items: center; gap: 6px; justify-self: end; }
+.icon-btn {
+  position: relative; flex: none; display: inline-grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0;
+  border-radius: 50%; color: var(--text); transition: background .15s, border-color .15s, filter .15s;
+}
+.icon-btn.outline { border: 1.5px solid #4a4a4a; }
+/* 关注频道 on a result row: secondary to ⬇, so smaller and quieter. */
+.icon-btn.follow { width: 32px; height: 32px; min-height: 32px; color: var(--muted); border-color: #3a3a3a; }
+.icon-btn.outline.on { border-color: transparent; background: var(--surface-2); color: var(--accent); }
+.icon-btn.filled { background: var(--accent); color: #000; }
+.icon-btn.filled.busy { color: #000; }
+.icon-btn.plain { width: 30px; color: var(--muted); }
+.icon-btn.state { color: var(--accent); background: rgba(30, 215, 96, .12); }
+.icon-btn:disabled { cursor: default; }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon-btn .svg-icon { pointer-events: none; }
+.ring-btn { color: var(--accent); }
+.ring-btn .ring { position: absolute; inset: 1px; }
+.ring-pct { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.ring-spin { animation: ring-spin 1s linear infinite; }
+@keyframes ring-spin { to { transform: rotate(360deg); } }
+.icon-btn.busy .ring { width: 26px; height: 26px; }
+.icon-badge {
+  position: absolute; top: -3px; right: -3px; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--danger); color: #fff; font-size: 11px; font-weight: 800; line-height: 1;
+}
+/* 推荐's suggested channels keep a compact text 关注 pill. */
+.recs .row-actions .secondary { min-height: 32px; padding: 0 14px; font-size: 14px; font-weight: 600; }
+.recs .row-actions .secondary.primary { background: rgba(30, 215, 96, .15); color: var(--accent); border-color: transparent; }
+@media (hover: hover) {
+  .icon-btn.outline:hover:not(:disabled) { border-color: #777; background: rgba(255,255,255,.06); }
+  .icon-btn.filled:hover:not(:disabled) { filter: brightness(1.1); }
+  .icon-btn.plain:hover { color: var(--text); background: rgba(255,255,255,.06); }
+  .pill-tabs > button:hover:not([aria-selected="true"]), .seg > button:hover:not([aria-pressed="true"]) { color: var(--text); }
+}

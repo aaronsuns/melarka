@@ -1,0 +1,36 @@
+Melarka
+Copyright (C) 2026 Aaron Sun
+
+Melarka (internal code name "lark") is free software: you can redistribute it and/or modify it
+under the terms of the GNU Affero General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later version
+(AGPL-3.0-or-later). See the LICENSE file. Commercial licences are available from the author.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Affero General Public License for more details.
+
+Third-party software
+--------------------
+
+The Docker image bundles the following programs. They run as separate programs and keep their
+own licences; their source code is available from the projects below.
+
+- FFmpeg (ffmpeg, ffprobe), from the Alpine Linux package
+  GNU General Public License version 2 or later (GPL-2.0-or-later), as built by Alpine
+  https://ffmpeg.org/
+
+- Node.js, from the Alpine Linux package (the JavaScript runtime yt-dlp uses)
+  MIT License
+  https://nodejs.org/
+
+- yt-dlp, the official standalone release binary
+  The Unlicense
+  https://github.com/yt-dlp/yt-dlp
+
+- Alpine Linux base image and packages
+  various open-source licences, listed in each package's metadata
+  https://alpinelinux.org/
+
+The Go modules and npm packages compiled into the server and the web app are listed in go.mod
+and web/package.json, each under its own licence.

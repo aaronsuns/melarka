@@ -1,0 +1,23 @@
+# Melarka: save as docker-compose.yml next to config.yaml and .env (see README "Quick start").
+# Then: docker compose up -d
+services:
+  melarka:
+    image: ghcr.io/aaronsuns/melarka:0.1.0       # or :0.1 (patch updates) or :latest
+    container_name: melarka
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4600:4600"    # loopback only; put an HTTPS reverse proxy in front (README "Reverse proxy and HTTPS")
+    env_file: .env               # LARK_ADMIN_PASSWORD=… (first start only); optional LARK_LANGUAGE, LARK_LASTFM_API_KEY
+    environment:
+      LARK_ADMIN_USER: admin     # the first admin's username, used only while no admin exists
+      # TZ: Area/City            # local time for recommendations.refresh_at; UTC if unset
+    volumes:
+      - ./data:/data                                   # database, caches, the updated yt-dlp copy
+      - ./config.yaml:/data/config.yaml:ro
+      - ${MUSIC_DIR:-/srv/melarka/music}:/music/main   # your music: set MUSIC_DIR in .env, or edit this line
+      - ./youtube:/music/youtube                       # YouTube downloads
+      - ./channels:/data/channels                      # followed channels' episodes (can grow large)
+      - ./previews:/data/previews                      # temporary previews and video thumbnails
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

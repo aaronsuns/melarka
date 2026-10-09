@@ -1,0 +1,63 @@
+# Lark's tag vocabulary. Automatic sources (folder rules, Last.fm, the agent) may only use these slugs;
+# manual tags may be anything. names = the UI label per locale (kept equal to web tag.<slug> by a test).
+- {slug: mandopop, kind: genre, aliases: [c-pop, cpop, chinese pop, mandarin pop, taiwanese pop], names: {en: Mandopop, zh-Hans: 华语流行, zh-Hant: 華語流行, sv: Mandopop}}
+- {slug: cantopop, kind: genre, aliases: [canto-pop, hong kong pop, hk pop], names: {en: Cantopop, zh-Hans: 粤语流行, zh-Hant: 粵語流行, sv: Cantopop}}
+- {slug: pop, kind: genre, aliases: [pop music], names: {en: Pop, zh-Hans: 流行, zh-Hant: 流行, sv: Pop}}
+- {slug: rock, kind: genre, aliases: [classic rock, soft rock, alternative rock, chinese rock], names: {en: Rock, zh-Hans: 摇滚, zh-Hant: 搖滾, sv: Rock}}
+- {slug: folk, kind: genre, aliases: [chinese folk, folk pop, singer-songwriter], names: {en: Folk, zh-Hans: 民谣, zh-Hant: 民謠, sv: Folkmusik}}
+- {slug: jazz, kind: genre, aliases: [smooth jazz, vocal jazz], names: {en: Jazz, zh-Hans: 爵士, zh-Hant: 爵士, sv: Jazz}}
+- {slug: blues, kind: genre, aliases: [], names: {en: Blues, zh-Hans: 蓝调, zh-Hant: 藍調, sv: Blues}}
+- {slug: classical, kind: genre, aliases: [classical music, baroque, orchestral], names: {en: Classical, zh-Hans: 古典, zh-Hant: 古典, sv: Klassiskt}}
+- {slug: electronic, kind: genre, aliases: [electronica, edm, electro, house, trance, dance], names: {en: Electronic, zh-Hans: 电子, zh-Hant: 電子, sv: Elektroniskt}}
+- {slug: hip-hop, kind: genre, aliases: [hip hop, rap, chinese hip hop], names: {en: Hip-hop, zh-Hans: 嘻哈, zh-Hant: 嘻哈, sv: Hiphop}}
+- {slug: rnb, kind: genre, aliases: [r&b, rhythm and blues, soul], names: {en: R&B, zh-Hans: R&B, zh-Hant: R&B, sv: R&B}}
+- {slug: country, kind: genre, aliases: [], names: {en: Country, zh-Hans: 乡村, zh-Hant: 鄉村, sv: Country}}
+- {slug: metal, kind: genre, aliases: [heavy metal], names: {en: Metal, zh-Hans: 金属, zh-Hant: 金屬, sv: Metal}}
+- {slug: latin, kind: genre, aliases: [latin pop, bossa nova, salsa], names: {en: Latin, zh-Hans: 拉丁, zh-Hant: 拉丁, sv: Latin}}
+- {slug: world, kind: genre, aliases: [world music, ethnic], names: {en: World, zh-Hans: 世界音乐, zh-Hant: 世界音樂, sv: Världsmusik}}
+- {slug: chinese-traditional, kind: genre, aliases: [chinese traditional, traditional chinese, guzheng, erhu, chinese classical], names: {en: Chinese traditional, zh-Hans: 中国风, zh-Hant: 中國風, sv: Kinesisk tradition}}
+- {slug: soundtrack, kind: genre, aliases: [ost, film score, score, movie soundtrack, anime], names: {en: Soundtrack, zh-Hans: 影视原声, zh-Hant: 影視原聲, sv: Filmmusik}}
+- {slug: new-age, kind: genre, aliases: [newage], names: {en: New age, zh-Hans: 新世纪, zh-Hant: 新世紀, sv: New age}}
+- {slug: ambient, kind: genre, aliases: [ambient music], names: {en: Ambient, zh-Hans: 氛围, zh-Hant: 氛圍, sv: Ambient}}
+- {slug: instrumental, kind: genre, aliases: [instrumental music, no vocals], names: {en: Instrumental, zh-Hans: 纯音乐, zh-Hant: 純音樂, sv: Instrumentalt}}
+- {slug: piano, kind: genre, aliases: [piano music, solo piano], names: {en: Piano, zh-Hans: 钢琴, zh-Hant: 鋼琴, sv: Piano}}
+- {slug: chill, kind: mood, aliases: [chillout, chill out, relax, relaxing, mellow, lounge], names: {en: Chill, zh-Hans: 放松, zh-Hant: 放鬆, sv: Chill}}
+- {slug: happy, kind: mood, aliases: [feel good, cheerful, fun], names: {en: Happy, zh-Hans: 快乐, zh-Hant: 快樂, sv: Glad}}
+- {slug: sad, kind: mood, aliases: [melancholy, melancholic, heartbreak, sad songs], names: {en: Sad, zh-Hans: 伤感, zh-Hant: 傷感, sv: Sorgsen}}
+- {slug: romantic, kind: mood, aliases: [love, love songs, love song], names: {en: Romantic, zh-Hans: 浪漫, zh-Hant: 浪漫, sv: Romantisk}}
+- {slug: energetic, kind: mood, aliases: [upbeat, energy, high energy], names: {en: Energetic, zh-Hans: 动感, zh-Hant: 動感, sv: Energisk}}
+- {slug: calm, kind: mood, aliases: [peaceful, soothing, quiet, gentle], names: {en: Calm, zh-Hans: 安静, zh-Hant: 安靜, sv: Lugn}}
+- {slug: nostalgic, kind: mood, aliases: [nostalgia, memories], names: {en: Nostalgic, zh-Hans: 怀旧, zh-Hant: 懷舊, sv: Nostalgisk}}
+- {slug: uplifting, kind: mood, aliases: [inspirational, inspiring, motivational], names: {en: Uplifting, zh-Hans: 励志, zh-Hant: 勵志, sv: Upplyftande}}
+- {slug: driving, kind: scene, aliases: [driving music, road trip, car], names: {en: Driving, zh-Hans: 开车, zh-Hant: 開車, sv: Bilkörning}}
+- {slug: workout, kind: scene, aliases: [gym, running, exercise, training], names: {en: Workout, zh-Hans: 运动, zh-Hant: 運動, sv: Träning}}
+- {slug: sleep, kind: scene, aliases: [sleeping, lullaby, bedtime], names: {en: Sleep, zh-Hans: 睡眠, zh-Hant: 睡眠, sv: Sömn}}
+- {slug: morning, kind: scene, aliases: [wake up, morning music], names: {en: Morning, zh-Hans: 早晨, zh-Hant: 早晨, sv: Morgon}}
+- {slug: party, kind: scene, aliases: [dance party, club], names: {en: Party, zh-Hans: 派对, zh-Hant: 派對, sv: Fest}}
+- {slug: study, kind: scene, aliases: [focus, studying, concentration], names: {en: Study, zh-Hans: 学习, zh-Hant: 學習, sv: Plugga}}
+- {slug: cafe, kind: scene, aliases: [coffee, coffee shop, cafe music, café], names: {en: Café, zh-Hans: 咖啡馆, zh-Hant: 咖啡館, sv: Kafé}}
+- {slug: kids, kind: scene, aliases: [children, children's music, nursery rhymes, kids music], names: {en: Kids, zh-Hans: 儿童, zh-Hant: 兒童, sv: Barn}}
+- {slug: christmas, kind: scene, aliases: [xmas, christmas music, holiday], names: {en: Christmas, zh-Hans: 圣诞, zh-Hant: 聖誕, sv: Jul}}
+- {slug: karaoke, kind: scene, aliases: [ktv, sing along], names: {en: Karaoke, zh-Hans: K歌, zh-Hant: K歌, sv: Karaoke}}
+- {slug: 60s, kind: era, aliases: [1960s, sixties], names: {en: 1960s, zh-Hans: 60年代, zh-Hant: 60年代, sv: 60-tal}}
+- {slug: 70s, kind: era, aliases: [1970s, seventies], names: {en: 1970s, zh-Hans: 70年代, zh-Hant: 70年代, sv: 70-tal}}
+- {slug: 80s, kind: era, aliases: [1980s, eighties], names: {en: 1980s, zh-Hans: 80年代, zh-Hant: 80年代, sv: 80-tal}}
+- {slug: 90s, kind: era, aliases: [1990s, nineties], names: {en: 1990s, zh-Hans: 90年代, zh-Hant: 90年代, sv: 90-tal}}
+- {slug: 2000s, kind: era, aliases: [00s, noughties], names: {en: 2000s, zh-Hans: 2000年代, zh-Hant: 2000年代, sv: 2000-tal}}
+- {slug: 2010s, kind: era, aliases: [10s], names: {en: 2010s, zh-Hans: 2010年代, zh-Hant: 2010年代, sv: 2010-tal}}
+- {slug: 2020s, kind: era, aliases: [20s], names: {en: 2020s, zh-Hans: 2020年代, zh-Hant: 2020年代, sv: 2020-tal}}
+- {slug: classic, kind: era, aliases: [oldies, golden oldies, oldie, evergreen, classics], names: {en: Classics, zh-Hans: 经典老歌, zh-Hant: 經典老歌, sv: Klassiker}}
+- {slug: mandarin, kind: language, aliases: [chinese, chinese music], names: {en: Mandarin, zh-Hans: 国语, zh-Hant: 國語, sv: Mandarin}}
+- {slug: cantonese, kind: language, aliases: [], names: {en: Cantonese, zh-Hans: 粤语, zh-Hant: 粵語, sv: Kantonesiska}}
+- {slug: hokkien, kind: language, aliases: [taiwanese, minnan], names: {en: Hokkien, zh-Hans: 闽南语, zh-Hant: 閩南語, sv: Hokkien}}
+- {slug: mongolian, kind: language, aliases: [mongolia, mongolian folk], names: {en: Mongolian, zh-Hans: 蒙古语, zh-Hant: 蒙古語, sv: Mongoliska}}
+- {slug: english, kind: language, aliases: [], names: {en: English, zh-Hans: 英语, zh-Hant: 英語, sv: Engelska}}
+- {slug: swedish, kind: language, aliases: [svenska, swedish pop, sweden], names: {en: Swedish, zh-Hans: 瑞典语, zh-Hant: 瑞典語, sv: Svenska}}
+- {slug: japanese, kind: language, aliases: [j-pop, jpop, japan], names: {en: Japanese, zh-Hans: 日语, zh-Hant: 日語, sv: Japanska}}
+- {slug: korean, kind: language, aliases: [k-pop, kpop, korea], names: {en: Korean, zh-Hans: 韩语, zh-Hant: 韓語, sv: Koreanska}}
+- {slug: live, kind: other, aliases: [live recording, concert], names: {en: Live, zh-Hans: 现场, zh-Hant: 現場, sv: Live}}
+- {slug: cover, kind: other, aliases: [covers, cover version], names: {en: Cover, zh-Hans: 翻唱, zh-Hant: 翻唱, sv: Cover}}
+- {slug: acoustic, kind: other, aliases: [unplugged], names: {en: Acoustic, zh-Hans: 原声, zh-Hant: 原聲, sv: Akustiskt}}
+- {slug: female-vocal, kind: other, aliases: [female vocalists, female vocalist, female vocals], names: {en: Female vocal, zh-Hans: 女声, zh-Hant: 女聲, sv: Kvinnlig sång}}
+- {slug: male-vocal, kind: other, aliases: [male vocalists, male vocalist, male vocals], names: {en: Male vocal, zh-Hans: 男声, zh-Hant: 男聲, sv: Manlig sång}}
+- {slug: duet, kind: other, aliases: [duets], names: {en: Duet, zh-Hans: 对唱, zh-Hant: 對唱, sv: Duett}}

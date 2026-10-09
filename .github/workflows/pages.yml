@@ -1,0 +1,67 @@
+name: pages
+
+# The SideStore source (AltStore source v2) at https://aaronsuns.github.io/melarka/source.json,
+# rebuilt from the GitHub Releases: the newest 5 versions that ship a Melarka-X.Y.Z.ipa.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash # bash -eo pipefail
+
+jobs:
+  # Pages on a private repository needs a paid plan and private release assets need authentication,
+  # so this only runs once the repository is public.
+  build:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: source.json from the GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p site
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          python3 ios/scripts/make_source.py --releases "$RUNNER_TEMP/releases.json" --repo "$GITHUB_REPOSITORY" > site/source.json
+          python3 -c 'import json; s = json.load(open("site/source.json")); print(len(s["apps"][0]["versions"]), "versions")'
+      - name: icon and index
+        run: |
+          cp ios/Sources/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png site/icon.png
+          cat > site/index.html <<EOF
+          <!doctype html>
+          <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Melarka</title></head>
+          <body><p><a href="https://github.com/$GITHUB_REPOSITORY">Melarka</a>: self-hosted music, in your pocket.
+          SideStore source: <a href="source.json">source.json</a></p></body></html>
+          EOF
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

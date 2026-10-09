@@ -1,0 +1,174 @@
+name: release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/aaronsuns/melarka
+  # The iOS project as XcodeGen names it (ios/project.yml), and what the built app must say it is.
+  IOS_PROJECT: Lark.xcodeproj
+  IOS_SCHEME: Lark
+  APP_BUNDLE_ID: io.github.aaronsuns.melarka
+  APP_DISPLAY_NAME: Melarka
+
+defaults:
+  run:
+    shell: bash # bash -eo pipefail
+
+jobs:
+  # Nothing is published unless the tag is a plain X.Y.Z with release notes and the gate is clean.
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: v
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "tag $GITHUB_REF_NAME is not vX.Y.Z" >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - run: scripts/changelog-section.sh "${{ steps.v.outputs.version }}" > /dev/null
+      - run: scripts/ci-install-gitleaks.sh
+      - run: scripts/ci-oss-check.sh # full mode; the denylist is REQUIRED here (no fork exception)
+        env:
+          OSS_DENYLIST: ${{ secrets.OSS_DENYLIST }}
+
+  image:
+    needs: gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+          labels: org.opencontainers.image.title=Melarka
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: VERSION=${{ needs.gate.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: The pushed image reports the tag's version
+        run: |
+          got=$(docker run --rm "$IMAGE:$VERSION" --version)
+          echo "$got"
+          [ "$got" = "melarka $VERSION" ]
+
+  ipa:
+    needs: gate
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ios
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Newest stable Xcode
+        run: |
+          xcode=$(printf '%s\n' /Applications/Xcode_*.app | grep -viE 'beta|_rc|release' | sort -V | tail -1)
+          [ -d "$xcode" ] || { echo "no stable Xcode in /Applications" >&2; exit 1; }
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - run: brew install xcodegen && xcodegen generate --quiet
+      - name: Unsigned archive (CFBundleVersion = CFBundleShortVersionString = the tag's semver)
+        run: |
+          xcodebuild -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -configuration Release \
+            -destination generic/platform=iOS -archivePath build/App.xcarchive -quiet archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$VERSION"
+      - name: Package Melarka-X.Y.Z.ipa and check what it says it is
+        run: |
+          shopt -s nullglob
+          apps=(build/App.xcarchive/Products/Applications/*.app)
+          [ ${#apps[@]} = 1 ] || { echo "expected one .app, found ${#apps[@]}" >&2; exit 1; }
+          mkdir -p build/ipa/Payload && cp -R "${apps[0]}" build/ipa/Payload/
+          p="build/ipa/Payload/$(basename "${apps[0]}")/Info.plist"
+          check() { got=$(/usr/libexec/PlistBuddy -c "Print $1" "$p"); echo "$1=$got"
+                    [ "$got" = "$2" ] || { echo "$1 is '$got', want '$2'" >&2; exit 1; }; }
+          check CFBundleIdentifier "$APP_BUNDLE_ID"
+          check CFBundleDisplayName "$APP_DISPLAY_NAME"
+          check CFBundleShortVersionString "$VERSION"
+          check CFBundleVersion "$VERSION"
+          (cd build/ipa && zip -qry "../Melarka-$VERSION.ipa" Payload)
+          ls -l "build/Melarka-$VERSION.ipa"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ipa
+          path: ios/build/Melarka-${{ needs.gate.outputs.version }}.ipa
+          if-no-files-found: error
+
+  release:
+    needs: [gate, image, ipa]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ipa
+          path: dist
+      - run: scripts/changelog-section.sh "$VERSION" > "$RUNNER_TEMP/notes.md"
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Melarka ${{ needs.gate.outputs.version }}
+          body_path: ${{ runner.temp }}/notes.md
+          files: dist/Melarka-${{ needs.gate.outputs.version }}.ipa
+          fail_on_unmatched_files: true
+
+  # A release made with GITHUB_TOKEN does not trigger other workflows, so Pages is called from here.
+  # pages.yml skips itself while the repository is private.
+  pages:
+    needs: release
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

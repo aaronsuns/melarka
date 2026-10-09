@@ -1,0 +1,32 @@
+{
+  "_type": "playlist",
+  "id": "PLtestlist0001",
+  "title": "Test list",
+  "playlist_count": 3,
+  "entries": [
+    {
+      "id": "p1_0000000x",
+      "title": "Song One",
+      "channel": "Artist A",
+      "duration": 180.0,
+      "url": "https://www.youtube.com/watch?v=p1_0000000x",
+      "thumbnails": [{"url": "https://i.ytimg.com/vi/p1_0000000x/hq.jpg"}]
+    },
+    {
+      "id": "p2_0000000x",
+      "title": "[Private video]",
+      "channel": "Unknown",
+      "duration": 0,
+      "url": "",
+      "thumbnails": []
+    },
+    {
+      "id": "p3_0000000x",
+      "title": "Song Three",
+      "uploader": "Artist C",
+      "duration": 240.0,
+      "url": "https://www.youtube.com/watch?v=p3_0000000x",
+      "thumbnail": "https://i.ytimg.com/vi/p3_0000000x/default.jpg"
+    }
+  ]
+}

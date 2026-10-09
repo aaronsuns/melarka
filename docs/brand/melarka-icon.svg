@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Melarka</title>
+  <!-- The Melarka icon: a lark drawn as a music note. Its body is the note head,
+       its raised wing is the note's flag. Full-bleed square: iOS and the PWA
+       round the corners themselves. scripts/render-icons.sh renders the web and
+       iPhone icons from this file. -->
+  <rect width="1024" height="1024" fill="#121212"/>
+  <g transform="translate(512 520) scale(1.18) translate(-520 -500)">
+    <g fill="#1ed760">
+      <!-- the stem, rising from the bird's back -->
+      <rect x="560" y="170" width="66" height="540" rx="33"/>
+      <!-- the wing: the note's flag, with two feather tips -->
+      <path d="M593 172
+               C 700 200, 820 262, 850 392
+               C 812 352, 770 336, 730 334
+               C 772 368, 792 410, 796 462
+               C 748 398, 690 372, 626 368 Z"/>
+      <!-- the body: the note head -->
+      <ellipse cx="470" cy="716" rx="172" ry="126" transform="rotate(-24 470 716)"/>
+      <!-- the beak -->
+      <path d="M360 740 L 232 712 L 318 666 Z"/>
+      <!-- the tail -->
+      <path d="M598 690 L 742 650 L 700 712 L 612 750 Z"/>
+    </g>
+    <!-- the eye -->
+    <circle cx="384" cy="676" r="22" fill="#121212"/>
+  </g>
+</svg>

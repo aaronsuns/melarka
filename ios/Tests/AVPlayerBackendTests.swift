@@ -1,0 +1,186 @@
+import XCTest
+import AVFoundation
+@testable import Lark
+
+/// Records every callback with its generation. `onFinished` lets a test answer like the engine does.
+@MainActor final class RecordingDelegate: MediaBackendDelegate {
+    var events: [String] = []
+    var ticks: [(ms: Int, generation: Int)] = []
+    var onFinished: ((Int) -> Void)?
+
+    func backendStarted(generation: Int) { events.append("started:\(generation)") }
+    func backendPaused(generation: Int) { events.append("paused:\(generation)") }
+    func backendFinished(generation: Int) { events.append("finished:\(generation)"); onFinished?(generation) }
+    func backendFailed(network: Bool, generation: Int) { events.append("failed:\(network):\(generation)") }
+    func backendBuffering(_ on: Bool, generation: Int) { events.append("buffering:\(on):\(generation)") }
+    func backendTick(positionMs: Int, generation: Int) { ticks.append((positionMs, generation)) }
+
+    var started: Bool { events.contains { $0.hasPrefix("started:") } }
+    var finished: Bool { events.contains { $0.hasPrefix("finished:") } }
+    func has(_ e: String) -> Bool { events.contains(e) }
+}
+
+/// Silence, 44.1 kHz mono PCM, in a .caf in the temporary directory: real AVFoundation, no server.
+func makeSilentFile(seconds: Double) throws -> URL {
+    let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("silence-\(UUID().uuidString).caf")
+    let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
+    let file = try AVAudioFile(forWriting: url, settings: format.settings)
+    let frames = AVAudioFrameCount(44_100 * seconds)
+    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames)!
+    buffer.frameLength = frames            // zero-filled
+    try file.write(from: buffer)
+    return url
+}
+
+@MainActor final class AVPlayerBackendTests: XCTestCase {
+    var files: [URL] = []
+    var backend: AVPlayerBackend!
+
+    override func tearDown() async throws {
+        backend?.stop(); backend = nil
+        for f in files { try? FileManager.default.removeItem(at: f) }
+        files = []
+    }
+
+    func silent(_ seconds: Double) throws -> URL {
+        let u = try makeSilentFile(seconds: seconds); files.append(u); return u
+    }
+
+    func testPlaysGeneratedFileToTheEnd() async throws {
+        let url = try silent(1)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(url), startMs: 0, autoplay: true, rate: 1, generation: 1)
+        try await waitUntil(timeout: 10) { d.started && d.finished }
+        XCTAssertTrue(d.has("started:1"), "\(d.events)")
+        XCTAssertTrue(d.has("finished:1"), "\(d.events)")
+        XCTAssertFalse(d.events.contains { $0.hasPrefix("paused:") || $0.hasPrefix("failed:") }, "\(d.events)")
+        XCTAssertFalse(d.ticks.isEmpty)
+        XCTAssertTrue(d.ticks.allSatisfy { $0.generation == 1 })
+    }
+
+    func testMissingFileReportsFailureNotNetwork() async throws {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("missing-\(UUID().uuidString).caf")
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(url), startMs: 0, autoplay: true, rate: 1, generation: 4)
+        try await waitUntil(timeout: 10) { d.events.contains { $0.hasPrefix("failed:") } }
+        XCTAssertEqual(d.events.filter { $0.hasPrefix("failed:") }, ["failed:false:4"])
+        XCTAssertFalse(d.started)
+    }
+
+    func testStartPositionAndDuration() async throws {
+        let url = try silent(2)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(url), startMs: 1000, autoplay: true, rate: 1, generation: 1)
+        XCTAssertEqual(b.positionMs, 1000)                      // before the item is ready, the position asked for
+        try await waitUntil(timeout: 10) { !d.ticks.isEmpty && d.started }
+        XCTAssertGreaterThanOrEqual(d.ticks.first!.ms, 900, "\(d.ticks)")
+        XCTAssertEqual(b.durationMs ?? 0, 2000, accuracy: 50)
+        try await waitUntil(timeout: 10) { d.finished }
+    }
+
+    /// A pause the engine asked for is never reported back as `backendPaused`.
+    func testRequestedPauseIsNotReported() async throws {
+        let url = try silent(3)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(url), startMs: 0, autoplay: true, rate: 1, generation: 1)
+        try await waitUntil(timeout: 10) { d.started && b.isPlaying }
+        b.pause()
+        XCTAssertFalse(b.isPlaying)
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertFalse(d.events.contains { $0.hasPrefix("paused:") }, "\(d.events)")
+        let at = b.positionMs
+        b.seek(ms: 2000)
+        try await waitUntil(timeout: 5) { b.positionMs >= 1900 }
+        XCTAssertGreaterThan(b.positionMs, at)
+        b.play()
+        try await waitUntil(timeout: 10) { d.finished }
+    }
+
+    /// A replaced item never reports again: only the new load's generation is heard.
+    func testReplacedItemIsSilent() async throws {
+        let a = try silent(1), c = try silent(1)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(a), startMs: 0, autoplay: true, rate: 1, generation: 1)
+        let mark = d.events.count, tickMark = d.ticks.count
+        b.load(.file(c), startMs: 0, autoplay: true, rate: 1, generation: 2)
+        try await waitUntil(timeout: 10) { d.has("finished:2") }
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertFalse(d.events[mark...].contains { $0.hasSuffix(":1") }, "\(d.events)")
+        XCTAssertTrue(d.ticks[tickMark...].allSatisfy { $0.generation == 2 })
+    }
+
+    /// Gapless: the queue player moves to the preloaded item by itself; the engine's load of that same source
+    /// (from `backendFinished`) takes it over instead of loading it again.
+    func testPreloadedItemIsAdoptedNotReloaded() async throws {
+        let a = try silent(1), c = try silent(1)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        d.onFinished = { g in if g == 1 { b.load(.file(c), startMs: 0, autoplay: true, rate: 1, generation: 2); b.preload(nil) } }
+        b.load(.file(a), startMs: 0, autoplay: true, rate: 1, generation: 1)
+        b.preload(.file(c))
+        try await waitUntil(timeout: 10) { d.has("finished:2") }
+        XCTAssertEqual(b.adoptedPreloads, 1)
+        XCTAssertEqual(d.events.filter { $0.hasPrefix("finished:") }, ["finished:1", "finished:2"])
+    }
+
+    /// The engine chose something else at the end: the preloaded item must not play on by itself.
+    func testUnadoptedPreloadDoesNotPlay() async throws {
+        let a = try silent(1), c = try silent(3)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(a), startMs: 0, autoplay: true, rate: 1, generation: 1)
+        b.preload(.file(c))
+        try await waitUntil(timeout: 10) { d.has("finished:1") }
+        try await Task.sleep(nanoseconds: 500_000_000)
+        XCTAssertFalse(b.isPlaying)
+        XCTAssertEqual(b.player.rate, 0)
+        XCTAssertTrue(b.player.items().isEmpty)
+        XCTAssertEqual(b.adoptedPreloads, 0)
+    }
+
+    /// Taking over a preloaded episode that resumes mid-way: paused until the seek lands, so its start never sounds.
+    func testAdoptWithAPositionWaitsForTheSeek() async throws {
+        let a = try silent(1), c = try silent(3)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        var rateAfterLoad: Float = -1
+        d.onFinished = { g in
+            guard g == 1 else { return }
+            b.load(.file(c), startMs: 1500, autoplay: true, rate: 1, generation: 2)
+            rateAfterLoad = b.player.rate
+        }
+        b.load(.file(a), startMs: 0, autoplay: true, rate: 1, generation: 1)
+        b.preload(.file(c))
+        try await waitUntil(timeout: 10) { d.ticks.contains { $0.generation == 2 } }
+        XCTAssertEqual(b.adoptedPreloads, 1)
+        XCTAssertEqual(rateAfterLoad, 0)
+        XCTAssertGreaterThanOrEqual(d.ticks.first { $0.generation == 2 }!.ms, 1400)
+        XCTAssertFalse(d.events.contains { $0.hasPrefix("paused:") }, "\(d.events)")
+        try await waitUntil(timeout: 10) { d.has("finished:2") }
+    }
+
+    /// A media services reset: a new player, nothing of the old one reports again, and the next load plays.
+    func testRebuildGivesAFreshPlayer() async throws {
+        let a = try silent(3), c = try silent(1)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(a), startMs: 0, autoplay: true, rate: 1, generation: 1)
+        try await waitUntil(timeout: 10) { d.started }
+        let old = b.player
+        b.rebuild()
+        XCTAssertFalse(b.player === old)
+        XCTAssertFalse(b.isPlaying)
+        XCTAssertNil(b.player.currentItem)
+        let mark = d.events.count, tickMark = d.ticks.count
+        b.load(.file(c), startMs: 0, autoplay: true, rate: 1, generation: 2)
+        try await waitUntil(timeout: 10) { d.has("finished:2") }
+        XCTAssertFalse(d.events[mark...].contains { $0.hasSuffix(":1") }, "\(d.events)")
+        XCTAssertTrue(d.ticks[tickMark...].allSatisfy { $0.generation == 2 })
+        XCTAssertEqual(old.rate, 0)
+    }
+
+    func testRemoteAssetCarriesTheTokenAsAHeader() {
+        let item = AVPlayerBackend.makeItem(.remote(URL(string: "https://lark.test/api/v1/tracks/7/stream?quality=high")!, token: "SECRET"))
+        let asset = item.asset as! AVURLAsset
+        XCTAssertEqual(asset.url.absoluteString, "https://lark.test/api/v1/tracks/7/stream?quality=high")
+        XCTAssertFalse(asset.url.absoluteString.contains("SECRET"))
+        XCTAssertEqual(AVPlayerBackend.headers(for: .remote(asset.url, token: "SECRET")), ["Authorization": "Bearer SECRET"])
+        XCTAssertNil(AVPlayerBackend.headers(for: .file(URL(fileURLWithPath: "/tmp/x.caf"))))
+    }
+}

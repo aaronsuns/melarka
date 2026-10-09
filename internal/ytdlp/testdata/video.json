@@ -1,0 +1,10 @@
+{
+  "_type": "video",
+  "id": "v1_0000000x",
+  "title": "Solo Video Title",
+  "channel": "Solo Channel",
+  "duration": 305.0,
+  "url": "https://rr3---sn-ab5l6nz6.googlevideo.com/videoplayback?expire=1234567890&ei=abc123&ip=0.0.0.0&id=o-abcDEF",
+  "webpage_url": "https://www.youtube.com/watch?v=v1_0000000x",
+  "thumbnails": [{"url": "https://i.ytimg.com/vi/v1_0000000x/default.jpg"}, {"url": "https://i.ytimg.com/vi/v1_0000000x/hq.jpg"}]
+}

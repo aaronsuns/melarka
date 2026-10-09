@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+ <link rel="self" href="http://www.youtube.com/feeds/videos.xml?channel_id=UC0e5c4U67Vm6sAVK0vxN3Uw"/>
+ <id>yt:channel:0e5c4U67Vm6sAVK0vxN3Uw</id>
+ <yt:channelId>0e5c4U67Vm6sAVK0vxN3Uw</yt:channelId>
+ <title>刘翔的投资频道</title>
+ <link rel="alternate" href="https://www.youtube.com/channel/UC0e5c4U67Vm6sAVK0vxN3Uw"/>
+ <published>2019-09-10T07:56:44+00:00</published>
+ <entry>
+  <id>yt:video:PncPZ-E1GjE</id>
+  <yt:videoId>PncPZ-E1GjE</yt:videoId>
+  <yt:channelId>UC0e5c4U67Vm6sAVK0vxN3Uw</yt:channelId>
+  <title>引爆全球金融危機?爲了它,川普已偷偷抛棄美債</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=PncPZ-E1GjE"/>
+  <published>2026-10-03T23:41:44+00:00</published>
+  <updated>2026-10-05T04:51:10+00:00</updated>
+  <media:group>
+   <media:title>引爆全球金融危機?爲了它,川普已偷偷抛棄美債</media:title>
+   <media:content url="https://www.youtube.com/v/PncPZ-E1GjE?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i1.ytimg.com/vi/PncPZ-E1GjE/hqdefault.jpg" width="480" height="360"/>
+   <media:description>保证物超所值，管用的赚钱策略
+https://www.patreon.com/liuxiang</media:description>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:CEJXqm2eiJ0</id>
+  <yt:videoId>CEJXqm2eiJ0</yt:videoId>
+  <yt:channelId>UC0e5c4U67Vm6sAVK0vxN3Uw</yt:channelId>
+  <title>一分钟看懂美债</title>
+  <link rel="alternate" href="https://www.youtube.com/shorts/CEJXqm2eiJ0"/>
+  <published>2026-10-01T10:00:00+00:00</published>
+  <media:group><media:description></media:description></media:group>
+ </entry>
+ <entry>
+  <id>yt:video:rvOZh8idOrU</id>
+  <yt:videoId>rvOZh8idOrU</yt:videoId>
+  <title>投行说现在像极了1999；美债要崩?</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=rvOZh8idOrU"/>
+  <published>2026-09-27T00:01:22+00:00</published>
+  <media:group><media:description>第二个</media:description></media:group>
+ </entry>
+ <entry>
+  <yt:videoId>not-a-video-id</yt:videoId>
+  <title>broken</title>
+  <published>2026-09-20T00:00:00+00:00</published>
+ </entry>
+ <entry>
+  <yt:videoId>AAAAAAAAAAA</yt:videoId>
+  <title>bad date</title>
+  <published>yesterday</published>
+ </entry>
+</feed>

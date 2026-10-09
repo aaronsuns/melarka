@@ -1,0 +1,79 @@
+# Melarka server settings. Save as config.yaml next to docker-compose.yml (see README "Quick start").
+# Every key is shown with its default; delete any line you don't change. Durations need a unit
+# ("3s", "0s"). Environment variables are separate (docs/configuration.md); LARK_LANGUAGE
+# overrides language below, LARK_OFFLINE_CACHE (on/off) overrides offline_cache.
+# LARK_YOUTUBE_FEED_URL and LARK_YOUTUBE_THUMB_URL (channel feeds, 视频 thumbnails) are for tests.
+
+language: en                # UI language before a user picks their own: en, zh-Hans, zh-Hant or sv
+music_root: /music          # libraries added in the admin console must live under this directory
+offline_cache: true         # web app keeps favorites on the phone for offline play; false removes it everywhere (docs/configuration.md)
+
+# Libraries created on the very first start only (later changes: admin console → Library).
+# The paths are inside the container; deploy/docker-compose.example.yml mounts them.
+libraries:
+  - name: main              # shown in the app
+    path: /music/main       # your music (MUSIC_DIR in .env)
+    download_target: false  # true for exactly one library: where YouTube downloads are saved
+  - name: youtube
+    path: /music/youtube
+    download_target: true
+
+ffmpeg_path: ffmpeg         # transcoder; looked up on PATH unless absolute
+ffprobe_path: ffprobe       # reads tags, durations and embedded lyrics
+ytdlp_path: yt-dlp          # YouTube search/download; an admin update in <data dir>/bin/yt-dlp takes precedence
+
+transcode:
+  cache_max_bytes: 21474836480  # 20 GiB cap on the disposable transcode cache
+  max_concurrent: 2             # ffmpeg processes at once
+  nice: true                    # run ffmpeg at low CPU priority
+
+lyrics:
+  # Asked in this order; remove one to switch it off. netease, qq and kugou are unofficial APIs
+  # that may break or change their terms at any time (docs/configuration.md "Lyrics").
+  providers: [embedded, lrclib, netease, qq, kugou]
+  prefetch_interval: 3s     # background lookup pace, one track per interval; 0s = off
+
+artwork:
+  # Cover sources in this order; remove one to switch it off. Covers are cached in
+  # <data dir>/cache/artwork; music files and folders are never written.
+  providers: [embedded, folder, itunes, netease, qq]
+  prefetch_interval: 3s     # background lookup pace, one song per interval; 0s = off
+
+recommendations:            # "For you" on Home: YouTube songs like the ones you play (docs/configuration.md)
+  enabled: true
+  refresh_at: "02:30"       # nightly refresh (HH:MM), container local time: UTC unless TZ is set (compose example: TZ)
+
+channels:                   # 频道: follow YouTube channels without an account (docs/configuration.md)
+  enabled: true
+  root: ""                  # episode files; "" = <data dir>/channels (the compose example mounts ./channels there)
+  poll_interval: 2h         # how often each followed channel's feed is read (at least 15m)
+  keep_days: 10             # days an episode is kept after publishing (users can set their own per channel)
+  initial_backfill: 3       # episodes fetched right away when someone follows a channel (newest first)
+  max_gb: 200               # cap on all episode files; the oldest episodes nobody kept go first
+  preview_root: ""          # temporary previews (▶ 试听) and video thumbnails; "" = <data dir>/previews
+  preview_ttl: 24h          # a preview is deleted this long after it was last played (at least 1h)
+  preview_max_gb: 10        # cap on all previews; the least recently played go first
+
+tagging:
+  lastfm_min_count: 10      # keep a Last.fm tag only at this count or above (needs LARK_LASTFM_API_KEY)
+  # A track whose folder path contains any `match` text (case-insensitive) gets these vocabulary
+  # `tags`. Writing folder_rules replaces the whole default list below.
+  folder_rules:
+    - { match: [纯音乐, 純音樂, instrumental], tags: [instrumental] }
+    - { match: [轻音乐, 輕音樂], tags: [chill] }
+    - { match: [钢琴, 鋼琴, piano], tags: [piano] }
+    - { match: [咖啡, cafe, café], tags: [cafe, chill] }
+    - { match: [精选, 精選, 金曲, 经典, 經典, 怀旧, 懷舊, 老歌], tags: [classic] }
+    - { match: [儿歌, 兒歌, 童谣, 童謠, kids, children], tags: [kids] }
+    - { match: [粤语, 粵語, cantonese], tags: [cantonese] }
+    - { match: [古典, classical], tags: [classical] }
+    - { match: [摇滚, 搖滾, rock], tags: [rock] }
+    - { match: [民谣, 民謠, folk], tags: [folk] }
+    - { match: [爵士, jazz], tags: [jazz] }
+    - { match: [睡眠, 助眠, sleep], tags: [sleep] }
+    - { match: [车载, 車載, 开车, 開車, driving], tags: [driving] }
+    - { match: [健身, 运动, 運動, workout, gym], tags: [workout] }
+    - { match: [圣诞, 聖誕, christmas], tags: [christmas] }
+    - { match: [蒙古], tags: [mongolian] }
+    - { match: [80年代], tags: [80s] }
+    - { match: [90年代], tags: [90s] }
