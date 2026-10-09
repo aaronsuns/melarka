@@ -147,3 +147,31 @@ test("the lyrics view's shift, align and wrong-lyrics controls fit a phone, and 
   await put;
   expect(await offsetOnServer()).toBe(0);
 });
+
+test("the lyrics view never scrolls sideways and shows no scrollbar, on a phone and on a desktop window", async ({ page }, info) => {
+  await login(page);
+  await page.getByRole("link", { name: "搜索" }).click();
+  await page.getByRole("searchbox").fill("甜蜜蜜");
+  const row = page.locator(".track-main", { hasText: "甜蜜蜜" });
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  const trackId = await trackIdByTitle(page, "甜蜜蜜");
+  await verifyPlaybackStarted(page, info, () => row.click(), { trackId });
+  await page.locator(".mini-info").click();
+  const now = page.getByRole("dialog", { name: "正在播放" });
+  await expect(now.getByRole("button", { name: "甜蜜蜜第一句" })).toBeVisible();
+  await expect(now.locator('.lyrics-synced [aria-current="true"]')).toHaveCount(1, { timeout: 6_000 });
+
+  const sizes = [page.viewportSize()!, { width: 1280, height: 800 }];
+  for (const size of sizes) {
+    await page.setViewportSize(size);
+    // The scale-up on the active line must not widen the list.
+    await expect(now.locator(".lyrics-synced button.active")).toHaveCount(1);
+    for (const sel of [".lyrics", ".lyrics-tools"]) {
+      const m = await now.locator(sel).first().evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth, ow: (el as HTMLElement).offsetWidth }));
+      expect(m.sw, `${sel} at ${size.width}px: no horizontal overflow`).toBeLessThanOrEqual(m.cw);
+      expect(m.ow - m.cw, `${sel} at ${size.width}px: no scrollbar gutter`).toBe(0);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: info.outputPath(`lyrics-${size.width}.png`) });
+  }
+});

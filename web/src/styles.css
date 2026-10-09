@@ -158,11 +158,13 @@ input, select, textarea { font-size: 16px; }
 .sleep-chip { padding: 0 12px; min-height: 36px; font-size: 14px; font-variant-numeric: tabular-nums; }
 button.now-art { padding: 0; width: 100%; }
 /* Lyrics take the cover's place; the active synced line is bright and centred. */
-.lyrics { flex: 1; min-height: 0; overflow-y: auto; text-align: center; }
+.lyrics { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; text-align: center; scrollbar-width: none; }
+.lyrics::-webkit-scrollbar { display: none; }
 .lyrics-note { margin-top: 30%; }
-.lyrics-plain p { margin: 0; padding: 6px 0; font-size: 17px; line-height: 1.5; color: var(--muted); }
-.lyrics-synced { list-style: none; margin: 0; padding: 30% 0; }
-.lyrics-synced button { width: 100%; padding: 6px 8px; font-size: 18px; line-height: 1.4; color: var(--muted); transition: color .2s, transform .2s; }
+.lyrics-plain p { overflow-wrap: anywhere; margin: 0; padding: 6px 0; font-size: 17px; line-height: 1.5; color: var(--muted); }
+/* The 4% side padding leaves room for the active line's scale-up (3% each side), so it never widens the scroller. */
+.lyrics-synced { list-style: none; margin: 0; padding: 30% 4%; }
+.lyrics-synced button { width: 100%; transform-origin: center; overflow-wrap: anywhere; padding: 6px 8px; font-size: 18px; line-height: 1.4; color: var(--muted); transition: color .2s, transform .2s; }
 .lyrics-synced button.active { color: var(--text); font-weight: 600; transform: scale(1.06); }
 /* Long-press aligns a line: no text selection or iOS callout on hold. */
 .lyrics-synced button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
