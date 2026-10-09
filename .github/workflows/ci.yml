@@ -209,28 +209,33 @@ jobs:
           print(best[1]["udid"])
           ')
           echo "SIM_UDID=$udid" >> "$GITHUB_ENV"
+          # Booted and finished booting before the tests start: left to xcodebuild, the first tests run while
+          # the simulator is still starting its services.
+          xcrun simctl boot "$udid" 2>/dev/null || true
+          xcrun simctl bootstatus "$udid" -b
           xcodebuild test -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$udid" \
             -derivedDataPath build/dd -resultBundlePath build/tests.xcresult -quiet
       - name: Why the unit tests failed
         if: failure()
         run: scripts/xcresult-failures.sh build/tests.xcresult
-      - name: TEMP stress AVPlayerBackendTests
+      - name: TEMP cold-start stress
         if: always()
         run: |
           set +e
           bad=0
-          stress() { # name, extra args
-            local n=$1; shift
+          for i in 1 2 3 4 5 6; do
+            # A cold simulator each round, not waited for: the worst case for the first tests.
+            xcrun simctl shutdown "$SIM_UDID" >/dev/null 2>&1
+            for j in 1 2 3 4 5 6; do (while :; do :; done) & done   # a loaded machine
             xcodebuild test-without-building -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$SIM_UDID" \
-              -derivedDataPath build/dd -resultBundlePath "build/$n.xcresult" -quiet \
-              -only-testing:LarkTests/AVPlayerBackendTests "$@" > /dev/null 2>&1
-            local rc=$?; echo "== $n: xcodebuild exit $rc"; [ $rc -eq 0 ] || bad=1
-            scripts/xcresult-failures.sh "build/$n.xcresult"
-          }
-          stress relaunched -test-iterations 40 -test-repetition-relaunch-enabled YES
-          for i in 1 2 3 4 5 6; do (while :; do :; done) & done   # a loaded machine
-          stress loaded -test-iterations 40 -test-repetition-relaunch-enabled YES
-          kill $(jobs -p) 2>/dev/null
+              -derivedDataPath build/dd -resultBundlePath "build/cold-$i.xcresult" \
+              -only-testing:LarkTests/AVPlayerBackendTests -only-testing:LarkTests/BridgeWebViewTests \
+              -only-testing:LarkTests/SettingsModelTests > "cold-$i.log" 2>&1
+            rc=$?; kill $(jobs -p) 2>/dev/null; wait 2>/dev/null
+            echo "== cold round $i: xcodebuild exit $rc; $(grep -h 'cold start:' "cold-$i.log" | sort -u | tr '\n' ' ')"
+            [ $rc -eq 0 ] || bad=1
+            scripts/xcresult-failures.sh "build/cold-$i.xcresult"
+          done
           exit $bad
       - run: python3 -m unittest discover -s scripts
 

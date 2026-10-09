@@ -150,6 +150,7 @@ import WebKit
 
     /// The old origin's web state (local storage here) goes with the server.
     func testChangeServerRemovesTheOldServersWebsiteData() async throws {
+        try await ColdStart.webKit()
         let s = makeServices()
         let web = s.web(for: Self.server)
         let loaded = expectation(description: "loaded")

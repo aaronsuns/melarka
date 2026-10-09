@@ -3,6 +3,10 @@ import WebKit
 @testable import Lark
 
 final class BridgeWebViewTests: XCTestCase {
+    override func setUp() async throws {
+        try await ColdStart.webKit()
+    }
+
     @MainActor func testUserScriptAndRoundTrip() async throws {
         var got: [WebMessage] = []
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { got.append($0) }

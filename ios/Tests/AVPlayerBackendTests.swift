@@ -50,6 +50,10 @@ extension AVPlayerBackend {
     var files: [URL] = []
     var backend: AVPlayerBackend!
 
+    override func setUp() async throws {
+        try await ColdStart.audio()
+    }
+
     override func tearDown() async throws {
         backend?.stop(); backend = nil
         for f in files { try? FileManager.default.removeItem(at: f) }

@@ -1,6 +1,7 @@
 import XCTest
 import UIKit
 import WebKit
+import AVFoundation
 
 struct WaitTimeout: Error, CustomStringConvertible {
     let seconds: TimeInterval
@@ -124,4 +125,46 @@ func XCTAssertThrowsErrorAsync<T>(_ expr: @autoclosure () async throws -> T, _ c
                                   file: StaticString = #filePath, line: UInt = #line) async {
     do { _ = try await expr(); XCTFail("expected an error", file: file, line: line) }
     catch { check(error) }
+}
+
+// MARK: - Cold start
+
+/// System services a fresh simulator starts on first use: the first web view's WebKit processes, the first
+/// audio playback. On a loaded CI machine that first start can take far longer than anything a test measures,
+/// so each test class that needs one pays for it once, up front, with a deadline that only a broken simulator
+/// reaches. The tests' own waits then measure the code under test, not the simulator's cold start.
+@MainActor enum ColdStart {
+    private static var webKitReady = false
+    private static var audioReady = false
+
+    static func webKit() async throws {
+        guard !webKitReady else { return }
+        let started = Date()
+        let web = WKWebView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let nav = OneShotNavDelegate {}
+        web.navigationDelegate = nav
+        web.loadHTMLString("<html><body>warm-up</body></html>", baseURL: URL(string: "https://warm-up.test/")!)
+        try await waitUntil(timeout: 120) {
+            (try? await web.evaluateJavaScript("document.body.textContent") as? String) == "warm-up"
+        }
+        withExtendedLifetime(nav) {}
+        webKitReady = true
+        print("cold start: WebKit ready in \(String(format: "%.1f", Date().timeIntervalSince(started))) s")
+    }
+
+    static func audio() async throws {
+        guard !audioReady else { return }
+        let started = Date()
+        let url = try makeSilentFile(seconds: 0.5)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let player = AVPlayer(url: url)
+        player.play()
+        try await waitUntil(timeout: 120) {
+            player.currentItem?.status == .failed || (player.currentTime().seconds) >= 0.3
+        }
+        player.pause()
+        if let e = player.currentItem?.error { throw e }
+        audioReady = true
+        print("cold start: audio ready in \(String(format: "%.1f", Date().timeIntervalSince(started))) s")
+    }
 }
