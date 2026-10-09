@@ -1,12 +1,15 @@
-# syntax=docker/dockerfile:1
-FROM --platform=$BUILDPLATFORM node:22-alpine AS web
+# syntax=mirror.gcr.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+# The Dockerfile frontend (above) and the base images: Docker's own images through Google's Docker Hub mirror (mirror.gcr.io), which has no
+# anonymous pull limit (Docker Hub answers 429 when several CI builds start at once). Pinned to the
+# multi-arch index digest, which is the same on Docker Hub: the bytes are Docker's, and a build is repeatable.
+FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
+FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/golang:1.26-alpine@sha256:c95332c2af86b6d89b91bd0500f4b9529ccbd090a0d1855c6d1ceaa142ae8615 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -16,7 +19,7 @@ ARG TARGETOS TARGETARCH VERSION=dev
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
     -ldflags="-s -w -X github.com/aaronsuns/lark-server/internal/buildinfo.Version=${VERSION}" -o /out/lark ./cmd/lark
 
-FROM alpine:3.22
+FROM mirror.gcr.io/library/alpine:3.22@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="Melarka" \
       org.opencontainers.image.source="https://github.com/aaronsuns/melarka" \
