@@ -13,6 +13,7 @@ import type { Lyrics } from "../api/types";
 import { hasLyrics, LyricStrip, LyricsView, syncedLines } from "./Lyrics";
 import { usePlayer, usePlayerProgress } from "./PlayerProvider";
 import { QueueSheet } from "./QueueSheet";
+import { SleepTimerMenu } from "./SleepTimerMenu";
 
 const DELETE_ARM_MS = 5000;
 
@@ -198,6 +199,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
             <button className="icon" aria-label={t("now.cover")} onClick={showCover}>▣</button>
           )}
           <button className="icon" aria-label={t("now.queue")} aria-pressed={showQueue} onClick={() => setShowQueue((s) => !s)}>☰</button>
+          <SleepTimerMenu />
         </span>
       </div>
       {showQueue ? (

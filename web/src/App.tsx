@@ -12,6 +12,7 @@ import { PreviewProvider } from "./channels/PreviewProvider";
 import { useChannelsEnabled } from "./channels/channelsSwitch";
 import { useUnplayed } from "./channels/useUnplayed";
 import { PlayerProvider } from "./player/PlayerProvider";
+import { SleepTimerProvider } from "./player/SleepTimerProvider";
 import { PrefsProvider, usePrefs } from "./prefs/PrefsProvider";
 import { useT } from "./i18n/i18n";
 import type { User } from "./api/types";
@@ -92,6 +93,7 @@ function Signed({ user }: { user: User }) {
     // effect the next time Lark opens.
     <PlayerProvider key={user.id} userId={user.id} onOpen={prefs.on_open} carLyrics={prefs.car_lyrics !== false} loudness={prefs.normalize_loudness !== false}>
       <EpisodesProvider userId={user.id}>
+      <SleepTimerProvider>
       <DownloadsProvider>
       <PreviewProvider>
       <Routes>
@@ -129,6 +131,7 @@ function Signed({ user }: { user: User }) {
       </Routes>
       </PreviewProvider>
       </DownloadsProvider>
+      </SleepTimerProvider>
       </EpisodesProvider>
     </PlayerProvider>
   );

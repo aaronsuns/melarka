@@ -290,6 +290,8 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
       queue, current: cur, playing, quality, error, notice, showNotice, needsTap: false,
       playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
       modes: NO_MODES, modesAvailable: false, setShuffle: noop, cycleRepeat: noop,
+      // The native engine runs its own sleep timer; the web one is hidden here.
+      setFade: noop, stopAfterCurrent: noop,
     }),
     [
       queue, cur, playing, quality, error, notice, showNotice, playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove,

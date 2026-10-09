@@ -55,6 +55,10 @@ export interface EpisodesPlayer {
   prev(): void;
   setRate(r: number): void;
   close(): void;
+  /** The sleep timer's fade, 0..1 (episodes have no loudness gain). iOS Safari ignores it. */
+  setFade(f: number): void;
+  /** On: the episode's natural end does not start the next one. Cleared by that end, or by false. */
+  stopAfterCurrent(on: boolean): void;
 }
 
 export interface EpisodesProgress {
@@ -288,6 +292,16 @@ function clearLockScreen() {
     else goTo(indexRef.current - 1);
   }, [audio, goTo]);
   const pause = useCallback(() => audio.pause(), [audio]);
+  const setFade = useCallback(
+    (f: number) => {
+      audio.volume = Math.min(1, Math.max(0, f));
+    },
+    [audio],
+  );
+  const stopAfter = useRef(false);
+  const stopAfterCurrent = useCallback((on: boolean) => {
+    stopAfter.current = on;
+  }, []);
   const toggle = useCallback(() => {
     if (!currentRef.current) return;
     // A queue restored after a reload has nothing loaded yet.
@@ -382,6 +396,10 @@ function clearLockScreen() {
     const onEnded = () => {
       setPlaying(false);
       save({ played: true }); // also marks it played in the queue
+      if (stopAfter.current) {
+        stopAfter.current = false; // the sleep timer: stay on the finished episode
+        return;
+      }
       if (indexRef.current + 1 < queueRef.current.length) goTo(indexRef.current + 1, false);
     };
     // An episode whose file is gone (410 expired, 404) is skipped before it
@@ -516,8 +534,8 @@ function clearLockScreen() {
   }, [audio]);
 
   const value = useMemo<EpisodesPlayer>(
-    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close }),
-    [queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close],
+    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close, setFade, stopAfterCurrent }),
+    [queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close, setFade, stopAfterCurrent],
   );
   const progress = useMemo(() => ({ position, duration }), [position, duration]);
   return (

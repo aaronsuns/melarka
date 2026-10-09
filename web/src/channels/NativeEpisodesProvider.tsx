@@ -20,6 +20,8 @@ function storedRate(): number {
 }
 
 const ms = (s: number) => Math.max(0, Math.round(s * 1000));
+// The native engine runs its own sleep timer; the web one is hidden in the app.
+const noop = () => {};
 
 /**
  * The 频道 episode player inside the Lark iPhone app: native plays the
@@ -307,7 +309,7 @@ export function NativeEpisodesProvider({ children, userId = 0 }: EpisodesProvide
   const progress = useNativeClock(clockBase);
 
   const value = useMemo<EpisodesPlayer>(
-    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close }),
+    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close, setFade: noop, stopAfterCurrent: noop }),
     [queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close],
   );
   return (
