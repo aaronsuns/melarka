@@ -4,13 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"math"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -80,11 +83,14 @@ func TestMeasureKnownTone(t *testing.T) {
 	if d := b.LUFS - a.LUFS; math.Abs(d-6) > 0.5 {
 		t.Fatalf("6 dB apart, got %.2f", d)
 	}
-	if a.LUFS > -25 || a.LUFS < -40 {
-		t.Fatalf("quiet tone LUFS %.1f out of range", a.LUFS)
+	// A 440 Hz sine at ffmpeg's default amplitude (1/8, -18 dBFS) measures
+	// about -21.8 LUFS mono; -12 dB of that is about -33.8 LUFS.
+	if math.Abs(a.LUFS-(-33.8)) > 1.5 {
+		t.Fatalf("quiet tone LUFS %.1f, want about -33.8", a.LUFS)
 	}
-	if b.TruePeakDB > -10 {
-		t.Fatalf("peak %.1f", b.TruePeakDB)
+	// -18 dBFS - 6 dB = -24 dBFS sample peak; the true peak is within a fraction of that.
+	if math.Abs(b.TruePeakDB-(-24.1)) > 1.5 {
+		t.Fatalf("loud tone peak %.1f, want about -24.1", b.TruePeakDB)
 	}
 	if _, err := (FFmpeg{Path: "ffmpeg"}).Measure(ctx, filepath.Join(dir, "absent.flac")); err == nil {
 		t.Fatal("want an error for a missing file")
@@ -93,12 +99,12 @@ func TestMeasureKnownTone(t *testing.T) {
 
 // fakeMeasurer answers per base name: fail → error, silent → -inf, else a fixed result.
 type fakeMeasurer struct {
-	fail, silent string
-	mu           sync.Mutex
-	paths        []string
-	inFlight     atomic.Int32
-	maxInFlight  atomic.Int32
-	block        func(ctx context.Context) // optional, runs inside Measure
+	fail, silent, transient string
+	mu                      sync.Mutex
+	paths                   []string
+	inFlight                atomic.Int32
+	maxInFlight             atomic.Int32
+	block                   func(ctx context.Context) // optional, runs inside Measure
 }
 
 func (f *fakeMeasurer) Measure(ctx context.Context, path string) (Result, error) {
@@ -122,6 +128,8 @@ func (f *fakeMeasurer) Measure(ctx context.Context, path string) (Result, error)
 	switch filepath.Base(path) {
 	case f.fail:
 		return Result{}, errors.New("decode error")
+	case f.transient:
+		return Result{}, fmt.Errorf("%w: ffmpeg not found", ErrTransient)
 	case f.silent:
 		return Result{LUFS: -70, TruePeakDB: math.Inf(-1)}, nil
 	}
@@ -141,14 +149,28 @@ type wenv struct {
 }
 
 func newWEnv(t *testing.T) *wenv {
-	e := &wenv{db: testutil.DB(t), root: "/lib", now: time.Unix(1_800_000_000, 0)}
+	e := &wenv{db: testutil.DB(t), root: t.TempDir(), now: time.Unix(1_800_000_000, 0)}
 	if _, err := e.db.Exec(`INSERT INTO libraries(id,name,root) VALUES (1,'m',?)`, e.root); err != nil {
 		t.Fatal(err)
 	}
 	return e
 }
 
+// add inserts a track and creates its file (the worker reads it before measuring).
 func (e *wenv) add(t *testing.T, rel string, addedAt int64, extra string) int64 {
+	t.Helper()
+	p := filepath.Join(e.root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte("audio"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return e.addRow(t, rel, addedAt, extra)
+}
+
+// addRow inserts a track without creating its file.
+func (e *wenv) addRow(t *testing.T, rel string, addedAt int64, extra string) int64 {
 	t.Helper()
 	res, err := e.db.Exec(`INSERT INTO tracks(library_id,rel_path,size,mtime,fingerprint,added_at) VALUES (1,?,1,1,?,?)`, rel, rel, addedAt)
 	if err != nil {
@@ -210,7 +232,7 @@ func TestWorkerRecordsNewestFirstAndFailures(t *testing.T) {
 	if step(t, w) {
 		t.Fatal("nothing should be left")
 	}
-	want := []string{"/lib/a/newest.flac", "/lib/bad.flac", "/lib/old.flac"}
+	want := []string{filepath.Join(e.root, "a", "newest.flac"), filepath.Join(e.root, "bad.flac"), filepath.Join(e.root, "old.flac")}
 	if got := m.seen(); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("order %v, want %v", got, want)
 	}
@@ -362,5 +384,172 @@ func TestRunReturnsOnCancel(t *testing.T) {
 	case <-done:
 	case <-time.After(5 * time.Second):
 		t.Fatal("Run ignored a cancelled context")
+	}
+}
+
+func TestMeasureRealSilence(t *testing.T) {
+	silent := testutil.Sample(t, t.TempDir(), "silence.flac", "-af", "volume=0")
+	r, err := FFmpeg{Path: "ffmpeg"}.Measure(context.Background(), silent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isFinite(r.TruePeakDB) && isFinite(r.LUFS) {
+		t.Fatalf("digital silence measured %+v, want a -inf peak", r)
+	}
+}
+
+func TestMeasureMissingBinaryIsTransient(t *testing.T) {
+	path := testutil.Sample(t, t.TempDir(), "a.flac")
+	for _, nice := range []bool{false, true} {
+		_, err := FFmpeg{Path: filepath.Join(t.TempDir(), "no-ffmpeg"), Nice: nice}.Measure(context.Background(), path)
+		if !errors.Is(err, ErrTransient) {
+			t.Errorf("nice=%v: err %v, want ErrTransient", nice, err)
+		}
+	}
+}
+
+// A read that never finishes (here a FIFO nobody writes to) is ended by the
+// context: the process is killed and Measure returns promptly.
+func TestMeasureTimeoutKillsFFmpeg(t *testing.T) {
+	testutil.Sample(t, t.TempDir(), "probe.flac") // skips without ffmpeg
+	fifo := filepath.Join(t.TempDir(), "stuck.flac")
+	if err := syscall.Mkfifo(fifo, 0o644); err != nil {
+		t.Skip("mkfifo:", err)
+	}
+	for _, nice := range []bool{false, true} {
+		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+		start := time.Now()
+		_, err := FFmpeg{Path: "ffmpeg", Nice: nice}.Measure(ctx, fifo)
+		cancel()
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("nice=%v: err %v, want DeadlineExceeded", nice, err)
+		}
+		if d := time.Since(start); d > 10*time.Second {
+			t.Errorf("nice=%v: took %s after the deadline", nice, d)
+		}
+	}
+}
+
+func TestTailBufferKeepsTheEnd(t *testing.T) {
+	b := &tailBuffer{max: 1024}
+	for i := range 500 {
+		fmt.Fprintf(b, "line %04d\n", i)
+	}
+	s := b.String()
+	if len(s) > 1024 || !strings.HasSuffix(s, "line 0499\n") {
+		t.Fatalf("len %d, tail %q", len(s), s[len(s)-20:])
+	}
+}
+
+func TestTimeoutFor(t *testing.T) {
+	for _, c := range []struct{ dur, want time.Duration }{
+		{0, time.Minute},
+		{10 * time.Second, time.Minute},
+		{4 * time.Minute, 8 * time.Minute},
+		{3 * time.Hour, 30 * time.Minute},
+	} {
+		if got := timeoutFor(c.dur); got != c.want {
+			t.Errorf("timeoutFor(%s) = %s, want %s", c.dur, got, c.want)
+		}
+	}
+}
+
+func isTransient(err error) bool { return errors.Is(err, ErrTransient) }
+
+// A missing file, a missing ffmpeg and a timeout say nothing about the track:
+// nothing is recorded, and the track is skipped for a while so the next one
+// is not blocked behind it.
+func TestWorkerTransientNotRecorded(t *testing.T) {
+	e := newWEnv(t)
+	gone := e.addRow(t, "gone.flac", 400, "")
+	nobin := e.add(t, "nobin.flac", 300, "")
+	stuck := e.add(t, "stuck.flac", 200, "")
+	ok := e.add(t, "ok.flac", 100, "")
+	m := &fakeMeasurer{transient: "nobin.flac"}
+	m.block = func(ctx context.Context) {
+		m.mu.Lock()
+		last := m.paths[len(m.paths)-1]
+		m.mu.Unlock()
+		if filepath.Base(last) == "stuck.flac" {
+			<-ctx.Done()
+		}
+	}
+	w := e.worker(m)
+	w.Timeout = func(time.Duration) time.Duration { return 50 * time.Millisecond }
+	for i, want := range []int64{gone, nobin, stuck} {
+		measured, err := w.Step(context.Background())
+		if measured || !isTransient(err) {
+			t.Fatalf("step %d: measured=%v err=%v, want a transient error", i, measured, err)
+		}
+		if r := e.row(t, want); r.checked.Valid {
+			t.Fatalf("step %d: track %d recorded: %+v", i, want, r)
+		}
+	}
+	if !step(t, w) {
+		t.Fatal("the healthy track was not measured")
+	}
+	if r := e.row(t, ok); r.lufs.Float64 != -11.5 {
+		t.Fatalf("ok: %+v", r)
+	}
+	if step(t, w) {
+		t.Fatal("transient tracks must be skipped for a while")
+	}
+	e.now = e.now.Add(transientSkip + time.Second)
+	if _, err := w.Step(context.Background()); !isTransient(err) {
+		t.Fatalf("after the skip window the newest transient track is tried again, err %v", err)
+	}
+}
+
+// Several transient failures in a row pause the whole worker.
+func TestRunPausesAfterTransientRun(t *testing.T) {
+	e := newWEnv(t)
+	for i := range 5 {
+		e.addRow(t, fmt.Sprintf("gone%d.flac", i), int64(i), "")
+	}
+	w := e.worker(&fakeMeasurer{})
+	w.Gap = 2 * time.Second
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var slept []time.Duration
+	w.Sleep = func(ctx context.Context, d time.Duration) bool {
+		slept = append(slept, d)
+		if d == transientPause {
+			cancel()
+			return false
+		}
+		return true
+	}
+	w.Run(ctx)
+	want := []time.Duration{2 * time.Second, 2 * time.Second, transientPause}
+	if fmt.Sprint(slept) != fmt.Sprint(want) {
+		t.Fatalf("slept %v, want %v", slept, want)
+	}
+}
+
+// A row the scanner is still working on (mtime=0) is not picked.
+func TestWorkerSkipsRowsMidScan(t *testing.T) {
+	e := newWEnv(t)
+	e.add(t, "scanning.flac", 100, "mtime=0")
+	if step(t, e.worker(&fakeMeasurer{})) {
+		t.Fatal("picked a row with mtime=0")
+	}
+}
+
+// Busy is checked again right before ffmpeg starts, not only before the pick.
+func TestWorkerWaitsForBusyBeforeMeasuring(t *testing.T) {
+	e := newWEnv(t)
+	e.add(t, "a.flac", 100, "")
+	var events []string
+	m := &fakeMeasurer{block: func(context.Context) { events = append(events, "measure") }}
+	w := e.worker(m)
+	busy := 2
+	w.Busy = func() bool { busy--; return busy >= 0 }
+	w.Sleep = func(_ context.Context, d time.Duration) bool {
+		events = append(events, d.String())
+		return true
+	}
+	step(t, w)
+	if got := strings.Join(events, ","); got != "5s,5s,measure" {
+		t.Fatalf("events %s", got)
 	}
 }

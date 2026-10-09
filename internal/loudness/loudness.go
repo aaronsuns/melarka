@@ -4,18 +4,21 @@
 package loudness
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 )
 
@@ -27,30 +30,89 @@ type Measurer interface {
 	Measure(ctx context.Context, path string) (Result, error)
 }
 
+// ErrTransient marks a failure that says nothing about the track itself: the
+// file could not be read (an unmounted or failing disk), ffmpeg could not be
+// started, or the measurement timed out. Such failures are not recorded.
+var ErrTransient = errors.New("loudness: transient failure")
+
 // FFmpeg measures with ffmpeg's ebur128 filter, decoding the whole file.
 type FFmpeg struct {
 	Path string // the ffmpeg binary
 	Nice bool   // run under nice -n 10
 }
 
+const (
+	// stderrTail is how much of ffmpeg's stderr is kept: the Summary block
+	// is always at the end, and a corrupt file can log an error per frame.
+	stderrTail = 64 << 10
+	// killWaitDelay bounds how long Wait waits for stderr to close after the
+	// process group is killed.
+	killWaitDelay = 5 * time.Second
+)
+
 func (f FFmpeg) Measure(ctx context.Context, path string) (Result, error) {
+	if _, err := exec.LookPath(f.Path); err != nil {
+		return Result{}, fmt.Errorf("%w: %v", ErrTransient, err)
+	}
 	name := f.Path
 	args := []string{"-nostdin", "-hide_banner", "-nostats", "-i", path,
 		"-af", "ebur128=peak=true:framelog=quiet", "-f", "null", "-"}
 	if f.Nice {
+		if _, err := exec.LookPath("nice"); err != nil {
+			return Result{}, fmt.Errorf("%w: %v", ErrTransient, err)
+		}
 		args = append([]string{"-n", "10", f.Path}, args...)
 		name = "nice"
 	}
-	var stderr bytes.Buffer
+	stderr := &tailBuffer{max: stderrTail}
 	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Stderr = &stderr // ebur128 logs its summary on stderr
+	cmd.Stderr = stderr // ebur128 logs its summary on stderr
+	// Own process group, so a timeout kills everything it started.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error {
+		err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		if errors.Is(err, syscall.ESRCH) {
+			return os.ErrProcessDone
+		}
+		return err
+	}
+	cmd.WaitDelay = killWaitDelay
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
 			return Result{}, ctx.Err()
 		}
-		return Result{}, fmt.Errorf("ffmpeg: %w: %s", err, tail(stderr.String(), 300))
+		out := stderr.String()
+		var ee *exec.ExitError
+		// nice exits 126/127 when it cannot run ffmpeg; a read error or a file
+		// that vanished since the pick is the disk, not the track.
+		if errors.As(err, &ee) && (ee.ExitCode() == 126 || ee.ExitCode() == 127) ||
+			strings.Contains(out, "Input/output error") || strings.Contains(out, "No such file or directory") {
+			return Result{}, fmt.Errorf("%w: ffmpeg: %v: %s", ErrTransient, err, tail(out, 300))
+		}
+		return Result{}, fmt.Errorf("ffmpeg: %w: %s", err, tail(out, 300))
 	}
 	return ParseEBUR128(stderr.String())
+}
+
+// tailBuffer is an io.Writer that keeps only the last max bytes written.
+type tailBuffer struct {
+	max int
+	buf []byte
+}
+
+func (b *tailBuffer) Write(p []byte) (int, error) {
+	b.buf = append(b.buf, p...)
+	if len(b.buf) > 2*b.max {
+		b.buf = append(b.buf[:0], b.buf[len(b.buf)-b.max:]...)
+	}
+	return len(p), nil
+}
+
+func (b *tailBuffer) String() string {
+	if len(b.buf) > b.max {
+		return string(b.buf[len(b.buf)-b.max:])
+	}
+	return string(b.buf)
 }
 
 // tail keeps the last n bytes of s, where ffmpeg puts the reason it failed.
@@ -103,12 +165,28 @@ const (
 	defaultRetry = 720 * time.Hour
 	// busyWait is how long the worker waits while the stream preparer works.
 	busyWait = 5 * time.Second
+	// transientRun transient failures in a row pause the worker for
+	// transientPause: the disk or ffmpeg is gone, not one file.
+	transientRun   = 3
+	transientPause = 10 * time.Minute
+	// transientSkip is how long a track that failed transiently is passed
+	// over, so a stuck file does not block the ones behind it.
+	transientSkip = time.Hour
+	// Per-track timeout: twice the duration, at least a minute, at most 30.
+	minTimeout = time.Minute
+	maxTimeout = 30 * time.Minute
 )
+
+// timeoutFor bounds one measurement of a track of the given duration.
+func timeoutFor(d time.Duration) time.Duration {
+	return min(max(minTimeout, 2*d), maxTimeout)
+}
 
 // Worker measures one track at a time: never-measured tracks first, newest
 // first, so a fresh scan or download is measured within minutes; a failed
 // measurement is retried only after RetryFailedAfter. Every track that was
-// measured, or failed, gets loudness_checked_at.
+// measured, or failed to decode, gets loudness_checked_at. Transient
+// failures (see ErrTransient) record nothing.
 type Worker struct {
 	DB      *sql.DB
 	Measure Measurer
@@ -123,8 +201,12 @@ type Worker struct {
 	Busy func() bool
 
 	// Injectable for tests.
-	Now   func() time.Time
-	Sleep func(ctx context.Context, d time.Duration) bool // false when ctx ended
+	Now     func() time.Time
+	Sleep   func(ctx context.Context, d time.Duration) bool // false when ctx ended
+	Timeout func(duration time.Duration) time.Duration      // per-track limit (default timeoutFor)
+
+	mu   sync.Mutex
+	skip map[int64]time.Time // transiently failed track → when it may be picked again
 }
 
 func (w *Worker) now() time.Time {
@@ -169,24 +251,51 @@ func (w *Worker) retryAfter() time.Duration {
 	return defaultRetry
 }
 
+func (w *Worker) timeout(d time.Duration) time.Duration {
+	if w.Timeout != nil {
+		return w.Timeout(d)
+	}
+	return timeoutFor(d)
+}
+
+// waitIdle waits while the stream preparer works; false when ctx ended.
+func (w *Worker) waitIdle(ctx context.Context) bool {
+	for w.Busy != nil && w.Busy() {
+		if !w.sleep(ctx, busyWait) {
+			return false
+		}
+	}
+	return ctx.Err() == nil
+}
+
 // Run measures tracks until ctx ends.
 func (w *Worker) Run(ctx context.Context) {
+	transient := 0
 	for ctx.Err() == nil {
-		for w.Busy != nil && w.Busy() {
-			if !w.sleep(ctx, busyWait) {
-				return
-			}
+		if !w.waitIdle(ctx) {
+			return
 		}
 		measured, err := w.Step(ctx)
 		if ctx.Err() != nil {
 			return
 		}
 		wait := w.Gap
-		if err != nil {
+		switch {
+		case errors.Is(err, ErrTransient):
+			w.log().Warn("loudness: not measured, will retry", "err", err)
+			if transient++; transient >= transientRun {
+				w.log().Warn("loudness: repeated transient failures, pausing", "for", transientPause)
+				wait, transient = transientPause, 0
+			}
+		case err != nil:
+			transient = 0
 			w.log().Warn("loudness: pick or record a track", "err", err)
 			wait = w.idle()
-		} else if !measured {
+		case !measured:
+			transient = 0
 			wait = w.idle()
+		default:
+			transient = 0
 		}
 		if !w.sleep(ctx, wait) {
 			return
@@ -194,20 +303,71 @@ func (w *Worker) Run(ctx context.Context) {
 	}
 }
 
+// skipped lists the tracks passed over after a transient failure, dropping
+// the ones whose time is up.
+func (w *Worker) skipped() []any {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	now := w.now()
+	var ids []any
+	for id, until := range w.skip {
+		if now.After(until) {
+			delete(w.skip, id)
+			continue
+		}
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func (w *Worker) skipFor(id int64) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.skip == nil {
+		w.skip = map[int64]time.Time{}
+	}
+	w.skip[id] = w.now().Add(transientSkip)
+}
+
+// readable reports whether path can be opened and read; a missing file or
+// a failing disk is not the track's fault.
+func readable(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := f.Read(make([]byte, 4096)); err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
+	return nil
+}
+
 // Step picks the next track, measures it and records the result. measured
-// is false when nothing is pending. A failed measurement is recorded (NULL
-// loudness) and is not an error; err is a database error or ctx ending.
+// is false when nothing is pending. A track that fails to decode is recorded
+// (NULL loudness) and is not an error. A transient failure records nothing
+// and returns an error wrapping ErrTransient; other errors are a database
+// error or ctx ending.
 func (w *Worker) Step(ctx context.Context) (measured bool, err error) {
 	var (
 		id          int64
 		rel, root   string
 		size, mtime int64
+		durationMS  int64
 	)
-	err = w.DB.QueryRowContext(ctx, `SELECT t.id, t.rel_path, l.root, t.size, t.mtime FROM tracks t JOIN libraries l ON l.id=t.library_id
-		WHERE t.status!='trashed' AND t.missing_since IS NULL AND t.broken=0
-		  AND (t.loudness_checked_at IS NULL OR (t.loudness_lufs IS NULL AND t.loudness_checked_at < ?))
+	args := []any{w.now().Add(-w.retryAfter()).Unix()}
+	skip := ""
+	if ids := w.skipped(); len(ids) > 0 {
+		skip = " AND t.id NOT IN (" + strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",") + ")"
+		args = append(args, ids...)
+	}
+	// mtime=0: the scanner is still probing or indexing the row.
+	err = w.DB.QueryRowContext(ctx, `SELECT t.id, t.rel_path, l.root, t.size, t.mtime, t.duration_ms
+		FROM tracks t JOIN libraries l ON l.id=t.library_id
+		WHERE t.status!='trashed' AND t.missing_since IS NULL AND t.broken=0 AND t.mtime!=0
+		  AND (t.loudness_checked_at IS NULL OR (t.loudness_lufs IS NULL AND t.loudness_checked_at < ?))`+skip+`
 		ORDER BY t.loudness_checked_at IS NOT NULL, t.added_at DESC LIMIT 1`,
-		w.now().Add(-w.retryAfter()).Unix()).Scan(&id, &rel, &root, &size, &mtime)
+		args...).Scan(&id, &rel, &root, &size, &mtime, &durationMS)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
@@ -215,9 +375,27 @@ func (w *Worker) Step(ctx context.Context) (measured bool, err error) {
 		return false, err
 	}
 	path := filepath.Join(root, filepath.FromSlash(rel))
-	r, merr := w.Measure.Measure(ctx, path)
+	if err := readable(path); err != nil {
+		w.skipFor(id)
+		return false, fmt.Errorf("%w: track %d: %v", ErrTransient, id, err)
+	}
+	// Playback first: the preparer may have started since the pick.
+	if !w.waitIdle(ctx) {
+		return false, ctx.Err()
+	}
+	mctx, cancel := context.WithTimeout(ctx, w.timeout(time.Duration(durationMS)*time.Millisecond))
+	r, merr := w.Measure.Measure(mctx, path)
+	timedOut := mctx.Err() != nil
+	cancel()
 	if err := ctx.Err(); err != nil {
 		return false, err // shutting down: not a failure of this track
+	}
+	if timedOut || errors.Is(merr, ErrTransient) {
+		w.skipFor(id)
+		if timedOut {
+			merr = fmt.Errorf("timed out: %w", context.DeadlineExceeded)
+		}
+		return false, fmt.Errorf("%w: track %d: %v", ErrTransient, id, merr)
 	}
 	var lufs, peak any // NULL unless measured
 	switch {

@@ -87,10 +87,13 @@ type ArtworkConfig struct {
 type LoudnessConfig struct {
 	Enabled          bool          `yaml:"enabled"`            // default true
 	Gap              time.Duration `yaml:"gap"`                // pause between tracks, default 2s; 0s = none
-	RetryFailedAfter time.Duration `yaml:"retry_failed_after"` // a failed measurement is tried again after this, default 720h, at least 1h
+	RetryFailedAfter time.Duration `yaml:"retry_failed_after"` // a failed measurement is tried again after this, default 720h, at least 1h (checked when enabled)
 }
 
 func (c LoudnessConfig) validate() error {
+	if !c.Enabled {
+		return nil // the limits only matter when the worker runs
+	}
 	switch {
 	case c.Gap < 0:
 		return fmt.Errorf("loudness.gap %s: must not be negative", c.Gap)

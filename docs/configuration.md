@@ -58,7 +58,7 @@ With Docker, put `LARK_ADMIN_PASSWORD` (and any key) in `.env`, which the compos
 | `loudness` | | background loudness measurement (see [Loudness](#loudness)) |
 | `loudness.enabled` | `true` | measure each song's loudness and true peak in the background |
 | `loudness.gap` | `2s` | pause between songs; `0s` measures back to back |
-| `loudness.retry_failed_after` | `720h` | a song that failed to measure is tried again after this (at least `1h`) |
+| `loudness.retry_failed_after` | `720h` | a song that failed to decode is tried again after this (at least `1h`) |
 | `tagging` | | tagging settings |
 | `tagging.folder_rules` | 18 rules (see the example) | folder-name rules; writing this key replaces the whole list |
 | `tagging.folder_rules[].match` | | texts matched case-insensitively against a song's folder path |
@@ -213,11 +213,16 @@ directory only costs a re-extract. Music files and folders are never written.
 Melarka measures each song's integrated loudness (EBU R128, in LUFS) and true peak with ffmpeg's
 `ebur128` filter, one song at a time in the background: new songs first, newest first, so a fresh
 scan or download is measured within minutes. The ffmpeg process runs at low priority when
-`transcode.nice` is on, and the worker waits while songs are being prepared for playback. It
-decodes every file once, so a library of N tracks takes roughly N × (decode time + `loudness.gap`)
-to finish; after that only new and changed files are measured. A changed file is measured again.
-A song that cannot be measured is skipped and tried again after `loudness.retry_failed_after`.
-Music files are only read, never written.
+`transcode.nice` is on, and the worker does not start a song while songs are being prepared for
+playback (a measurement already running finishes at low priority). It decodes every file once, so
+a library of N tracks takes roughly N × (decode time + `loudness.gap`) to finish; after that only
+new and changed files are measured. A changed file is measured again. A song that fails to decode
+is tried again after `loudness.retry_failed_after`. A file that cannot be read (an unmounted disk),
+a missing ffmpeg or a measurement that takes too long (twice the song's length, at least a minute,
+at most 30 minutes) records nothing: that song is passed over for an hour, and after a few such
+failures in a row the worker pauses for 10 minutes. `loudness.gap` and
+`loudness.retry_failed_after` are only checked when `loudness.enabled` is on. Music files are only
+read, never written.
 
 ## Tags
 
