@@ -10,6 +10,10 @@ import os
 ///   the network starts again when it comes back. An episode that cannot play falls back to music.
 /// - Backend callbacks carry the generation of their load; a callback about a replaced item is dropped.
 /// - Radio, shuffle and favorites queues refill themselves when 2 or fewer items are left (the web's refill).
+/// - Shuffle and repeat (`modes`, music only, the web's `modes.ts`): repeat off changes nothing above; repeat all
+///   loops the queue with no refill (a new, reshuffled pass when shuffle is on); repeat one replays a track that
+///   ended on its own, gaplessly. A cached favorite that stands in for a track under repeat all plays once and
+///   leaves the queue again.
 /// - Both queues are saved per user on every change and every 10 s while playing (`QueueStore`); the music
 ///   queue goes to `PUT /queue` (`QueueSync`). Music creates play events (`PlayEventQueue`); episodes send
 ///   `PUT /episodes/{id}/progress` instead.
@@ -84,6 +88,16 @@ import os
             emitState(.episode)
         }
     }
+    /// Shuffle and repeat for the music queue (episodes ignore them), saved with the queues.
+    private(set) var modes = PlayModes() {
+        didSet { if modes != oldValue { onModesChange?(modes) } }
+    }
+    /// The modes changed (`RemoteCommands`: the lock screen's and the car's repeat and shuffle state).
+    var onModesChange: ((PlayModes) -> Void)?
+    /// Repeat all: cached favorites put in for a track that could not play, and the interrupted track's id
+    /// (requeued after it). Dropped when it ends or is skipped, and before a new pass (the web's `substitutes`).
+    private struct Substitute { let id: String; var requeue: String? }
+    private var substitutes: [Substitute] = []
     var onEvent: ((NativeEvent) -> Void)?
     /// The active kind changed (`RemoteCommands`: skip buttons for episodes).
     var onActiveChange: ((Item.Kind) -> Void)?
@@ -191,6 +205,7 @@ import os
         case .setRate(let r): rate = r
         case .stop(let k): stop(k)
         case .setPrefs(let p): prefs = p
+        case .setModes(let shuffle, let repeatMode): setModes(shuffle: shuffle, repeatMode: repeatMode)
         case .pauseForWeb: pause()
         case .flushEvents(let id): flushEvents(id)
         case .auth, .favoriteChanged, .openSettings: break
@@ -216,6 +231,7 @@ import os
 
         // An edit (enqueue, remove, reorder, update): the current item stays, and so does playback.
         if sq.positionMs == nil, queue(k).current?.id == item.id {
+            if k == .track { editedMusic(to: sq.items, index: idx) }
             modify(k) { $0.items = sq.items; $0.index = idx; $0.source = sq.source }
             if loaded?.kind == k { loaded?.index = idx }
             emitQueue(k); emitState(k); persist()
@@ -224,20 +240,23 @@ import os
         }
 
         let pos = max(0, sq.positionMs ?? 0)
+        var new = PlaybackQueue(items: sq.items, index: idx, positionMs: pos, source: sq.source)
         if k == .track {
             musicGeneration += 1; refillExhausted = false; refillWanted = false; consecutiveFailures = 0
             refillTimer?.cancel(); refillTimer = nil
+            substitutes = []
+            new = shuffledIfOn(new)
         }
         if k != active && !sq.play {
             // The other kind, not to be played now: stored for later.
-            modify(k) { $0 = PlaybackQueue(items: sq.items, index: idx, positionMs: pos, source: sq.source) }
+            modify(k) { $0 = new }
             emitQueue(k); emitState(k); persist()
             if k == .track { sync.edited(); maybeRefill() }
             return
         }
         let switched = k != active
         if switched { leaveActive(); active = k } else { saveOutgoingEpisode() }
-        modify(k) { $0 = PlaybackQueue(items: sq.items, index: idx, positionMs: pos, source: sq.source) }
+        modify(k) { $0 = new }
         load(k, index: idx, startMs: pos, autoplay: sq.play)
         emitQueue(k)
         // The web mirrors each kind from its own state events: tell it the outgoing kind stopped (first, so
@@ -367,6 +386,7 @@ import os
             emitQueue(.episode); emitState(.episode); persist()
         } else {
             finishListen(.skip)
+            dropSubstitutes()
             advanceMusic(user: true)
         }
     }
@@ -536,6 +556,7 @@ import os
         lyricsID = nil; carLyrics = nil; lyricsRetry = nil; preloadedNext = nil
         music = .empty; episodes = .empty; active = .track
         failedAt = [:]; consecutiveFailures = 0; refilling = false; refillExhausted = false
+        modes = PlayModes(); substitutes = []
         savedAt = 0; ownDevice = nil; lastProgress = nil
         greeted = false               // the next user's page gets its `hello{onOpen}` honoured
         events.clear()
@@ -551,6 +572,8 @@ import os
         active = s?.active ?? .track
         savedAt = s?.savedAt ?? 0
         ownDevice = s?.ownDevice
+        modes = s?.modes ?? PlayModes()        // a file from before the modes: both off
+        substitutes = []
         loaded = nil; listen = nil; playing = false; buffering = false; error = nil
     }
 
@@ -574,6 +597,90 @@ import os
         repeat {
             await tasks.idle(); await events.tasks.idle(); await sync.tasks.idle()
         } while !(tasks.isEmpty && events.tasks.isEmpty && sync.tasks.isEmpty)
+    }
+
+    // MARK: - Shuffle and repeat
+
+    /// `setModes`, the lock screen and the car. Shuffle reorders only what follows the current item, which plays
+    /// on: nothing is loaded. Music only; episodes keep their own order.
+    func setModes(shuffle: Bool, repeatMode: RepeatMode) {
+        var m = modes
+        let reorder = shuffle != m.shuffle
+        if reorder {
+            if shuffle {
+                let (q, original) = PlayModes.shuffleUpcoming(music, random: random)
+                music = q; m.original = original
+            } else {
+                music = PlayModes.unshuffle(music, original: m.original ?? [])
+                m.original = nil
+            }
+            m.shuffle = shuffle
+        }
+        m.repeatMode = repeatMode
+        guard m != modes else { return emitState(.track) }
+        modes = m
+        persist()
+        if reorder { emitQueue(.track) }
+        emitState(.track)
+        if reorder { sync.edited() }
+        prefetchUpcoming()
+        if loaded?.kind == .track { preloadNext(.track) }
+        maybeRefill()                         // repeat all turned off at the end: never-stop again
+    }
+
+    /// Shuffle on: a new list plays shuffled after its chosen item (the web's `playList`); the same queue again
+    /// (a jump) is not reshuffled.
+    private func shuffledIfOn(_ q: PlaybackQueue) -> PlaybackQueue {
+        guard modes.shuffle, q.items.map(\.id) != music.items.map(\.id) else { return q }
+        let (s, original) = PlayModes.shuffleUpcoming(q, random: random)
+        modes.original = original
+        return s
+    }
+
+    /// A user's edit of the music queue (it is about to replace `music`): the pre-shuffle order follows it, and
+    /// a substitute's requeued copy taken out keeps the interrupted entry in the loop.
+    private func editedMusic(to items: [Item], index: Int) {
+        let new = PlaybackQueue(items: items, index: index, positionMs: 0, source: music.source)
+        if modes.shuffle, let o = modes.original {
+            modes.original = PlayModes.edited(original: o, from: music, to: new)
+        }
+        guard !substitutes.isEmpty, items.count + 1 == music.items.count else { return }
+        let old = music.items
+        let r = items.indices.first(where: { old[$0].id != items[$0].id }) ?? items.count
+        guard (old[..<r] + old[(r + 1)...]).map(\.id) == items.map(\.id) else { return }   // one entry taken out
+        for (n, sub) in substitutes.enumerated() where sub.requeue == old[r].id {
+            if let i = Self.locate(sub.id, in: old, near: music.index), r > i { substitutes[n].requeue = nil }
+        }
+    }
+
+    /// Where a substitute is: its id at or before the current item (it was played from there), else after it.
+    private static func locate(_ id: String, in items: [Item], near index: Int) -> Int? {
+        guard !items.isEmpty else { return nil }
+        return items[...min(index, items.count - 1)].lastIndex(where: { $0.id == id }) ?? items.firstIndex(where: { $0.id == id })
+    }
+
+    /// Repeat all: each substitute leaves the queue, with the interrupted item's old entry (its requeued copy
+    /// stays, to be tried again); with nothing before it left to stand on, the old entry stays and the copy
+    /// goes. Any other mode: forgotten, nothing removed.
+    private func dropSubstitutes() {
+        let subs = substitutes
+        substitutes = []
+        guard !subs.isEmpty, modes.repeatMode == .all else { return }
+        var items = music.items, index = music.index
+        for sub in subs {
+            guard let i = Self.locate(sub.id, in: items, near: index) else { continue }
+            let k = sub.requeue.flatMap { r in items[..<i].lastIndex(where: { $0.id == r }) }
+            let copy = sub.requeue.flatMap { r in items[(i + 1)...].firstIndex(where: { $0.id == r }) }
+            func indexWithout(_ d: Set<Int>) -> Int { index - d.filter { $0 < index }.count - (d.contains(index) ? 1 : 0) }
+            var drop: Set<Int> = k.map { Set([i, $0]) } ?? Set([i])
+            if indexWithout(drop) < 0, let copy { drop = [i, copy] }
+            let ni = max(0, indexWithout(drop))
+            items = items.enumerated().filter { !drop.contains($0.offset) }.map(\.element)
+            index = min(ni, max(0, items.count - 1))
+        }
+        music.items = items
+        music.index = index
+        if loaded?.kind == .track { loaded?.index = index }
     }
 
     // MARK: - Backend events
@@ -628,6 +735,13 @@ import os
         if l.kind == .track {
             finishListen(.ended)
             consecutiveFailures = 0
+            if modes.repeatMode == .one, music.current?.id == l.id {
+                // Repeat one: the same item again (the preloaded copy of it: gapless), a new listen and so a new play.
+                load(.track, index: music.index, startMs: 0, autoplay: true)
+                afterMusicMove()
+                return
+            }
+            dropSubstitutes()
             advanceMusic(user: false)
         } else {
             sendProgress(id: l.id, positionS: 0, played: true, emit: false)
@@ -791,7 +905,7 @@ import os
     private func persist(touch: Bool = true) {
         syncPosition()
         if touch { savedAt = Int(now().timeIntervalSince1970) }
-        store.save(QueueSnapshot(version: QueueSnapshot.currentVersion, music: music, episodes: episodes, active: active, savedAt: savedAt, ownDevice: ownDevice))
+        store.save(QueueSnapshot(version: QueueSnapshot.currentVersion, music: music, episodes: episodes, active: active, savedAt: savedAt, ownDevice: ownDevice, modes: modes))
     }
 
     private func isFailed(_ item: Item) -> Bool {
@@ -844,9 +958,17 @@ import os
     }
 
     /// The next item into the backend for a gapless change.
+    /// Repeat one: the current item again (the loop is gapless: `load` matches the preloaded source on the id).
+    /// Repeat all without shuffle, at the last item: the first one, which the next pass starts with.
     private func preloadNext(_ k: Item.Kind) {
         let q = queue(k)
-        let next = q.upcoming.first { k == .episode || (!isFailed($0) && (network.isOnline || isLocal($0))) }
+        let usable = { [unowned self] (i: Item) in k == .episode || (!self.isFailed(i) && (self.network.isOnline || self.isLocal(i))) }
+        var next = q.upcoming.first(where: usable)
+        if k == .track && modes.repeatMode == .one {
+            next = q.current
+        } else if k == .track, next == nil, modes.repeatMode == .all, !modes.shuffle, let first = q.items.first, usable(first) {
+            next = first
+        }
         let src = next.flatMap(mediaSource)
         // A stream preloaded here is also downloaded by the lookahead: accepted, so the change stays gapless.
         preloadedNext = next.flatMap { n in src.map { (k, n.id, $0) } }
@@ -942,9 +1064,11 @@ import os
                    skipped: end == .skip && l.seconds < Self.skipThresholdS, quality: prefs.quality)
     }
 
-    private func chooseNext(mustBeLocal: Bool) -> NextChooser.Choice {
+    /// `wrap` (repeat all, on the paths the web's `changeOpts`/`onError` pass it): start over at the end. The
+    /// local-only switches (a stall, offline) never wrap: they want something on the phone now.
+    private func chooseNext(mustBeLocal: Bool, wrap: Bool = false) -> NextChooser.Choice {
         NextChooser.choose(music, mustBeLocal: mustBeLocal, failed: isFailed, isLocal: isLocal,
-                           favorites: cache.cachedFavorites().map { Item(track: $0.0, json: $0.1) }, random: random)
+                           favorites: cache.cachedFavorites().map { Item(track: $0.0, json: $0.1) }, random: random, wrap: wrap)
     }
 
     /// Plays `c` next: a queued item moved up to just after the current one, or a cached favorite inserted
@@ -958,6 +1082,15 @@ import os
             }
         case .insert(let item):
             music.items.insert(item, at: music.index + 1)
+            if modes.repeatMode == .all { substitutes.append(Substitute(id: item.id, requeue: requeue?.id)) }
+        case .wrap:
+            // Repeat all: the whole queue again from its first item (offline, from the first one on the phone).
+            dropSubstitutes()                 // never part of the next pass
+            music = PlayModes.newPass(music, shuffle: modes.shuffle, random: random)
+            guard let first = music.current else { return false }
+            let start = network.isOnline || isLocal(first) ? 0 : (music.items.firstIndex(where: isLocal) ?? 0)
+            load(.track, index: start, startMs: 0, autoplay: true)
+            return true
         case .none:
             return false
         }
@@ -976,7 +1109,7 @@ import os
     private func advanceMusic(user: Bool, forceLocal: Bool = false) {
         let offline = !network.isOnline
         let mustBeLocal = forceLocal || offline || consecutiveFailures >= Self.maxConsecutiveFailures
-        let choice = chooseNext(mustBeLocal: mustBeLocal)
+        let choice = chooseNext(mustBeLocal: mustBeLocal, wrap: modes.repeatMode == .all)
         if case .insert = choice, offline { onEvent?(.notice(Self.offlineNotice)) }
         if !apply(choice) {
             if user { return }      // nothing to go to: the user's next leaves things as they are
@@ -1001,6 +1134,7 @@ import os
     /// Radio, shuffle and favorites queues refill when 2 or fewer playable items are left
     /// (the web's refill effect: 20 favorites or random tracks, 10 radio tracks).
     private func maybeRefill() {
+        guard modes.repeatMode != .all else { return }     // repeat all loops the queue as it is
         guard !refilling, !refillExhausted, refillTimer == nil, !music.items.isEmpty,
               [.favorites, .shuffle, .radio].contains(music.source) else { return }
         let upcoming = music.upcoming.filter { !isFailed($0) }
@@ -1102,7 +1236,8 @@ import os
         let duration = (isLoaded ? backend.durationMs : nil) ?? q.current?.durationMs ?? 0
         onEvent?(.state(StateEvent(kind: k, itemId: q.current?.id, index: q.index, playing: isActive && playing,
                                    positionMs: position(k), durationMs: duration, buffering: isActive && buffering,
-                                   error: isActive ? error : nil, rate: k == .episode ? rate : 1)))
+                                   error: isActive ? error : nil, rate: k == .episode ? rate : 1,
+                                   shuffle: k == .track && modes.shuffle, repeatMode: k == .track ? modes.repeatMode : .off)))
         if isActive { refreshNowPlaying() }
     }
 

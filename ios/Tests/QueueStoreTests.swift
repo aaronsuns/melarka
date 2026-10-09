@@ -79,4 +79,25 @@ final class QueueStoreTests: EngineTestCase {
         let files = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
         XCTAssertTrue(files.isEmpty)
     }
+
+    /// A queue file written before shuffle and repeat existed (v0.1.0, no `modes`) loads, with both off.
+    func testAQueueFileWithoutModesLoadsWithModesOff() throws {
+        let item = #"{"kind":"track","id":"7","title":"T7","artist":"A","album":"B","durationMs":1000,"meta":{"id":7}}"#
+        let q = #"{"items":[\#(item)],"index":0,"positionMs":0,"source":"list"}"#
+        let empty = #"{"items":[],"index":0,"positionMs":0,"source":"list"}"#
+        let file = #"{"version":1,"music":\#(q),"episodes":\#(empty),"active":"track","savedAt":1}"#
+        try Data(file.utf8).write(to: queueFile)
+        let s = try XCTUnwrap(store.load())
+        XCTAssertNil(s.modes)
+        makeEngine()
+        XCTAssertEqual(engine.music.items.map(\.id), ["7"])
+        XCTAssertEqual(engine.modes, PlayModes())
+    }
+
+    func testModesAreSavedWithTheQueues() {
+        engine.handle(.setQueue(q([7, 8], index: 0, pos: 0, play: false)))
+        engine.handle(.setModes(shuffle: false, repeatMode: .one))
+        XCTAssertEqual(store.load()?.modes, PlayModes(repeatMode: .one))
+        XCTAssertEqual(store.load()?.version, 1)
+    }
 }

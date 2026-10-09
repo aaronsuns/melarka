@@ -4,7 +4,13 @@
 // CustomEvents on window. The field names are the wire protocol of
 // lark-ios Sources/Bridge/WebMessage.swift and NativeEvent.swift: change
 // them only together.
+//
+// Shuffle and repeat (music only): the web posts `setModes {shuffle, repeat}`
+// and native's `state` carries `shuffle` and `repeat` (an episode's state:
+// false and "off"). An app older than that sends neither: the web then hides
+// the buttons.
 import type { Episode, OnOpen, Quality, Track } from "../api/types";
+import type { RepeatMode } from "../player/modes";
 import type { QueueState } from "../player/queue";
 
 export type ItemKind = "track" | "episode";
@@ -37,7 +43,8 @@ export type ToNative =
   | { type: "pauseForWeb" }
   | { type: "favoriteChanged"; trackId: number; on: boolean }
   | { type: "flushEvents"; id: string }
-  | { type: "openSettings" };
+  | { type: "openSettings" }
+  | { type: "setModes"; shuffle: boolean; repeat: RepeatMode };
 
 export interface NativeState {
   type: "state";
@@ -50,6 +57,8 @@ export interface NativeState {
   buffering: boolean;
   error: string | null;
   rate: number;
+  shuffle?: boolean; // absent from an app older than this web: modes unavailable
+  repeat?: RepeatMode;
 }
 
 export type FromNative =

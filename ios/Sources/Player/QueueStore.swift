@@ -5,6 +5,7 @@ import os
 /// (`savedAt`, unix seconds) and the server's name for this device (`ownDevice`, from our own `PUT /queue`).
 /// `version` is the schema: a file with another version reads as no queue (logged), never as a crash.
 /// A later schema adds fields with `decodeIfPresent` defaults and bumps the version only when it must.
+/// `modes` (shuffle and repeat) came later: a file without it reads as both off, still version 1.
 struct QueueSnapshot: Codable, Equatable {
     static let currentVersion = 1
     var version = QueueSnapshot.currentVersion
@@ -13,6 +14,7 @@ struct QueueSnapshot: Codable, Equatable {
     var active: Item.Kind
     var savedAt: Int
     var ownDevice: String?
+    var modes: PlayModes?
 }
 
 /// Per-user files in one directory: `queues-<userId>.json` and `events-<userId>.json`. With no user nothing is

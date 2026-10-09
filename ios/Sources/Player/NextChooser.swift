@@ -11,15 +11,19 @@ enum NextChooser {
     enum Choice: Equatable {
         case queue(Int)       // play queue entry i, moved to just after the current one
         case insert(Item)     // put this cached favorite after the current one and play it
+        case wrap             // repeat all: the queue starts over from its first item
         case none
     }
 
     /// A cached favorite this far back in the queue (or the current one) is passed over while another is available.
     static let history = 30
 
+    /// `wrap` (repeat all): with nothing playable after the current item, start the queue over instead of a
+    /// favorite or stopping. Without it the result is exactly as before.
     static func choose(_ q: PlaybackQueue, mustBeLocal: Bool, failed: (Item) -> Bool, isLocal: (Item) -> Bool,
-                       favorites: [Item], random: () -> Double) -> Choice {
+                       favorites: [Item], random: () -> Double, wrap: Bool = false) -> Choice {
         let cands = q.items.indices.filter { $0 > q.index && !failed(q.items[$0]) }
+        if wrap && cands.isEmpty { return .wrap }
         if !mustBeLocal, let first = cands.first { return .queue(first) }
         if let j = cands.first(where: { isLocal(q.items[$0]) }) { return .queue(j) }
         if let fav = pickFavorite(q, failed: failed, favorites: favorites, random: random) { return .insert(fav) }

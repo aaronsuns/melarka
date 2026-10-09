@@ -2,7 +2,8 @@ import MediaPlayer
 
 /// Lock screen, Control Center, headphone and car buttons. The car's play goes to the last Now Playing app
 /// even when it is suspended: with nothing loaded it resumes the saved queue or shuffles cached favorites.
-/// Skip ±(30/15 s) replaces next/previous on the lock screen, so it is on only for 频道 episodes.
+/// Skip ±(30/15 s) replaces next/previous on the lock screen, so it is on only for 频道 episodes. Repeat and
+/// shuffle (where the lock screen or the car shows them) are music's: on only while music is the active kind.
 @MainActor final class RemoteCommands {
     static let skipForwardS: Double = 30
     static let skipBackwardS: Double = 15
@@ -33,6 +34,14 @@ import MediaPlayer
         }
         add(center.skipForwardCommand) { r, e in r.skipNow(seconds: (e as? MPSkipIntervalCommandEvent)?.interval ?? Self.skipForwardS) }
         add(center.skipBackwardCommand) { r, e in r.skipNow(seconds: -((e as? MPSkipIntervalCommandEvent)?.interval ?? Self.skipBackwardS)) }
+        add(center.changeRepeatModeCommand) { r, e in
+            guard let e = e as? MPChangeRepeatModeCommandEvent else { return .commandFailed }
+            return r.changeRepeatNow(e.repeatType)
+        }
+        add(center.changeShuffleModeCommand) { r, e in
+            guard let e = e as? MPChangeShuffleModeCommandEvent else { return .commandFailed }
+            return r.changeShuffleNow(e.shuffleType)
+        }
         center.skipForwardCommand.preferredIntervals = [NSNumber(value: Self.skipForwardS)]
         center.skipBackwardCommand.preferredIntervals = [NSNumber(value: Self.skipBackwardS)]
         for c in [center.playCommand, center.pauseCommand, center.togglePlayPauseCommand, center.nextTrackCommand,
@@ -40,18 +49,33 @@ import MediaPlayer
         update(for: .track)
     }
 
-    /// A newly built engine: the skip buttons follow its active kind.
+    /// A newly built engine: the skip buttons follow its active kind, repeat and shuffle its modes.
     func attach(_ engine: PlayerEngine) {
         attached?.onActiveChange = nil
+        attached?.onModesChange = nil
         attached = engine
         engine.onActiveChange = { [weak self] in self?.update(for: $0) }
+        engine.onModesChange = { [weak self] in self?.show($0) }
         update(for: engine.active)
+        show(engine.modes)
     }
 
-    /// Skip intervals for episodes only; next and previous always.
+    /// Skip intervals for episodes only; repeat and shuffle for music only; next and previous always.
     func update(for kind: Item.Kind) {
         center.skipForwardCommand.isEnabled = kind == .episode
         center.skipBackwardCommand.isEnabled = kind == .episode
+        center.changeRepeatModeCommand.isEnabled = kind == .track
+        center.changeShuffleModeCommand.isEnabled = kind == .track
+    }
+
+    /// The modes as the lock screen and the car show them.
+    func show(_ m: PlayModes) {
+        center.changeRepeatModeCommand.currentRepeatType = Self.repeatType(m.repeatMode)
+        center.changeShuffleModeCommand.currentShuffleType = m.shuffle ? .items : .off
+    }
+
+    static func repeatType(_ m: RepeatMode) -> MPRepeatType {
+        switch m { case .off: return .off; case .all: return .all; case .one: return .one }
     }
 
     /// Removes every handler (tests: the command center is shared by the process).
@@ -59,6 +83,7 @@ import MediaPlayer
         for (c, t) in targets { c.removeTarget(t) }
         targets = []
         attached?.onActiveChange = nil
+        attached?.onModesChange = nil
         attached = nil
     }
 
@@ -115,6 +140,21 @@ import MediaPlayer
     func skipNow(seconds: Double) -> MPRemoteCommandHandlerStatus {
         guard let engine = resolve(), engine.current != nil, seconds.isFinite else { return .noActionableNowPlayingItem }
         engine.skip(ms: Int((seconds * 1000).rounded()))
+        return .success
+    }
+
+    /// The lock screen's or the car's repeat button: the shuffle stays as it is. Episodes ignore it.
+    func changeRepeatNow(_ type: MPRepeatType) -> MPRemoteCommandHandlerStatus {
+        guard let engine = resolve(), engine.active == .track else { return .noActionableNowPlayingItem }
+        let m: RepeatMode = type == .one ? .one : type == .all ? .all : .off
+        engine.setModes(shuffle: engine.modes.shuffle, repeatMode: m)
+        return .success
+    }
+
+    /// The shuffle button: any shuffle type but off turns it on. Episodes ignore it.
+    func changeShuffleNow(_ type: MPShuffleType) -> MPRemoteCommandHandlerStatus {
+        guard let engine = resolve(), engine.active == .track else { return .noActionableNowPlayingItem }
+        engine.setModes(shuffle: type != .off, repeatMode: engine.modes.repeatMode)
         return .success
     }
 
