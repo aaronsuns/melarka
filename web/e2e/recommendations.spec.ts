@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { login, trackIdByJobTitle, trackIdByTitle, verifyPlaybackStarted } from "./playback";
 
 test("为你推荐: a real listen seeds it, 刷新 fills it, 下载 → ▶ 播放 from Home", async ({ page }, info) => {

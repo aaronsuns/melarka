@@ -1,4 +1,4 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "./fixtures";
 import { login, loginWith } from "./playback";
 
 // The card grid under a 视频 section heading.

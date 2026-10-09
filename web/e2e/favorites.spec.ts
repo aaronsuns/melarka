@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { login, trackIdByTitle, verifyPlaybackStarted } from "./playback";
 
 // Puts the shared admin back on "resume", which every other spec expects

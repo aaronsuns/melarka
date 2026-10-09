@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { login } from "./playback";
 
 test("▶ 试听 an episode that isn't downloaded, then 保留到频道 without downloading again", async ({ page }, info) => {

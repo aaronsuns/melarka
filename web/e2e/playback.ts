@@ -1,4 +1,4 @@
-import { expect, type Page, type TestInfo } from "@playwright/test";
+import { expect, type Page, type TestInfo } from "./fixtures";
 
 // Reads the mini player's progress bar as a percentage. It's driven by
 // `position / duration` from real `timeupdate` events on the <audio>

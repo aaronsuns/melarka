@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { login, trackIdByJobTitle, verifyPlaybackStarted } from "./playback";
 
 test("YouTube search → download → play, admin console, shuffle", async ({ page }, info) => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("language follows the server, then the user's choice", async ({ page }) => {
   await page.goto("/");
