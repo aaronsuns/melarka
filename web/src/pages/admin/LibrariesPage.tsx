@@ -1,0 +1,169 @@
+import { useEffect, useRef, useState } from "react";
+import { api } from "../../api/client";
+import type { Library, ScanStatus, Track } from "../../api/types";
+import { formatDateTime } from "../../format";
+import { errorMessage } from "../../i18n/errors";
+import { useT } from "../../i18n/i18n";
+
+const POLL_MS = 2000;
+
+function resultLabels(t: ReturnType<typeof useT>): [keyof ScanStatus["last"], string][] {
+  return [
+    ["added", t("admin.libraries.resultAdded")],
+    ["updated", t("admin.libraries.resultUpdated")],
+    ["moved", t("admin.libraries.resultMoved")],
+    ["missing", t("admin.libraries.resultMissing")],
+    ["broken", t("admin.libraries.resultBroken")],
+    ["unchanged", t("admin.libraries.resultUnchanged")],
+  ];
+}
+
+function resultSummary(t: ReturnType<typeof useT>, last: ScanStatus["last"]): string {
+  return resultLabels(t).map(([key, label]) => `${label} ${last[key] ?? 0}`).join(" · ");
+}
+
+export default function LibrariesPage() {
+  const t = useT();
+  const [libraries, setLibraries] = useState<Library[] | null>(null);
+  const [statuses, setStatuses] = useState<Record<number, ScanStatus>>({});
+  const [loadError, setLoadError] = useState("");
+  const [scanBusy, setScanBusy] = useState<Set<number>>(new Set());
+  const [scanError, setScanError] = useState<Record<number, string>>({});
+  const [polling, setPolling] = useState(false);
+
+  const [broken, setBroken] = useState<Track[] | null>(null);
+  const [brokenError, setBrokenError] = useState("");
+
+  const scanBusyRef = useRef(scanBusy);
+  scanBusyRef.current = scanBusy;
+
+  function applyStatuses(sts: ScanStatus[]) {
+    const map: Record<number, ScanStatus> = {};
+    for (const st of sts) map[st.library_id] = st;
+    setStatuses(map);
+    return sts;
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .libraries()
+      .then((libs) => {
+        if (!cancelled) setLibraries(libs);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setLoadError(errorMessage(e, "common.loadFailed"));
+      });
+    api
+      .scanStatus()
+      .then((sts) => {
+        if (cancelled) return;
+        applyStatuses(sts);
+        if (sts.some((s) => s.running)) setPolling(true);
+      })
+      .catch(() => {
+        /* status is best-effort; the libraries list is the load-bearing fetch */
+      });
+    api
+      .tracks({ broken: 1 })
+      .then((p) => {
+        if (!cancelled) setBroken(p.items);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setBrokenError(errorMessage(e, "common.loadFailed"));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Polls /admin/scan/status every 2 s while any library is running, and
+  // stops itself once none are — a fresh trigger (rescan) sets `polling`
+  // back to true to resume it.
+  useEffect(() => {
+    if (!polling) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tick = () => {
+      api
+        .scanStatus()
+        .then((sts) => {
+          if (cancelled) return;
+          applyStatuses(sts);
+          if (sts.some((s) => s.running)) timer = setTimeout(tick, POLL_MS);
+          else setPolling(false);
+        })
+        .catch(() => {
+          if (!cancelled) timer = setTimeout(tick, POLL_MS);
+        });
+    };
+    tick();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [polling]);
+
+  async function rescan(lib: Library) {
+    if (scanBusyRef.current.has(lib.id)) return;
+    setScanBusy((s) => new Set(s).add(lib.id));
+    setScanError((e) => ({ ...e, [lib.id]: "" }));
+    try {
+      await api.triggerScan(lib.id);
+      setPolling(true);
+    } catch (e) {
+      setScanError((er) => ({ ...er, [lib.id]: errorMessage(e, "admin.libraries.rescanFailed") }));
+    } finally {
+      setScanBusy((s) => {
+        const next = new Set(s);
+        next.delete(lib.id);
+        return next;
+      });
+    }
+  }
+
+  return (
+    <>
+      {loadError && <p className="error">{loadError}</p>}
+      {libraries?.length === 0 && <p className="muted">{t("admin.libraries.empty")}</p>}
+      <ul className="rows">
+        {libraries?.map((lib) => {
+          const st = statuses[lib.id];
+          return (
+            <li key={lib.id} className="lib-row">
+              <div className="lib-row-main">
+                <span className="ellipsis">{lib.name}</span>
+                {lib.download_target && <span className="badge">{t("admin.libraries.downloadTarget")}</span>}
+                <button className="secondary" disabled={scanBusy.has(lib.id) || st?.running} onClick={() => void rescan(lib)}>
+                  {t("admin.libraries.rescan", { name: lib.name })}
+                </button>
+              </div>
+              <span className="muted small">{lib.root}</span>
+              {st?.running && <span className="muted small">{t("admin.libraries.scanning")}</span>}
+              {st && !st.running && st.finished_at > 0 && (
+                <span className="muted small">{t("admin.libraries.lastScan", { time: formatDateTime(st.finished_at) })}</span>
+              )}
+              {st && !st.running && st.finished_at > 0 && <span className="muted small">{resultSummary(t, st.last)}</span>}
+              {st?.last_error && <span className="error small">{st.last_error}</span>}
+              {scanError[lib.id] && <span className="error small">{scanError[lib.id]}</span>}
+            </li>
+          );
+        })}
+      </ul>
+
+      <h2 className="section-title">{t("admin.libraries.brokenHeading")}</h2>
+      {brokenError && <p className="error">{brokenError}</p>}
+      {broken?.length === 0 && <p className="muted">{t("admin.libraries.noBroken")}</p>}
+      <ul className="rows">
+        {broken?.map((track) => (
+          <li key={track.id} className="check-row">
+            <span className="track-text">
+              <span className="ellipsis track-title">{track.path}</span>
+              <span className="muted small">{track.broken_reason || t("admin.libraries.unreadable")}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}

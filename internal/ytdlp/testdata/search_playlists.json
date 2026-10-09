@@ -1,0 +1,12 @@
+{"_type": "playlist", "id": "邓丽君", "title": "邓丽君", "entries": [
+  {"_type": "url", "ie_key": "YoutubeTab", "id": "PL1F3EC94FCEA4669F", "url": "https://www.youtube.com/playlist?list=PL1F3EC94FCEA4669F",
+   "title": "鄧麗君 歌曲精選 Teresa Teng Song Selection", "channel": "Flute Hibbeler (hibbeller9)", "uploader": "Flute Hibbeler (hibbeller9)",
+   "thumbnails": [{"url": "https://i.ytimg.com/vi/IiFm7AWP9n4/hq720.jpg?sqp=a", "height": 202, "width": 360},
+                  {"url": "https://i.ytimg.com/vi/IiFm7AWP9n4/hq720.jpg?sqp=b", "height": 404, "width": 720}]},
+  {"_type": "url", "ie_key": "YoutubeTab", "id": "PL6Nbs-FqsydjBjx__tLPMJr3dtETDNlVP", "url": "https://www.youtube.com/playlist?list=PL6Nbs-FqsydjBjx__tLPMJr3dtETDNlVP",
+   "title": "[老歌邓丽君500首] - 邓丽君的经典歌曲", "uploader": "Chinese Classic Songs",
+   "thumbnails": [{"url": "https://i.ytimg.com/vi/hRwgpR54UN8/hq720.jpg?sqp=c"}]},
+  {"_type": "url", "ie_key": "YoutubeTab", "id": "RDCLAK5uy_kmPRjHDECIcuVwnKsx2Ng7fyNgFKWNJFs", "url": "https://www.youtube.com/playlist?list=RDCLAK5uy_kmPRjHDECIcuVwnKsx2Ng7fyNgFKWNJFs", "title": "Mix", "channel": "YouTube"},
+  {"_type": "url", "ie_key": "YoutubeTab", "id": "UCECWMthvNsTJvMBdp5Lb4uw", "url": "https://www.youtube.com/channel/UCECWMthvNsTJvMBdp5Lb4uw", "title": "A channel"},
+  {"_type": "url", "ie_key": "Youtube", "id": "IiFm7AWP9n4", "url": "https://www.youtube.com/watch?v=IiFm7AWP9n4", "title": "a stray video"}
+]}

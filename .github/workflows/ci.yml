@@ -1,0 +1,205 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The iOS project as XcodeGen names it (ios/project.yml). Change these here if the project or scheme is renamed.
+env:
+  IOS_PROJECT: Lark.xcodeproj
+  IOS_SCHEME: Lark
+
+defaults:
+  run:
+    shell: bash # bash -eo pipefail: a failing command before a pipe fails the step
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      ios: ${{ steps.f.outputs.ios }}
+      docker: ${{ steps.f.outputs.docker }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
+        id: f
+        with:
+          filters: |
+            ios:
+              - 'ios/**'
+              - '.github/workflows/ci.yml'
+            docker:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/release.yml'
+
+  go:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.26'
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: go vet ./...
+      - run: go test ./...
+      - run: go test -race ./internal/stream/... ./internal/download/... ./internal/channels/... ./internal/personal/...
+
+  web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    needs: web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.26'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit chromium
+      - run: npm run build
+      - run: npm run e2e # the test server uses web/e2e/fake-yt-dlp.sh: no network
+
+  image:
+    needs: [go, web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: docker build --build-arg VERSION=ci -t melarka:ci .
+      - run: |
+          got=$(docker run --rm melarka:ci --version)
+          echo "$got"
+          [ "$got" = "melarka ci" ]
+
+  # Both release platforms, no push: proves the per-architecture yt-dlp checksums before a tag needs them.
+  image-multiarch:
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          build-args: VERSION=ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  ios:
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Newest stable Xcode
+        run: |
+          xcode=$(printf '%s\n' /Applications/Xcode_*.app | grep -viE 'beta|_rc|release' | sort -V | tail -1)
+          [ -d "$xcode" ] || { echo "no stable Xcode in /Applications" >&2; exit 1; }
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - run: brew install xcodegen && xcodegen generate --quiet
+      - name: Unit tests on the newest iPhone simulator
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, re, sys
+          best = None
+          for key, devs in json.load(sys.stdin)["devices"].items():
+              m = re.search(r"SimRuntime\.iOS-(\d+)-(\d+)(?:-(\d+))?$", key)
+              phones = [d for d in devs if d.get("isAvailable", True) and d["name"].startswith("iPhone")]
+              if m and phones:
+                  ver = tuple(int(x or 0) for x in m.groups())
+                  if best is None or ver > best[0]:
+                      best = (ver, phones[-1])
+          if best is None:
+              sys.exit("no available iPhone simulator")
+          sys.stderr.write("simulator: %s, iOS %s\n" % (best[1]["name"], ".".join(map(str, best[0]))))
+          print(best[1]["udid"])
+          ')
+          xcodebuild test -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$udid" \
+            -derivedDataPath build/dd -quiet
+      - run: python3 -m unittest discover -s scripts
+
+  # Release gate: gitleaks over the full history + the private denylist (repository secret OSS_DENYLIST).
+  # Fails closed everywhere except pull requests from forks, which get no secrets.
+  oss-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: scripts/ci-install-gitleaks.sh
+      - run: scripts/test_oss_check.sh && scripts/test_changelog_section.sh
+      - run: scripts/ci-oss-check.sh
+        env:
+          OSS_DENYLIST: ${{ secrets.OSS_DENYLIST }}
+          OSS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true }}

@@ -1,0 +1,24 @@
+/bin/
+/data/
+*.db
+*.db-*
+web/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+/docker-compose.yml
+/config.yaml
+/.env
+/youtube/
+/channels/
+/previews/
+/.lark-install-auth
+.superpowers/
+.vscode/
+.DS_Store
+# iOS (XcodeGen generates the project)
+ios/Lark.xcodeproj/
+ios/build/
+ios/DerivedData/
+ios/*.ipa
+xcuserdata/

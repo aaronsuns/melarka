@@ -1,0 +1,29 @@
+{
+  "_type": "playlist",
+  "entries": [
+    {
+      "id": "x1_0000000x",
+      "title": "邓丽君 - 甜蜜蜜",
+      "channel": "Teresa Teng",
+      "duration": 215.0,
+      "url": "https://www.youtube.com/watch?v=x1_0000000x",
+      "thumbnails": [{"url": "https://i.ytimg.com/vi/x1_0000000x/default.jpg"}, {"url": "https://i.ytimg.com/vi/x1_0000000x/hq.jpg"}]
+    },
+    {
+      "id": "x2_0000000x",
+      "title": "Alan Walker - Faded",
+      "uploader": "Alan Walker",
+      "duration": 212.5,
+      "url": "https://www.youtube.com/watch?v=x2_0000000x",
+      "thumbnail": "https://i.ytimg.com/vi/x2_0000000x/default.jpg"
+    },
+    {
+      "id": "x3_0000000x",
+      "title": "River Flows In You",
+      "channel": "Yiruma - Topic",
+      "duration": 201.0,
+      "url": "https://www.youtube.com/watch?v=x3_0000000x",
+      "thumbnails": [{"url": "https://i.ytimg.com/vi/x3_0000000x/default.jpg"}, {"url": "https://i.ytimg.com/vi/x3_0000000x/hq.jpg"}]
+    }
+  ]
+}

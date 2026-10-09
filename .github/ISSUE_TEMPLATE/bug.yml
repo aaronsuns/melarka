@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in Melarka doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please search the existing issues first.
+        **Security problems:** don't file them here; see SECURITY.md.
+        **Before pasting logs or screenshots**, remove passwords, tokens, your server address and anything personal.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Tap …
+        3. See …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Melarka version
+      description: Shown in the web app's settings, or by `docker run --rm ghcr.io/aaronsuns/melarka:<tag> --version`.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen?
+      multiple: true
+      options:
+        - Server / Docker
+        - Web app in a desktop browser
+        - Web app on a phone (browser or home screen)
+        - iPhone app
+        - Agent skill
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Host OS and CPU (e.g. Debian 13 on arm64), and the browser or iOS version.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The relevant lines of `docker compose logs --tail 200 melarka`, with private details removed.
+      render: text
