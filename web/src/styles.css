@@ -298,6 +298,22 @@ button.now-art { padding: 0; width: 100%; }
 .episode-queue { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
 .now-queue [aria-current="true"] { color: var(--accent); font-weight: 600; }
 .episode-queue .now-queue .row { width: 100%; text-align: left; }
+/* Queue sheet rows (music and episodes): tap plays, the handle on the right
+   drags (it alone takes the touch, so the list still scrolls), a left swipe
+   removes (rows pass vertical pans to the browser), ✕ on a desktop. */
+.queue-row { display: flex; align-items: center; gap: 2px; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.queue-list .queue-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 52px; text-align: left; }
+.queue-main > span { max-width: 100%; }
+.queue-now { color: var(--accent); }
+.queue-handle { flex: none; width: 44px; height: 44px; color: var(--muted); touch-action: none; cursor: grab; }
+.queue-remove { display: none; flex: none; width: 36px; height: 36px; color: var(--muted); }
+.queue-list.dragging .queue-row { transition: transform .15s ease; }
+.queue-list.dragging .queue-row.lifted { transition: none; background: var(--surface-2); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+.queue-list.dragging .queue-handle { cursor: grabbing; }
+@media (hover: hover) {
+  .queue-remove { display: inline-flex; align-items: center; justify-content: center; }
+  .queue-remove:hover, .queue-handle:hover { color: var(--text); }
+}
 .icon:disabled { opacity: 0.35; }
 .shell-player { min-width: 0; }
 .episode-resume button { width: 100%; min-height: 40px; padding: 0 16px; background: var(--surface); border: 0; border-top: 1px solid #222; color: var(--accent); font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

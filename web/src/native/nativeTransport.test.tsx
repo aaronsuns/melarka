@@ -166,6 +166,47 @@ it("playList and jump start a new queue at 0; enqueueNext keeps the current item
   expect(n.post).toHaveBeenLastCalledWith(expect.objectContaining({ type: "setQueue", index: 0, positionMs: 0, play: true }));
 });
 
+it("queue sheet edits and add to queue keep the current item playing (setQueue without positionMs)", () => {
+  renderPlayer();
+  const [t3, t4, t7] = [tr(3), tr(4), tr(7)];
+  act(() => p.playList([track1, track2, t3, t4], 1));
+  n.emit(stateEvent({ kind: "track", itemId: "2", index: 1, playing: true }));
+  act(() => p.move(1, 3));
+  const moved = n.post.mock.calls.at(-1)![0];
+  expect(moved).toEqual({ type: "setQueue", kind: "track", items: [track1, t3, t4, track2].map(trackItem), index: 3, play: true, source: "list" });
+  expect("positionMs" in moved).toBe(false);
+  expect(p.current?.id).toBe(2);
+  act(() => p.removeAt(0));
+  expect(n.post).toHaveBeenLastCalledWith({ type: "setQueue", kind: "track", items: [t3, t4, track2].map(trackItem), index: 2, play: true, source: "list" });
+  n.post.mockClear();
+  act(() => p.removeAt(2)); // the current one: nothing sent
+  expect(n.post).not.toHaveBeenCalled();
+  act(() => p.move(2, 0));
+  act(() => p.addToQueue(t7));
+  const added = n.post.mock.calls.at(-1)![0];
+  expect(added).toEqual({ type: "setQueue", kind: "track", items: [track2, t7, t3, t4].map(trackItem), index: 0, play: true, source: "list" });
+  expect("positionMs" in added).toBe(false);
+});
+
+it("native's echo of an edited queue keeps the queued tracks, so a second add goes after the first", () => {
+  renderPlayer();
+  const [t3, t7, t8] = [tr(3), tr(7), tr(8)];
+  act(() => p.playList([track1, track2, t3], 0));
+  act(() => p.addToQueue(t7));
+  // Native answers every setQueue with its queue.
+  n.emit({ type: "queue", kind: "track", items: [track1, t7, track2, t3].map(trackItem), index: 0, source: "list" });
+  act(() => p.addToQueue(t8));
+  expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 7, 8, 2, 3]);
+  // Native moved on by itself: the queued block shrinks with it.
+  n.emit({ type: "queue", kind: "track", items: [track1, t7, t8, track2, t3].map(trackItem), index: 1, source: "list" });
+  act(() => p.addToQueue(tr(9)));
+  expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 7, 8, 9, 2, 3]);
+  // A different queue from native (another device's, a refill): nothing is queued any more.
+  n.emit({ type: "queue", kind: "track", items: [track1, track2].map(trackItem), index: 0, source: "list" });
+  act(() => p.addToQueue(tr(5)));
+  expect(p.queue.tracks.map((x) => x.id)).toEqual([1, 5, 2]);
+});
+
 it("remove and updateTrack edit the queue; removing the last entry stops music", () => {
   renderPlayer();
   act(() => p.playList([track1, track2], 0));
@@ -446,4 +487,21 @@ it("logout in native mode flushes native's events before signing out", async () 
   await waitFor(() => expect(n.sent("auth").at(-1)).toEqual({ type: "auth", signedIn: false }));
   const order = n.post.mock.calls.map(([m]) => m.type);
   expect(order.indexOf("flushEvents")).toBeLessThan(order.lastIndexOf("auth"));
+});
+
+it("episode queue sheet edits keep the current episode playing (setQueue without positionMs)", () => {
+  renderPlayer(<><Probe /><EProbe /></>);
+  const list = [ep("a"), ep("b"), ep("c")];
+  act(() => e.play(list, 1));
+  n.emit(stateEvent({ kind: "episode", itemId: "b", index: 1, playing: true }));
+  act(() => e.move(1, 0));
+  const moved = n.post.mock.calls.at(-1)![0];
+  expect(moved).toEqual({ type: "setQueue", kind: "episode", items: [list[1], list[0], list[2]].map(episodeItem), index: 0, play: true, source: "list" });
+  expect("positionMs" in moved).toBe(false);
+  act(() => e.removeAt(2));
+  expect(n.post).toHaveBeenLastCalledWith({ type: "setQueue", kind: "episode", items: [list[1], list[0]].map(episodeItem), index: 0, play: true, source: "list" });
+  n.post.mockClear();
+  act(() => e.removeAt(0)); // the current one
+  expect(n.post).not.toHaveBeenCalled();
+  expect(e.current?.video_id).toBe("b");
 });

@@ -19,7 +19,8 @@ const ep = (n: number, extra: Partial<Episode> = {}): Episode => ({
   audio: { status: "done", progress: 100, bytes: 1, error: "" }, video: null, position_s: 0, played: false, kept: false, ...extra,
 });
 const progress = Object.fromEntries([1, 2, 3, 4, 5].map((n) => [`PUT /api/v1/episodes/episode000${n}/progress`, () => ({ status: 204 })]));
-const queueTitles = () => within(screen.getByRole("list", { name: "节目队列" })).getAllByRole("button").map((b) => b.querySelector(".ellipsis")?.textContent);
+// Each row's title (a row also holds its ✕ and drag handle).
+const queueTitles = () => within(screen.getByRole("list", { name: "节目队列" })).getAllByRole("listitem").map((li) => li.querySelector(".ellipsis")?.textContent);
 
 afterEach(() => resetSessionOwner());
 

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, episodeStreamUrl } from "../api/client";
 import type { Episode } from "../api/types";
 import { t } from "../i18n/i18n";
+import { moveEntry, removeEntry } from "../player/dragReorder";
 import { claimSession, onSessionClaim, ownsSession } from "../player/sessionOwner";
 import { buildQueue, clearStoredQueue, loadStoredQueue, saveStoredQueue, type EpisodeOrder } from "./episodeQueue";
 import { hasNative } from "../native/bridge";
@@ -37,6 +38,13 @@ export interface EpisodesPlayer {
   playList(list: Episode[], start: number, opts?: { order?: EpisodeOrder; includePlayed?: boolean }): void;
   /** Plays queue entry i. */
   jump(i: number): void;
+  /**
+   * Queue sheet edits; the current episode keeps playing. It can be moved
+   * (and stays current) but not removed. A later order or "include played"
+   * change rebuilds the queue from its list, dropping these edits.
+   */
+  move(from: number, to: number): void;
+  removeAt(i: number): void;
   setOrder(o: EpisodeOrder): void;
   setIncludePlayed(on: boolean): void;
   toggle(): void;
@@ -237,6 +245,26 @@ function clearLockScreen() {
   const incRef = useRef(includePlayed);
   incRef.current = includePlayed;
   const setOrder = useCallback((o: EpisodeOrder) => rebuild(o, incRef.current), [rebuild]);
+  const reorder = useCallback((list: Episode[], i: number) => {
+    queueRef.current = list;
+    indexRef.current = i;
+    setQueue(list);
+    setIndex(i);
+  }, []);
+  const move = useCallback(
+    (from: number, to: number) => {
+      const m = from === to ? null : moveEntry(queueRef.current, indexRef.current, from, to);
+      if (m) reorder(m.list, m.index);
+    },
+    [reorder],
+  );
+  const removeAt = useCallback(
+    (i: number) => {
+      const r = removeEntry(queueRef.current, indexRef.current, i);
+      if (r) reorder(r.list, r.index);
+    },
+    [reorder],
+  );
   const setIncludePlayed = useCallback((on: boolean) => rebuild(orderRef.current, on), [rebuild]);
 
   // goTo plays list entry i; a user's skip saves the position first, the
@@ -488,8 +516,8 @@ function clearLockScreen() {
   }, [audio]);
 
   const value = useMemo<EpisodesPlayer>(
-    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close }),
-    [queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close],
+    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close }),
+    [queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close],
   );
   const progress = useMemo(() => ({ position, duration }), [position, duration]);
   return (

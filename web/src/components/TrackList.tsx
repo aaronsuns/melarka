@@ -87,6 +87,7 @@ export function TrackList({ tracks, showAlbum = true, onChange, onRemoved, extra
               {menuFor === track.id && (
                 <div className="menu" role="menu">
                   <button role="menuitem" onClick={() => { player.enqueueNext(track); closeMenu(); }}>{t("track.playNext")}</button>
+                  <button role="menuitem" onClick={() => { player.addToQueue(track); closeMenu(); }}>{t("track.addToQueue")}</button>
                   <button role="menuitem" onClick={() => act(async () => { await api.setFavorite(track.id, !track.favorite); onChange?.({ ...track, favorite: !track.favorite }); })}>
                     {track.favorite ? t("common.unfavorite") : t("common.favorite")}
                   </button>

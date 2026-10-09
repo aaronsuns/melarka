@@ -689,3 +689,26 @@ describe("repeat all and a cached substitute", () => {
     expect(ids(player())).toEqual([1, 2, 3]);
   });
 });
+
+describe("repeat all, a cached substitute and a queue edit", () => {
+  beforeEach(() => {
+    localStorage.setItem("lark.modes", JSON.stringify({ shuffle: false, repeat: "all", original: null }));
+    favs = [{ track: tr(9), lastPlayedAt: 0 }];
+    kinds.set(9, "favorite");
+  });
+
+  test("removing the interrupted track's retry keeps it in the loop", () => {
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3)], 1));
+    for (let i = 0; i < 4; i++) {
+      audio.error = { code: 2 };
+      act(() => audio.fire("error"));
+    }
+    expect(ids(player())).toEqual([1, 2, 9, 2, 3]);
+    act(() => player().removeAt(3)); // the retry, from the queue sheet
+    expect(ids(player())).toEqual([1, 2, 9, 3]);
+    act(() => audio.fire("ended"));
+    expect(ids(player())).toEqual([1, 2, 3]); // the substitute leaves; 2 stays in the loop
+    expect(player().current?.id).toBe(3);
+  });
+});

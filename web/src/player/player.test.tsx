@@ -1086,3 +1086,56 @@ describe("shuffle and repeat", () => {
     expect(p.modes).toEqual({ shuffle: false, repeat: "off" });
   });
 });
+
+// Queue editing from the queue sheet and the track menu: the playing track is
+// never reloaded or restarted.
+describe("queue editing", () => {
+  const ids = (p: Player) => p.queue.tracks.map((t) => t.id);
+  afterEach(() => vi.restoreAllMocks());
+
+  test("addToQueue, move and removeAt leave the playing track alone", async () => {
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3), tr(4)], 1));
+    const srcSet = vi.spyOn(audio, "src", "set");
+    act(() => player().enqueueNext(tr(9)));
+    act(() => player().addToQueue(tr(7)));
+    expect(ids(player())).toEqual([1, 2, 9, 7, 3, 4]);
+    act(() => player().move(5, 0));
+    expect(ids(player())).toEqual([4, 1, 2, 9, 7, 3]);
+    act(() => player().removeAt(0));
+    act(() => player().removeAt(1)); // the current one: ignored
+    expect(ids(player())).toEqual([1, 2, 9, 7, 3]);
+    expect(player().queue.index).toBe(1);
+    await act(async () => {});
+    expect(srcSet).not.toHaveBeenCalled();
+    expect(audio.play).toHaveBeenCalledTimes(1);
+    expect(player().current?.id).toBe(2);
+  });
+
+  test("moving the current track keeps it playing, then plays what follows it", async () => {
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3), tr(4)], 0));
+    const srcSet = vi.spyOn(audio, "src", "set");
+    act(() => player().move(0, 2));
+    expect(ids(player())).toEqual([2, 3, 1, 4]);
+    expect(player().queue.index).toBe(2);
+    await act(async () => {});
+    expect(srcSet).not.toHaveBeenCalled();
+    act(() => audio.fire("ended"));
+    await waitFor(() => expect(player().current?.id).toBe(4));
+  });
+
+  test("shuffle on: a track added or removed keeps where the user put it after shuffle off", () => {
+    const { player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3), tr(4), tr(5)], 0));
+    act(() => player().setShuffle(true));
+    // 3 was among the shuffled ones; queued now, it is the user's, not the shuffle's.
+    act(() => player().addToQueue(tr(3)));
+    const at = player().queue.tracks.findIndex((t) => t.id === 4);
+    act(() => player().removeAt(at));
+    act(() => player().addToQueue(tr(4))); // removed, then queued again
+    expect(ids(player()).slice(0, 3)).toEqual([1, 3, 4]);
+    act(() => player().setShuffle(false));
+    expect(ids(player())).toEqual([1, 3, 4, 2, 5]);
+  });
+});

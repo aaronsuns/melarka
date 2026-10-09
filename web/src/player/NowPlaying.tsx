@@ -12,7 +12,7 @@ import { RepeatIcon, RepeatOneIcon, ShuffleIcon } from "../components/icons";
 import type { Lyrics } from "../api/types";
 import { hasLyrics, LyricStrip, LyricsView, syncedLines } from "./Lyrics";
 import { usePlayer, usePlayerProgress } from "./PlayerProvider";
-import { upcoming } from "./queue";
+import { QueueSheet } from "./QueueSheet";
 
 const DELETE_ARM_MS = 5000;
 
@@ -171,7 +171,6 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
   }
   const fav = favoriteOverride && favoriteOverride.id === track.id ? favoriteOverride.value : track.favorite;
   const pos = scrub ?? progress.position;
-  const queueUpcoming = upcoming(p.queue);
 
   async function run(id: number, fn: () => Promise<void>) {
     if (busy.current) return;
@@ -202,16 +201,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
         </span>
       </div>
       {showQueue ? (
-        <ul className="now-queue">
-          {queueUpcoming.map((q, i) => (
-            <li key={`${p.queue.index + 1 + i}-${q.id}`}>
-              <button className="row" onClick={() => p.jump(p.queue.index + 1 + i)}>
-                <span className="ellipsis">{q.title}</span><span className="muted small ellipsis">{q.artist}</span>
-              </button>
-            </li>
-          ))}
-          {queueUpcoming.length === 0 && <li className="muted">{p.modes.repeat === "all" ? t("now.repeatAllEnd") : t("now.radioEnd")}</li>}
-        </ul>
+        <QueueSheet />
       ) : showLyrics ? (
         <LyricsView key={track.id} lyrics={lyrics} trackId={track.id} onEmptied={() => setForcedLyricsId(track.id)} />
       ) : (
