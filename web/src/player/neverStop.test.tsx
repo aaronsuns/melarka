@@ -571,3 +571,37 @@ describe("lookahead", () => {
     }
   });
 });
+
+// Shuffle and repeat stored as off: the end of the queue is exactly as before
+// (a cached favorite while hidden, and the radio refill).
+describe("with play modes stored as off", () => {
+  beforeEach(() => localStorage.setItem("lark.modes", JSON.stringify({ shuffle: false, repeat: "off", original: null })));
+
+  test("hidden at the very end of the queue, a cached favorite still keeps it going", () => {
+    favs = [{ track: tr(9), lastPlayedAt: 0 }];
+    const { audio, player } = setup();
+    expect(player().modes).toEqual({ shuffle: false, repeat: "off" });
+    act(() => player().playList([tr(1)], 0));
+    hidden = true;
+    act(() => audio.fire("ended"));
+    expect(player().current?.id).toBe(9);
+    expect(ids(player())).toEqual([1, 9]);
+    expect(player().playing).toBe(true);
+  });
+
+  test("near the end of the queue, the radio refill still runs", async () => {
+    const radio = vi.fn(() => ({ body: [tr(10), tr(11)] }));
+    const { player } = setup({ "GET /api/v1/radio/next": radio });
+    act(() => player().playList([tr(1), tr(2)], 0));
+    await waitFor(() => expect(ids(player())).toEqual([1, 2, 10, 11]));
+    expect(radio).toHaveBeenCalledTimes(1);
+  });
+
+  test("visible at the end of an unrefillable queue, it stops as before", () => {
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1)], 0));
+    act(() => audio.fire("ended"));
+    expect(player().current?.id).toBe(1);
+    expect(player().playing).toBe(false);
+  });
+});

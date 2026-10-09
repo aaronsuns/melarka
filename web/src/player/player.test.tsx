@@ -910,3 +910,166 @@ test("loudness normalization off plays at unity, and the switch applies at once 
   rerender(ui(false));
   expect(audio.volume).toBe(1);
 });
+
+// Shuffle and repeat. Modes are stored per device ("lark.modes", or
+// "lark.modes.<userId>") and read when the player mounts.
+describe("shuffle and repeat", () => {
+  const storeModes = (m: object, key = "lark.modes") => localStorage.setItem(key, JSON.stringify(m));
+  const ids = (p: Player) => p.queue.tracks.map((t) => t.id);
+  const listenFor = (audio: FakeAudio, seconds: number) => {
+    for (let s = 1; s <= seconds; s++) {
+      audio.currentTime = s;
+      act(() => audio.fire("timeupdate"));
+    }
+  };
+  afterEach(() => vi.restoreAllMocks());
+
+  test("repeat one: a natural end replays the same track, and each loop is a new play", async () => {
+    storeModes({ shuffle: false, repeat: "one", original: null });
+    // The server is down: the events stay buffered, where they can be counted.
+    const { audio, player } = setup({ "POST /api/v1/events/play": () => ({ status: 500, body: {} }) });
+    act(() => player().playList([tr(1), tr(2), tr(3)], 0));
+    expect(player().modes).toEqual({ shuffle: false, repeat: "one" });
+    listenFor(audio, 5);
+    act(() => audio.fire("ended"));
+    expect(audio.src).toContain("/tracks/1/");
+    expect(player().current?.id).toBe(1);
+    expect(player().queue.index).toBe(0);
+    expect(audio.play).toHaveBeenCalledTimes(2);
+    listenFor(audio, 5);
+    act(() => audio.fire("ended"));
+    expect(audio.src).toContain("/tracks/1/");
+    expect(audio.play).toHaveBeenCalledTimes(3);
+    await waitFor(() => {
+      const pending = JSON.parse(localStorage.getItem("lark.pendingEvents") ?? "[]") as { track_id: number; skipped: boolean }[];
+      expect(pending.map((e) => [e.track_id, e.skipped])).toEqual([[1, false], [1, false]]);
+    });
+  });
+
+  test("repeat one: next() still moves to the next track", () => {
+    storeModes({ shuffle: false, repeat: "one", original: null });
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3)], 0));
+    act(() => player().next());
+    expect(audio.src).toContain("/tracks/2/");
+    expect(player().current?.id).toBe(2);
+  });
+
+  test("repeat all: the end of the queue plays its first track again, with no refill", async () => {
+    storeModes({ shuffle: false, repeat: "all", original: null });
+    const radio = vi.fn(() => ({ body: [tr(10)] }));
+    // Both shuffle and favorites refills ask /tracks/random.
+    const random = vi.fn(() => ({ body: [tr(20)] }));
+    const { audio, player } = setup({ "GET /api/v1/radio/next": radio, "GET /api/v1/tracks/random": random });
+    act(() => player().playList([tr(1), tr(2), tr(3)], 0));
+    act(() => audio.fire("ended"));
+    act(() => audio.fire("ended"));
+    expect(player().current?.id).toBe(3);
+    act(() => audio.fire("ended"));
+    expect(player().current?.id).toBe(1);
+    expect(player().queue.index).toBe(0);
+    expect(audio.src).toContain("/tracks/1/");
+    expect(audio.play).toHaveBeenCalledTimes(4);
+    expect(ids(player())).toEqual([1, 2, 3]);
+    // A shuffle and a favorites queue don't refill either.
+    act(() => player().playList([tr(4), tr(5)], 0, { source: "shuffle" }));
+    act(() => player().playList([tr(6), tr(7)], 0, { source: "favorites" }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(radio).not.toHaveBeenCalled();
+    expect(random).not.toHaveBeenCalled();
+  });
+
+  test("repeat all: next() at the last track wraps too", () => {
+    storeModes({ shuffle: false, repeat: "all", original: null });
+    const { player } = setup();
+    act(() => player().playList([tr(1), tr(2)], 1));
+    act(() => player().next());
+    expect(player().current?.id).toBe(1);
+    expect(player().queue.index).toBe(0);
+  });
+
+  test("repeat all with shuffle: each new pass is a fresh permutation from index 0", () => {
+    storeModes({ shuffle: true, repeat: "all", original: null });
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3), tr(4)], 3));
+    act(() => audio.fire("ended"));
+    expect(player().queue.index).toBe(0);
+    expect([...ids(player())].sort()).toEqual([1, 2, 3, 4]);
+    expect(ids(player())).not.toEqual([1, 2, 3, 4]);
+    expect(audio.src).toContain(`/tracks/${ids(player())[0]}/`);
+    expect(player().queue.source).toBe("list");
+  });
+
+  test("shuffle on mid-queue keeps the current track playing and permutes the rest; off restores it", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3), tr(4), tr(5), tr(6)], 1));
+    audio.currentTime = 42;
+    const src = audio.src;
+    act(() => player().setShuffle(true));
+    expect(player().modes.shuffle).toBe(true);
+    expect(audio.src).toBe(src);
+    expect(audio.currentTime).toBe(42);
+    expect(audio.load).not.toHaveBeenCalled();
+    expect(audio.play).toHaveBeenCalledTimes(1);
+    expect(player().queue.index).toBe(1);
+    expect(ids(player()).slice(0, 2)).toEqual([1, 2]);
+    expect([...ids(player()).slice(2)].sort()).toEqual([3, 4, 5, 6]);
+    expect(ids(player())).not.toEqual([1, 2, 3, 4, 5, 6]);
+    act(() => player().setShuffle(false));
+    expect(player().modes.shuffle).toBe(false);
+    expect(ids(player())).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(audio.src).toBe(src);
+    expect(audio.currentTime).toBe(42);
+  });
+
+  test("with shuffle on, a newly played list is shuffled after the chosen track", () => {
+    storeModes({ shuffle: true, repeat: "off", original: null });
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2), tr(3), tr(4), tr(5)], 1));
+    expect(audio.src).toContain("/tracks/2/");
+    expect(ids(player()).slice(0, 2)).toEqual([1, 2]);
+    expect(ids(player())).not.toEqual([1, 2, 3, 4, 5]);
+    act(() => player().setShuffle(false));
+    expect(ids(player())).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  test("cycleRepeat goes off → all → one → off", () => {
+    const { player } = setup();
+    expect(player().modes).toEqual({ shuffle: false, repeat: "off" });
+    expect(player().modesAvailable).toBe(true);
+    act(() => player().cycleRepeat());
+    expect(player().modes.repeat).toBe("all");
+    act(() => player().cycleRepeat());
+    expect(player().modes.repeat).toBe("one");
+    act(() => player().cycleRepeat());
+    expect(player().modes.repeat).toBe("off");
+  });
+
+  test("modes persist per user and are read back on mount", () => {
+    mockFetch({
+      "GET /api/v1/queue": () => ({ body: { queue: { track_ids: [], current_index: 0, position_ms: 0, version: 0, updated_by: "", updated_at: 0 }, tracks: [] } }),
+      "PUT /api/v1/queue": () => ({ status: 200, body: {} }),
+      "GET /api/v1/radio/next": () => ({ body: [] }),
+    });
+    let p!: Player;
+    function Probe() {
+      p = usePlayer();
+      return null;
+    }
+    const mount = (userId: number) =>
+      render(<PlayerProvider audio={new FakeAudio() as unknown as HTMLAudioElement} userId={userId}><Probe /></PlayerProvider>);
+    const first = mount(1);
+    act(() => p.setShuffle(true));
+    act(() => p.cycleRepeat());
+    expect(JSON.parse(localStorage.getItem("lark.modes.1")!)).toMatchObject({ shuffle: true, repeat: "all" });
+    first.unmount();
+    const again = mount(1);
+    expect(p.modes).toEqual({ shuffle: true, repeat: "all" });
+    again.unmount();
+    mount(2);
+    expect(p.modes).toEqual({ shuffle: false, repeat: "off" });
+  });
+});

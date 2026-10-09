@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { Track } from "../api/types";
 import { chooseNext, type ChooseDeps } from "./nextTrack";
+import type { ChooseOpts } from "./nextTrack";
 import { queueReducer, type QueueState } from "./queue";
 
 const tr = (id: number) => ({ id, title: `t${id}` }) as Track;
@@ -73,5 +74,39 @@ describe("chooseNext", () => {
   test("offline, tracks that can't play are skipped (and said so)", () => {
     const c = chooseNext(q([1, 2, 3]), { mustBeLocal: false, favoritesAtEnd: false }, deps({ playable: (id) => id === 3 }));
     expect(c).toMatchObject({ kind: "queue", index: 2, skippedOffline: true });
+  });
+});
+
+describe("chooseNext with wrap (repeat all)", () => {
+  // Every existing case, as [queue, opts, deps].
+  const cases: [string, QueueState, ChooseOpts, ChooseDeps][] = [
+    ["cached next", q([1, 2, 3]), { mustBeLocal: true, favoritesAtEnd: true }, deps({ cached: [2] })],
+    ["visible uncached", q([1, 2, 3]), { mustBeLocal: false, favoritesAtEnd: false }, deps({ cached: [3] })],
+    ["hidden, later cached", q([1, 2, 3, 4]), { mustBeLocal: true, favoritesAtEnd: true }, deps({ cached: [4] })],
+    ["hidden, favorite", q([1, 2, 3]), { mustBeLocal: true, favoritesAtEnd: true }, deps({ favs: [[10, NOW - 60_000], [11, 0], [1, 0]] })],
+    ["all favorites recent", q([1, 2]), { mustBeLocal: true, favoritesAtEnd: true }, deps({ favs: [[1, NOW], [10, NOW - 1000]] })],
+    ["favorite in history", q([5, 1, 2], 1), { mustBeLocal: true, favoritesAtEnd: true }, deps({ favs: [[5, 0], [6, 0]] })],
+    ["nothing cached", q([1, 2]), { mustBeLocal: true, favoritesAtEnd: true }, deps()],
+    ["failed skipped", q([1, 2, 3]), { mustBeLocal: false, favoritesAtEnd: false }, deps({ failedIds: [2] })],
+    ["end, favorite", q([1, 2], 1), { mustBeLocal: false, favoritesAtEnd: true }, deps({ favs: [[9, 0]] })],
+    ["end, none", q([1, 2], 1), { mustBeLocal: false, favoritesAtEnd: false }, deps({ favs: [[9, 0]] })],
+    ["offline skip", q([1, 2, 3]), { mustBeLocal: false, favoritesAtEnd: false }, deps({ playable: (id) => id === 3 })],
+  ];
+
+  test.each(cases)("wrap: false changes nothing (%s)", (_, s, opts, d) => {
+    expect(chooseNext(s, { ...opts, wrap: false }, d)).toEqual(chooseNext(s, opts, d));
+  });
+
+  test.each(cases.filter(([, s]) => s.index < s.tracks.length - 1))("wrap: true with tracks left changes nothing (%s)", (_, s, opts, d) => {
+    expect(chooseNext(s, { ...opts, wrap: true }, d)).toEqual(chooseNext(s, opts, d));
+  });
+
+  test("at the end of the queue, wrap starts over instead of a favorite or none", () => {
+    const favs = deps({ favs: [[9, 0]], cached: [9] });
+    expect(chooseNext(q([1, 2], 1), { mustBeLocal: false, favoritesAtEnd: true, wrap: true }, favs)).toEqual({ kind: "wrap" });
+    expect(chooseNext(q([1, 2], 1), { mustBeLocal: true, favoritesAtEnd: true, wrap: true }, favs)).toEqual({ kind: "wrap" });
+    expect(chooseNext(q([1, 2], 1), { mustBeLocal: false, favoritesAtEnd: false, wrap: true }, deps())).toEqual({ kind: "wrap" });
+    // Only failed tracks left: nothing to play after the current one either.
+    expect(chooseNext(q([1, 2, 3], 1), { mustBeLocal: false, favoritesAtEnd: false, wrap: true }, deps({ failedIds: [3] }))).toEqual({ kind: "wrap" });
   });
 });

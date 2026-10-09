@@ -16,6 +16,10 @@ const NOTICE_MS = 4000;
 const READY_AFTER_MS = 1500;
 // flushEvents gives up waiting for native's `flushed` after this long.
 const FLUSH_TIMEOUT_MS = 3000;
+// The native engine has no shuffle/repeat yet: the buttons stay hidden and
+// the queue keeps its never-stop behaviour.
+const NO_MODES = { shuffle: false, repeat: "off" } as const;
+const noop = () => {};
 
 function storedQuality(): Quality {
   const q = localStorage.getItem("lark.quality");
@@ -258,6 +262,7 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true }: Pla
     () => ({
       queue, current: cur, playing, quality, error, notice, showNotice, needsTap: false,
       playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
+      modes: NO_MODES, modesAvailable: false, setShuffle: noop, cycleRepeat: noop,
     }),
     [
       queue, cur, playing, quality, error, notice, showNotice, playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove,

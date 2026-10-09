@@ -15,6 +15,7 @@ import { claimSession, onSessionClaim, ownsSession } from "./sessionOwner";
 import { appendable, current, emptyQueue, needsRefill, queueReducer, upcoming, type QueueAction, type QueueState } from "./queue";
 import { hasNative } from "../native/bridge";
 import { gainFactor } from "./gain";
+import { loadModes, newPass, nextRepeat, saveModes, shuffleUpcoming, unshuffleUpcoming, type PlayModes, type StoredModes } from "./modes";
 import { NativePlayerProvider } from "./NativePlayerProvider";
 
 export interface Player {
@@ -70,6 +71,14 @@ export interface Player {
   // False until the boot (resume / shuffle on open) has settled: the idle
   // mini player must not offer a shortcut that would race the restore.
   ready: boolean;
+  // Shuffle and repeat. With repeat off the queue never stops (refills), as
+  // without modes; repeat all loops the queue instead; repeat one replays a
+  // track at its natural end (next/previous still move).
+  modes: PlayModes;
+  // False where the engine can't do modes (an iPhone app older than this web): the buttons are hidden.
+  modesAvailable: boolean;
+  setShuffle(on: boolean): void;
+  cycleRepeat(): void;
 }
 
 export interface PlayerProgress {
@@ -252,6 +261,19 @@ function WebPlayerProvider({
 
   const queueRef = useRef(queue);
   queueRef.current = queue;
+  // Shuffle/repeat, per device and user. Read in event handlers through the
+  // ref (an "ended" must see a change made a moment before).
+  const [modes, setModesState] = useState<StoredModes>(() => loadModes(userId));
+  const modesRef = useRef(modes);
+  modesRef.current = modes;
+  const updateModes = useCallback(
+    (m: StoredModes) => {
+      modesRef.current = m;
+      setModesState(m);
+      saveModes(userId, m);
+    },
+    [userId],
+  );
   const qualityRef = useRef(quality);
   qualityRef.current = quality;
   const loadedId = useRef<number | null>(null);
@@ -472,7 +494,7 @@ function WebPlayerProvider({
   // track already on the phone, when there is one.
   const changeOpts = useCallback((): ChooseOpts => {
     const away = isHidden() || !isOnline();
-    return { mustBeLocal: away, favoritesAtEnd: away };
+    return { mustBeLocal: away, favoritesAtEnd: away, wrap: modesRef.current.repeat === "all" };
   }, []);
 
   // Plays a choice synchronously — no render round-trip, no timer: in the
@@ -482,6 +504,20 @@ function WebPlayerProvider({
   const go = useCallback(
     (c: NextChoice, notice?: string, o: { picked?: boolean; requeue?: Track | null } = {}): boolean => {
       if (c.kind === "none") return false;
+      if (c.kind === "wrap") {
+        // Repeat all: the whole queue again from its first track (offline,
+        // from the first one that can play).
+        const nq = newPass(queueRef.current, modesRef.current.shuffle);
+        if (nq.tracks.length === 0) return false;
+        const j = playableNow(nq.tracks[0].id) ? 0 : firstPlayable(nq.tracks, 0);
+        const i = j >= 0 ? j : 0;
+        queueRef.current = { ...nq, index: i };
+        dispatch({ type: "setOrder", tracks: nq.tracks, index: i });
+        load(nq.tracks[i], { autoplay: wantPlay.current, index: i, picked: o.picked });
+        if (i > 0) showNotice(t("player.skippedUncached"));
+        else if (notice) showNotice(notice);
+        return true;
+      }
       const requeue = o.requeue ?? undefined;
       const action: QueueAction =
         c.kind === "queue" ? { type: "advance", to: c.index, requeue } : { type: "advanceInsert", track: c.track, requeue };
@@ -654,6 +690,11 @@ function WebPlayerProvider({
       // the finished one, or it would start downloading in that very gap.
       setBuffering(true);
       if (done) notePlayed(done, true);
+      // Repeat one: the same track again — a new listen, so a new play event.
+      if (modesRef.current.repeat === "one" && done) {
+        load(done, { autoplay: true, index: queueRef.current.index });
+        return;
+      }
       if (!go(choose(changeOpts()))) stop(null);
     };
     // A track that doesn't come from the phone and isn't moving: switch to
@@ -873,10 +914,18 @@ function WebPlayerProvider({
       errors.current = 0;
       setError(null);
       wantPlay.current = true;
-      dispatch({ type: "playList", tracks, start: i, source: opts?.source });
-      load(tracks[i], { autoplay: true, index: i, picked: true }); // synchronous play(): iOS only allows it inside the tap handler
+      let order = tracks;
+      const m = modesRef.current;
+      if (m.shuffle) {
+        // Shuffle stays on for a new list: what follows the chosen track is shuffled.
+        const s = shuffleUpcoming({ tracks, index: i, source: "list" });
+        order = s.queue.tracks;
+        updateModes({ ...m, original: s.original });
+      }
+      dispatch({ type: "playList", tracks: order, start: i, source: opts?.source });
+      load(order[i], { autoplay: true, index: i, picked: true }); // synchronous play(): iOS only allows it inside the tap handler
     },
-    [load, showNotice],
+    [load, showNotice, updateModes],
   );
 
   const shuffleAll = useCallback(async () => {
@@ -974,6 +1023,30 @@ function WebPlayerProvider({
     [load, showNotice],
   );
   const enqueueNext = useCallback((t: Track) => dispatch({ type: "enqueueNext", track: t }), []);
+  // Neither touches the element: the current track plays on.
+  const setShuffle = useCallback(
+    (on: boolean) => {
+      const m = modesRef.current;
+      if (m.shuffle === on) return;
+      const q = queueRef.current;
+      if (on) {
+        const { queue: nq, original } = shuffleUpcoming(q);
+        queueRef.current = nq;
+        dispatch({ type: "setOrder", tracks: nq.tracks, index: nq.index });
+        updateModes({ ...m, shuffle: true, original });
+      } else {
+        const nq = unshuffleUpcoming(q, m.original ?? []);
+        queueRef.current = nq;
+        dispatch({ type: "setOrder", tracks: nq.tracks, index: nq.index });
+        updateModes({ ...m, shuffle: false, original: null });
+      }
+    },
+    [updateModes],
+  );
+  const cycleRepeat = useCallback(() => {
+    const m = modesRef.current;
+    updateModes({ ...m, repeat: nextRepeat(m.repeat) });
+  }, [updateModes]);
   const updateTrack = useCallback((t: Track) => dispatch({ type: "updateTrack", track: t }), []);
   const remove = useCallback(
     (trackId: number) => {
@@ -1039,7 +1112,9 @@ function WebPlayerProvider({
   // means the source is exhausted; for favorites only an empty answer does.
   // A failed request (e.g. no signal) is retried on the next queue change,
   // or after RADIO_RETRY_MS.
+  // Repeat all loops the queue as it is: no refill.
   useEffect(() => {
+    if (modes.repeat === "all") return;
     if (queue.tracks.length === 0 || !needsRefill(queue, isFailed) || refilling.current || radioExhausted.current) return;
     refilling.current = true;
     // Only the most recent ids: enough to avoid near repeats, and the
@@ -1069,7 +1144,7 @@ function WebPlayerProvider({
       .finally(() => {
         refilling.current = false;
       });
-  }, [queue, radioTick, isFailed]);
+  }, [queue, radioTick, isFailed, modes.repeat]);
 
   // While this track plays: the lyrics of the next one; the next few
   // transcoded on the server and downloaded to the phone (the offline
@@ -1395,14 +1470,16 @@ function WebPlayerProvider({
     };
   }, [audio]);
 
+  const shownModes = useMemo<PlayModes>(() => ({ shuffle: modes.shuffle, repeat: modes.repeat }), [modes.shuffle, modes.repeat]);
   const value = useMemo<Player>(
     () => ({
       queue, current: cur, playing, quality, error, notice, showNotice, needsTap,
       playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
+      modes: shownModes, modesAvailable: true, setShuffle, cycleRepeat,
     }),
     [
       queue, cur, playing, quality, error, notice, showNotice, needsTap, playList, enqueueNext, toggle, play, pause, next, prev, seek, jump, remove,
-      updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
+      updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready, shownModes, setShuffle, cycleRepeat,
     ],
   );
   const progress = useMemo<PlayerProgress>(() => ({ position, duration }), [position, duration]);

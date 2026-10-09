@@ -209,7 +209,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
               </button>
             </li>
           ))}
-          {queueUpcoming.length === 0 && <li className="muted">{t("now.radioEnd")}</li>}
+          {queueUpcoming.length === 0 && <li className="muted">{p.modes.repeat === "all" ? t("now.repeatAllEnd") : t("now.radioEnd")}</li>}
         </ul>
       ) : showLyrics ? (
         <LyricsView key={track.id} lyrics={lyrics} trackId={track.id} onEmptied={() => setForcedLyricsId(track.id)} />
@@ -239,9 +239,23 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
       />
       <div className="now-times muted small"><span>{duration(pos * 1000)}</span><span>-{duration(Math.max(0, progress.duration - pos) * 1000)}</span></div>
       <div className="now-controls">
+        {p.modesAvailable && (
+          <button className="icon mode" aria-label={t("now.shuffle")} aria-pressed={p.modes.shuffle} onClick={() => p.setShuffle(!p.modes.shuffle)}>🔀</button>
+        )}
         <button className="icon big" aria-label={t("common.previous")} onClick={p.prev}>⏮</button>
         <button className="icon huge" aria-label={p.playing ? t("common.pause") : t("common.play")} onClick={p.toggle}>{p.playing ? "⏸" : "▶"}</button>
         <button className="icon big" aria-label={t("common.next")} onClick={p.next}>⏭</button>
+        {p.modesAvailable && (
+          <button
+            className="icon mode"
+            aria-label={t(`now.repeat.${p.modes.repeat}`)}
+            aria-pressed={p.modes.repeat !== "off"}
+            data-repeat={p.modes.repeat}
+            onClick={p.cycleRepeat}
+          >
+            {p.modes.repeat === "one" ? "🔂" : "🔁"}
+          </button>
+        )}
       </div>
       <div className="now-actions">
         <button

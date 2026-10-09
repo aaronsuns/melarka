@@ -141,3 +141,12 @@ test("needsRefill counts only upcoming tracks that haven't failed", () => {
   expect(needsRefill(s)).toBe(false);
   expect(needsRefill(s, (id) => id === 2 || id === 3)).toBe(true);
 });
+
+test("setOrder replaces the order and index but keeps the source", () => {
+  const s = r(emptyQueue, { type: "playList", tracks: list, start: 1, source: "favorites" });
+  const o = r(s, { type: "setOrder", tracks: [tr(1), tr(2), tr(5), tr(3), tr(4)], index: 1 });
+  expect(o.tracks.map((t) => t.id)).toEqual([1, 2, 5, 3, 4]);
+  expect(o.index).toBe(1);
+  expect(o.source).toBe("favorites");
+  expect(r(s, { type: "setOrder", tracks: [tr(1)], index: 9 }).index).toBe(0);
+});

@@ -24,6 +24,9 @@ export interface ChooseOpts {
   mustBeLocal: boolean;
   // Nothing usable left in the queue: play a cached favorite.
   favoritesAtEnd: boolean;
+  // Repeat all: with nothing after the current track, start the queue over
+  // (instead of a favorite, or stopping).
+  wrap?: boolean;
 }
 
 export type NextChoice =
@@ -31,6 +34,8 @@ export type NextChoice =
   | { kind: "queue"; index: number; local: boolean; skippedOffline: boolean }
   // Put this cached favorite after the current one and play it.
   | { kind: "favorite"; track: Track }
+  // Repeat all: the queue starts over from its first track.
+  | { kind: "wrap" }
   | { kind: "none" };
 
 // A favorite played this recently (on this device), or this far back in the
@@ -51,6 +56,7 @@ export function pickFavorite(q: QueueState, deps: ChooseDeps): Track | null {
 export function chooseNext(q: QueueState, opts: ChooseOpts, deps: ChooseDeps): NextChoice {
   const cands: number[] = [];
   for (let i = q.index + 1; i < q.tracks.length; i++) if (!deps.failed(q.tracks[i].id)) cands.push(i);
+  if (opts.wrap && cands.length === 0) return { kind: "wrap" };
   // Offline: only what can play (with nothing playable, they're tried as before).
   const playable = cands.filter((i) => deps.playable(q.tracks[i].id));
   const pool = playable.length > 0 ? playable : cands;
