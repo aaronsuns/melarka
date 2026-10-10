@@ -8,6 +8,12 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A track stuck at 0:00 while "playing"**: in browsers whose media engine can stall with the
+  audio already downloaded (WebKit on Linux), the web player now reloads the track where it
+  stands after 2.5 s, at most twice per track, instead of showing a frozen track.
+
 ## [0.2.1] - 2026-10-10
 
 ### Added
