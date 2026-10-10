@@ -1,4 +1,4 @@
-import { devices, expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { devices, expect, test, type Browser, type BrowserContext, type Page } from "./fixtures";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { login, loginWith } from "./playback";

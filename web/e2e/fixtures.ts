@@ -1,7 +1,7 @@
 import { test as base, expect } from "@playwright/test";
 
-export { expect } from "@playwright/test";
-export type { Page, TestInfo } from "@playwright/test";
+export { devices, expect } from "@playwright/test";
+export type { Browser, BrowserContext, Locator, Page, TestInfo } from "@playwright/test";
 
 // The e2e server and its fakes are all on 127.0.0.1 (start-server.sh points
 // LARK_YOUTUBE_THUMB_URL at the local feed server), so no page should ask the

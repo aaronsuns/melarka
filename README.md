@@ -40,6 +40,9 @@ Demo data: invented songs and channels, generated test tones and covers.</sub></
   lock-screen controls.
 - **An iPhone app** with a native playback engine: background play, gapless transitions, an
   offline cache of your favorites, and Shortcuts to start playing when the car connects.
+- **Now Playing** with shuffle and repeat (all or one), a sleep timer that fades out, volume
+  normalization that turns loud songs down, and a queue you edit by hand: add to it, drag to
+  reorder, swipe to remove.
 - **Synced lyrics** from the file itself, a `.lrc` next to it, or online lyrics services.
   Everyone can fix lyrics that run early or late (shift them, or align to the line being sung)
   and report wrong lyrics, which brings up the next best version.
