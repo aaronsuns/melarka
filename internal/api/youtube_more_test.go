@@ -160,14 +160,36 @@ func TestYouTubePlaylistEntries(t *testing.T) {
 	if len(calls) != 1 || !strings.HasSuffix(strings.Join(calls[0], " "), want) {
 		t.Fatalf("want one cached flat-playlist run ending %q, got %v", want, calls)
 	}
-	// The next page asks for more (bounded at 200, the download cap).
-	for n, end := range map[string]string{"100": "100", "51": "100", "5000": "200"} {
-		do(t, ts, tok, "GET", "/api/v1/youtube/playlist/entries?list=PLtestlist0001&n="+n, nil)
+	// The next page asks for more (rounded up to a whole page, bounded at 200,
+	// the download cap). Each rounded size has its own cache entry, so 51 after
+	// 100 is answered from the cache, and 200 is never cut down to answer 100.
+	// In a fixed order: which request runs yt-dlp depends on the ones before it.
+	for _, c := range []struct {
+		n, end string // end "": served from the cache, no new run
+		more   bool   // the playlist has 120 videos; 200 is the cap
+	}{{"100", "100", true}, {"51", "", true}, {"5000", "200", false}, {"100", "", true}} {
+		before := fr.callCount()
+		r, b := do(t, ts, tok, "GET", "/api/v1/youtube/playlist/entries?list=PLtestlist0001&n="+c.n, nil)
+		if r.StatusCode != 200 {
+			t.Fatalf("n=%s: %d %s", c.n, r.StatusCode, b)
+		}
+		var res struct {
+			More bool `json:"more"`
+		}
+		if err := json.Unmarshal(b, &res); err != nil || res.More != c.more {
+			t.Fatalf("n=%s: want more=%v, got %s", c.n, c.more, b)
+		}
 		fr.mu.Lock()
-		last := strings.Join(fr.calls[len(fr.calls)-1], " ")
+		calls := fr.calls[before:]
 		fr.mu.Unlock()
-		if !strings.Contains(last, "--playlist-end "+end+" ") {
-			t.Fatalf("n=%s: %s", n, last)
+		if c.end == "" {
+			if len(calls) != 0 {
+				t.Fatalf("n=%s: want a cache hit, got runs %v", c.n, calls)
+			}
+			continue
+		}
+		if len(calls) != 1 || !strings.Contains(strings.Join(calls[0], " "), "--playlist-end "+c.end+" ") {
+			t.Fatalf("n=%s: want one run with --playlist-end %s, got %v", c.n, c.end, calls)
 		}
 	}
 	for _, bad := range []string{"list=RDxyzxyzxyzxyz", "list=", "list=--exec=x", "list=short", "list=PLtestlist0001&n=0", "list=PLtestlist0001&n=x"} {
