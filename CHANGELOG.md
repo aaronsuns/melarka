@@ -12,7 +12,8 @@ the iPhone app share one version number.
 
 ### Added
 
-- **Shuffle and repeat** (all, one) in Now Playing, the iPhone app, the lock screen and the car.
+- **Shuffle and repeat** (all, one) in Now Playing and the iPhone app; car head units and Siri
+  that support it can change them too.
   With repeat off the queue still never stops: radio and favorites refills carry on as before.
   The choice is kept per device.
 - **Sleep timer**: 15, 30, 45 or 60 minutes, or the end of the current track, with a 10-second
@@ -34,6 +35,8 @@ the iPhone app share one version number.
 ### Fixed
 
 - The lyrics view no longer shows a horizontal scrollbar, or a vertical one on desktop.
+- iPhone app: a track handed over with a start position could begin playing from the old
+  position before its seek landed.
 - Test reliability: the end-to-end tests no longer reach the Internet (local covers and a guard
   that fails any outside request), flaky timing-dependent tests are deterministic, and CI pulls
   its base images from a mirror instead of a rate-limited registry.
