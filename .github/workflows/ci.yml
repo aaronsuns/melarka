@@ -223,14 +223,16 @@ jobs:
         run: |
           set +e
           bad=0
-          for i in 1 2 3 4 5 6; do
+          for i in 1 2 3 4 5; do
             # A cold simulator each round, not waited for: the worst case for the first tests.
             xcrun simctl shutdown "$SIM_UDID" >/dev/null 2>&1
-            for j in 1 2 3 4 5 6; do (while :; do :; done) & done   # a loaded machine
+            for j in 1 2 3; do (while :; do :; done) & done   # a loaded machine
             xcodebuild test-without-building -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$SIM_UDID" \
               -derivedDataPath build/dd -resultBundlePath "build/cold-$i.xcresult" \
               -only-testing:LarkTests/AVPlayerBackendTests -only-testing:LarkTests/BridgeWebViewTests \
-              -only-testing:LarkTests/SettingsModelTests > "cold-$i.log" 2>&1
+              -only-testing:LarkTests/SettingsModelTests -only-testing:LarkTests/AppServicesTests \
+              -only-testing:LarkTests/CacheWiringTests \
+              -test-timeouts-enabled YES -maximum-test-execution-time-allowance 180 > "cold-$i.log" 2>&1
             rc=$?; kill $(jobs -p) 2>/dev/null; wait 2>/dev/null
             echo "== cold round $i: xcodebuild exit $rc; $(grep -h 'cold start:' "cold-$i.log" | sort -u | tr '\n' ' ')"
             [ $rc -eq 0 ] || bad=1

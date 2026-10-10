@@ -168,3 +168,17 @@ func XCTAssertThrowsErrorAsync<T>(_ expr: @autoclosure () async throws -> T, _ c
         print("cold start: audio ready in \(String(format: "%.1f", Date().timeIntervalSince(started))) s")
     }
 }
+
+// MARK: - Cookies
+
+extension WKHTTPCookieStore {
+    /// Sets `cookie` and waits until the store hands it back. `setCookie` can return before `allCookies()`
+    /// includes the cookie (the store forwards it to WebKit's network process, which a cold simulator may still
+    /// be starting), so code that reads the store next would not see it yet.
+    @MainActor func setCookieAndWait(_ cookie: HTTPCookie, file: StaticString = #filePath, line: UInt = #line) async throws {
+        await setCookie(cookie)
+        try await waitUntil(timeout: 30, file: file, line: line, state: { "cookie \(cookie.name) for \(cookie.domain) not in the store" }) {
+            await self.allCookies().contains { $0.name == cookie.name && $0.domain == cookie.domain && $0.value == cookie.value }
+        }
+    }
+}

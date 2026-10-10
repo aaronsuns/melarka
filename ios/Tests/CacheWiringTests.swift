@@ -175,7 +175,7 @@ import WebKit
         let props: [HTTPCookiePropertyKey: Any] = [.name: "lark_token", .value: "T2", .domain: "other.lark.test", .path: "/",
                                                    HTTPCookiePropertyKey("HttpOnly"): "TRUE"]
         let cookie = try XCTUnwrap(HTTPCookie(properties: props))
-        await cookies.setCookie(cookie)
+        try await cookies.setCookieAndWait(cookie)
         s.handle(.auth(signedIn: true, userId: 5))
         let other = caches.appendingPathComponent(AppServices.serverKey(otherServer))
         try await waitUntil { s.cache.localURL(trackID: 2) != nil }

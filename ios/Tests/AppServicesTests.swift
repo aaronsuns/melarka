@@ -3,6 +3,10 @@ import WebKit
 @testable import Lark
 
 final class AppServicesTests: XCTestCase {
+    override func setUp() async throws {
+        try await ColdStart.webKit()
+    }
+
     @MainActor func testSignOutDeletesTheSessionCookieSoItCannotBeHarvestedAgain() async throws {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: "lark.tests.\(UUID().uuidString)"))
         let s = AppServices(defaults: defaults, secrets: MemorySecretStore())
@@ -11,15 +15,18 @@ final class AppServicesTests: XCTestCase {
         let store = s.web(for: server).configuration.websiteDataStore.httpCookieStore
         let props: [HTTPCookiePropertyKey: Any] = [.name: "lark_token", .value: "T1", .domain: "signout.lark.test", .path: "/",
                                                    HTTPCookiePropertyKey("HttpOnly"): "TRUE"]
-        await store.setCookie(try XCTUnwrap(HTTPCookie(properties: props)))
-        await store.setCookie(try XCTUnwrap(HTTPCookie(properties: [.name: "other", .value: "keep", .domain: "signout.lark.test", .path: "/"])))
+        try await store.setCookieAndWait(try XCTUnwrap(HTTPCookie(properties: props)))
+        try await store.setCookieAndWait(try XCTUnwrap(HTTPCookie(properties: [.name: "other", .value: "keep", .domain: "signout.lark.test", .path: "/"])))
         await s.harvestCookies(userId: 3)
         XCTAssertEqual(s.auth.token, "T1")
 
         await s.signOut()
         XCTAssertNil(s.auth.token)
-        let left = await store.allCookies().filter { $0.domain == "signout.lark.test" }
-        XCTAssertEqual(left.map(\.name), ["other"])
+        var left: [HTTPCookie] = []
+        try await waitUntil(timeout: 30, state: { "left: \(left.map(\.name))" }) {
+            left = await store.allCookies().filter { $0.domain == "signout.lark.test" }
+            return left.map(\.name) == ["other"]
+        }
         await s.harvestCookies(userId: 3)
         XCTAssertNil(s.auth.token)
         for c in left { await store.deleteCookie(c) }
@@ -37,7 +44,7 @@ extension AppServicesTests {
         let store = s.web(for: server).configuration.websiteDataStore.httpCookieStore
         let props: [HTTPCookiePropertyKey: Any] = [.name: "lark_token", .value: "T9", .domain: "api401.lark.test", .path: "/",
                                                    HTTPCookiePropertyKey("HttpOnly"): "TRUE"]
-        await store.setCookie(try XCTUnwrap(HTTPCookie(properties: props)))
+        try await store.setCookieAndWait(try XCTUnwrap(HTTPCookie(properties: props)))
         await s.harvestCookies(userId: 1)
         XCTAssertEqual(s.auth.token, "T9")
 
@@ -45,8 +52,9 @@ extension AppServicesTests {
         StubURLProtocol.handler = { _ in (.status(401), Data()) }
         await XCTAssertThrowsErrorAsync(try await api.queue()) { XCTAssertEqual($0 as? LarkError, .unauthorized) }
         XCTAssertNil(s.auth.token)
-        let left = await store.allCookies().filter { $0.name == "lark_token" && $0.domain == "api401.lark.test" }
-        XCTAssertTrue(left.isEmpty)
+        try await waitUntil(timeout: 30, state: { "the session cookie is still in the store" }) {
+            await store.allCookies().filter { $0.name == "lark_token" && $0.domain == "api401.lark.test" }.isEmpty
+        }
     }
 }
 
