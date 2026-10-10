@@ -208,7 +208,6 @@ jobs:
           sys.stderr.write("simulator: %s, iOS %s\n" % (best[1]["name"], ".".join(map(str, best[0]))))
           print(best[1]["udid"])
           ')
-          echo "SIM_UDID=$udid" >> "$GITHUB_ENV"
           # Booted and finished booting before the tests start: left to xcodebuild, the first tests run while
           # the simulator is still starting its services.
           xcrun simctl boot "$udid" 2>/dev/null || true
@@ -218,30 +217,6 @@ jobs:
       - name: Why the unit tests failed
         if: failure()
         run: scripts/xcresult-failures.sh build/tests.xcresult
-      - name: TEMP cold-start stress
-        if: always()
-        timeout-minutes: 100
-        run: |
-          set +e
-          bad=0
-          run() { # name, extra args
-            local n=$1; shift
-            xcodebuild test-without-building -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$SIM_UDID" \
-              -derivedDataPath build/dd -resultBundlePath "build/$n.xcresult" \
-              -test-timeouts-enabled YES -maximum-test-execution-time-allowance 180 "$@" > "$n.log" 2>&1
-            local rc=$?; [ $rc -eq 0 ] || bad=1
-            echo "== $n: xcodebuild exit $rc; $(grep -h 'cold start:' "$n.log" | sort -u | tr '\n' ' ')"
-            scripts/xcresult-failures.sh "build/$n.xcresult"
-          }
-          for i in 1 2 3 4; do
-            # A cold simulator each round, not waited for: the worst case for the first tests.
-            xcrun simctl shutdown "$SIM_UDID" >/dev/null 2>&1
-            run "cold-$i" -only-testing:LarkTests/AVPlayerBackendTests -only-testing:LarkTests/BridgeWebViewTests \
-              -only-testing:LarkTests/SettingsModelTests -only-testing:LarkTests/AppServicesTests -only-testing:LarkTests/CacheWiringTests
-          done
-          xcrun simctl shutdown "$SIM_UDID" >/dev/null 2>&1
-          run whole-suite-x3 -test-iterations 3
-          exit $bad
       - run: python3 -m unittest discover -s scripts
 
   # Release gate: gitleaks over the full history + the private denylist (repository secret OSS_DENYLIST).
