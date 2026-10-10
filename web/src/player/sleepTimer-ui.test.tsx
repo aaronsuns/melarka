@@ -9,7 +9,7 @@ import { EpisodeMini } from "../channels/EpisodeMini";
 import { EpisodesProvider, useEpisodes, type EpisodesPlayer } from "../channels/EpisodesProvider";
 import type { NativeState } from "../native/bridge";
 import { installFakeNative, stateEvent, type FakeNative } from "../native/fakeNative";
-import { trackItem } from "../native/items";
+import { episodeItem, trackItem } from "../native/items";
 import { FakeAudio, mockFetch } from "../test/setup";
 import { renderWithApp } from "../test/render";
 import { MiniPlayer } from "./MiniPlayer";
@@ -461,6 +461,19 @@ describe("in the iPhone app", () => {
     advance(3000);
     state(null);
     expect(chip()).toBeNull();
+  });
+
+  // A reload's first states: the inactive kind's comes first, and its time left
+  // says nothing about the timer. Only the playing kind's state decides.
+  test("a reload under end of this episode reads the episode's state, not music's", () => {
+    renderNative();
+    n.emit({ type: "queue", kind: "episode", items: [episodeItem(ep(1))], index: 0, source: "list" });
+    state(100_000, { playing: false, positionMs: 10_000, durationMs: 200_000 });           // music, inactive
+    n.emit(stateEvent({ kind: "episode", itemId: "episode0001", playing: true, positionMs: 1_700_000, durationMs: 1_800_000, sleepRemainingMs: 100_000 }));
+    n.emit(stateEvent({ kind: "episode", itemId: "episode0001", playing: false, positionMs: 1_700_000, durationMs: 1_800_000, sleepRemainingMs: 100_000 }));
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 1:40");
+    advance(30_000);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 1:40");
   });
 
   test("a page reloaded while native's timer runs shows it", () => {

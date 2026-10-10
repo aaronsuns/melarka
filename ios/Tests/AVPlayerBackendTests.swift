@@ -244,12 +244,12 @@ extension AVPlayerBackendTests {
         let url = try silent(2)
         let b = AVPlayerBackend(); backend = b
         b.load(.file(url), startMs: 0, autoplay: false, rate: 1, gain: 0.5, generation: 1)
-        b.setGain(1)
+        b.setGain(1, next: 1)
         let item = try XCTUnwrap(b.player.currentItem as? LarkPlayerItem)
         try await waitUntil(timeout: 10) { item.status == .readyToPlay }
         try await Task.sleep(nanoseconds: 300_000_000)
         XCTAssertNil(item.audioMix, "the older 0.5 must not land after the newer 1")
-        b.setGain(0.25)
+        b.setGain(0.25, next: 1)
         try await waitUntil(timeout: 10) { item.audioMix != nil }
         XCTAssertEqual(try XCTUnwrap(mixVolume(item)), 0.25, accuracy: 0.0001)
     }
@@ -279,5 +279,79 @@ extension AVPlayerBackendTests {
         XCTAssertEqual(b.player.volume, 0.3, accuracy: 0.0001)
         b.setVolume(1)
         XCTAssertEqual(b.player.volume, 1)
+    }
+}
+
+// MARK: - No sound before the gain is set
+
+extension AVPlayerBackendTests {
+    /// Polls until `item` has its mix; true if the player ran at any moment before that.
+    func ranBeforeTheMix(_ b: AVPlayerBackend, _ item: AVPlayerItem) async throws -> Bool {
+        var ran = false
+        let deadline = Date().addingTimeInterval(10)
+        while item.audioMix == nil && Date() < deadline {
+            if b.player.rate != 0 { ran = true }
+            try await Task.sleep(nanoseconds: 2_000_000)
+        }
+        XCTAssertNotNil(item.audioMix)
+        return ran
+    }
+
+    func testAnAttenuatedLoadWaitsForItsMix() async throws {
+        let url = try silent(2)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(url), startMs: 0, autoplay: true, rate: 1, gain: 0.5, generation: 1)
+        XCTAssertEqual(b.player.rate, 0, "not playing at full level while the mix loads")
+        let item = try XCTUnwrap(b.player.currentItem)
+        let ran = try await ranBeforeTheMix(b, item)
+        XCTAssertFalse(ran)
+        try await waitUntil(timeout: 10) { d.started }
+        XCTAssertFalse(d.events.contains { $0.hasPrefix("paused:") }, "waiting for the mix is not a pause: \(d.events)")
+    }
+
+    func testAPlayCallWaitsForTheMixToo() async throws {
+        let url = try silent(2)
+        let b = AVPlayerBackend(); backend = b
+        b.load(.file(url), startMs: 0, autoplay: false, rate: 1, gain: 0.5, generation: 1)
+        b.play()
+        let item = try XCTUnwrap(b.player.currentItem)
+        let ran = try await ranBeforeTheMix(b, item)
+        XCTAssertFalse(ran)
+        try await waitUntil(timeout: 10) { b.player.rate != 0 }
+    }
+
+    /// A fast skip takes a preloaded item over before its mix has landed: it waits too.
+    func testAnAdoptedPreloadWaitsForItsMix() async throws {
+        let a = try silent(3), c = try silent(2)
+        let d = RecordingDelegate(); let b = AVPlayerBackend(); b.delegate = d; backend = b
+        b.load(.file(a), startMs: 0, autoplay: true, rate: 1, gain: 1, generation: 1)
+        b.preload(.file(c), gain: 0.25)
+        let next = try XCTUnwrap(b.player.items().last)
+        b.load(.file(c), startMs: 0, autoplay: true, rate: 1, gain: 0.25, generation: 2)
+        XCTAssertEqual(b.adoptedPreloads, 1)
+        XCTAssertTrue(b.player.currentItem === next)
+        let ran = try await ranBeforeTheMix(b, next)
+        XCTAssertFalse(ran)
+        try await waitUntil(timeout: 10) { d.has("started:2") }
+    }
+
+    func testUnityPlaysAtOnce() throws {
+        let url = try silent(2)
+        let b = AVPlayerBackend(); backend = b
+        b.load(.file(url), startMs: 0, autoplay: true, rate: 1, gain: 1, generation: 1)
+        XCTAssertNotEqual(b.player.rate, 0)
+    }
+
+    /// The loudness switch changes the preloaded item in place: the same item, nothing preloaded again.
+    func testSetGainChangesThePreloadedItemInPlace() async throws {
+        let a = try silent(3), c = try silent(2)
+        let b = AVPlayerBackend(); backend = b
+        b.load(.file(a), startMs: 0, autoplay: false, rate: 1, gain: 1, generation: 1)
+        b.preload(.file(c), gain: 1)
+        let next = try XCTUnwrap(b.player.items().last)
+        b.setGain(0.5, next: 0.25)
+        try await waitUntil(timeout: 10) { next.audioMix != nil }
+        XCTAssertTrue(b.player.items().last === next)
+        XCTAssertEqual(try XCTUnwrap(mixVolume(next)), 0.25, accuracy: 0.0001)
     }
 }

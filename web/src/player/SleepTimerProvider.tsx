@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useEpisodes, useEpisodesProgress } from "../channels/EpisodesProvider";
-import { hasNative, nativePost, onNative, type NativeState } from "../native/bridge";
+import { hasNative, nativePost, onNative, type ItemKind, type NativeState } from "../native/bridge";
 import { usePlayer, usePlayerProgress } from "./PlayerProvider";
 import { FADE_MS, FADE_STEP_MS, fadeSteps, type SleepChoice } from "./sleepTimer";
 
@@ -68,6 +68,8 @@ export function SleepTimerProvider({ children }: { children: ReactNode }) {
   // The app: native's timer, once a state has carried it (null until then: not available).
   const [nativeSleep, setNativeSleep] = useState<NativeSleep | null>(null);
   const pending = useRef<{ armed: boolean; at: number } | null>(null);
+  // Native's latest state of each kind (a reloaded page reads the playing kind's).
+  const lastStates = useRef<Partial<Record<ItemKind, NativeState>>>({});
 
   const setFadeAll = useCallback((f: number) => {
     playerRef.current.setFade(f);
@@ -160,6 +162,7 @@ export function SleepTimerProvider({ children }: { children: ReactNode }) {
       if (m.type !== "state") return;
       const ms = stateSleep(m);
       if (ms === undefined) return;
+      lastStates.current[m.kind] = m;
       const p = pending.current;
       // Already on its way when the last tap was posted: the tap stands.
       if (p && (ms !== null) !== p.armed && Date.now() - p.at < PENDING_MS) return;
@@ -168,11 +171,23 @@ export function SleepTimerProvider({ children }: { children: ReactNode }) {
       setNativeSleep((s) => (s && s.ms === null && ms === null ? s : { ms, at }));
       setNow(at);
       if (ms === null) setChoice(null);
-      else setChoice((c) => c ?? (m.durationMs > 0 && Math.abs(m.durationMs - m.positionMs - ms) <= SAME_MS ? { endOfTrack: true } : { minutes: 15 }));
     });
   }, [native]);
+  // A timer this page didn't set (it was reloaded): its kind, from the active kind's own state. The
+  // inactive kind's state, which may come first, says nothing about it.
+  const activeKind: ItemKind = eps.active && eps.current ? "episode" : "track";
+  let inferred: "endOfTrack" | "minutes" | null = null;
+  if (native && !choice && nativeSleep?.ms != null) {
+    const s = lastStates.current[activeKind];
+    const left = s ? stateSleep(s) : null;
+    inferred = s && left != null && s.durationMs > 0 && Math.abs(s.durationMs - s.positionMs - left) <= SAME_MS ? "endOfTrack" : "minutes";
+  }
+  const shown = useMemo<SleepChoice | null>(
+    () => choice ?? (inferred === "endOfTrack" ? { endOfTrack: true } : inferred === "minutes" ? { minutes: 15 } : null),
+    [choice, inferred],
+  );
   // A deadline counts down between native's states (none come while paused).
-  const nativeDeadline = native && choice !== null && "minutes" in choice && nativeSleep?.ms != null;
+  const nativeDeadline = native && shown !== null && "minutes" in shown && nativeSleep?.ms != null;
   useEffect(() => {
     if (!nativeDeadline) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -181,13 +196,13 @@ export function SleepTimerProvider({ children }: { children: ReactNode }) {
 
   let remainingMs = deadline === null ? null : Math.max(0, deadline - now);
   if (native) {
-    const ms = choice ? (nativeSleep?.ms ?? null) : null;
+    const ms = shown ? (nativeSleep?.ms ?? null) : null;
     remainingMs = ms === null ? null : nativeDeadline ? Math.max(0, ms - (now - nativeSleep!.at)) : ms;
   }
   const available = !native || nativeSleep !== null;
   const value = useMemo<SleepTimer>(
-    () => ({ choice, remainingMs, start, cancel, available }),
-    [choice, remainingMs, start, cancel, available],
+    () => ({ choice: shown, remainingMs, start, cancel, available }),
+    [shown, remainingMs, start, cancel, available],
   );
   return (
     <Ctx.Provider value={value}>

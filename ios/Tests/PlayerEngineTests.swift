@@ -483,13 +483,16 @@ extension PlayerEngineTests {
         engine.handle(.setQueue(SetQueue(kind: .track, items: [gainTrack(1, gainDB: -6), gainTrack(2, gainDB: -6)], index: 0,
                                          positionMs: 0, play: true, source: .list)))
         backend.start()
-        let loads = backend.loads.count
+        let loads = backend.loads.count, preloads = backend.preloads.count
         engine.handle(.setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: false)))
         XCTAssertEqual(backend.loads.count, loads, "not reloaded")
+        XCTAssertEqual(backend.preloads.count, preloads, "the preloaded item is changed in place, not preloaded again")
         XCTAssertEqual(backend.currentGains.last, 1)
-        XCTAssertEqual(backend.preloadGains.last, 1)
+        XCTAssertEqual(backend.nextGains.last, 1)
         engine.handle(.setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: true)))
         XCTAssertEqual(try XCTUnwrap(backend.currentGains.last), 0.501, accuracy: 0.001)
+        XCTAssertEqual(try XCTUnwrap(backend.nextGains.last), 0.501, accuracy: 0.001)
+        XCTAssertEqual(backend.preloads.count, preloads)
         // The same prefs again change nothing.
         let calls = backend.currentGains.count
         engine.handle(.setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: true)))

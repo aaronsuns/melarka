@@ -32,8 +32,9 @@ enum MediaSource: Equatable {
     func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, gain: Float, generation: Int)
     /// The next item, for a gapless change (AVQueuePlayer), with its own gain, so it starts at its level.
     func preload(_ s: MediaSource?, gain: Float)
-    /// The loaded item's gain changed (the loudness switch): applied in place, nothing is reloaded.
-    func setGain(_ g: Float)
+    /// The loudness switch: the loaded item's gain and the preloaded next item's, changed in place (nothing is
+    /// loaded or preloaded again, so the gapless change stays ready).
+    func setGain(_ g: Float, next: Float)
     /// The master volume, for the sleep timer's fade; independent of each item's gain, kept across items.
     func setVolume(_ v: Float)
     func play()
@@ -57,7 +58,7 @@ enum MediaSource: Equatable {
     private(set) var isPlaying = false
     func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, gain: Float, generation: Int) { positionMs = startMs; isPlaying = false }
     func preload(_ s: MediaSource?, gain: Float) {}
-    func setGain(_ g: Float) {}
+    func setGain(_ g: Float, next: Float) {}
     func setVolume(_ v: Float) {}
     func play() {}
     func pause() { isPlaying = false }

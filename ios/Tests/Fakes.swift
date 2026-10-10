@@ -15,6 +15,7 @@ import MediaPlayer
     var preloadGains: [Float] = []
     /// `setGain` calls (the current item's gain changed in place) and `setVolume` calls (the master volume).
     var currentGains: [Float] = []
+    var nextGains: [Float] = []
     var volumes: [Float] = []
     var calls: [String] = []
     var positionMs = 0
@@ -29,7 +30,7 @@ import MediaPlayer
         self.generation = generation
     }
     func preload(_ s: MediaSource?, gain: Float) { preloads.append(s); preloadGains.append(gain) }
-    func setGain(_ g: Float) { currentGains.append(g) }
+    func setGain(_ g: Float, next: Float) { currentGains.append(g); nextGains.append(next) }
     func setVolume(_ v: Float) { volumes.append(v) }
     func play() { calls.append("play"); isPlaying = true }
     func pause() { calls.append("pause"); isPlaying = false }

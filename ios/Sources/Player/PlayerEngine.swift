@@ -113,6 +113,8 @@ import os
     private var sleep: Sleep?
     /// The fade's start, then its steps.
     private var sleepJobs: [Cancellable] = []
+    /// The minutes timer's fade is running.
+    private var sleepFading = false
     /// The master volume the fade set last (1: no fade).
     private var fadeLevel: Float = 1
     var onEvent: ((NativeEvent) -> Void)?
@@ -328,6 +330,7 @@ import os
     func play() {
         let q = queue(active)
         guard q.current != nil else { return }
+        catchUpSleep(playing: false)
         pausedBySystem = false
         if loaded?.kind == active {
             willStartPlayback?()
@@ -723,6 +726,9 @@ import os
 
     /// The minutes timer's last 10 s: the volume steps down to 0, then playback pauses.
     private func startSleepFade() {
+        guard !sleepFading else { return }
+        sleepJobs.forEach { $0.cancel() }
+        sleepFading = true
         let n = Self.sleepFadeSteps, step = Self.sleepFadeS / Double(n)
         sleepJobs = (1...n).map { i in
             scheduler.after(Double(i) * step) { [weak self] in
@@ -735,7 +741,7 @@ import os
 
     /// The deadline: paused (it stays paused if it already was), the volume back for the next play.
     private func sleepEnded() {
-        sleepJobs = []
+        sleepJobs = []; sleepFading = false
         pause()
         setFade(1)
         sleep = nil
@@ -747,10 +753,24 @@ import os
         let wasEndOfTrack: Bool
         if case .endOfTrack = sleep { wasEndOfTrack = true } else { wasEndOfTrack = false }
         sleepJobs.forEach { $0.cancel() }
-        sleepJobs = []
+        sleepJobs = []; sleepFading = false
         sleep = nil
         if fadeLevel != 1 { setFade(1) }
         if wasEndOfTrack, preloadAgain, let l = loaded { preloadNext(l.kind) }
+    }
+
+    /// The scheduler's clock stops while the phone sleeps (paused and locked), so its job can come late; the
+    /// deadline is wall time. Past the fade's start, the fade starts now. Past the deadline itself before a play,
+    /// the timer is over: it would have paused a player that was paused anyway, and the play goes on.
+    private func catchUpSleep(playing: Bool) {
+        guard case .at(let deadline) = sleep, !sleepFading else { return }
+        let t = now()
+        if t >= deadline && !playing {
+            clearSleep()
+            emitStates()
+        } else if t >= deadline.addingTimeInterval(-Self.sleepFadeS) {
+            startSleepFade()
+        }
     }
 
     private func setFade(_ level: Float) {
@@ -780,12 +800,12 @@ import os
 
     // MARK: - Loudness
 
-    /// The loudness switch: the loaded track's level changes in place, and the preloaded next one is
-    /// preloaded again at its new level.
+    /// The loudness switch: the loaded track's level and the preloaded next one's change in place (nothing is
+    /// preloaded again, so a switch in a track's last seconds keeps the change gapless).
     private func loudnessChanged() {
         guard let l = loaded, l.kind == .track, let item = music.current else { return }
-        backend.setGain(Gain.factor(item, enabled: prefs.loudness))
-        preloadNext(.track)
+        let next = preloadedNext.flatMap { p in queue(p.kind).items.first { $0.id == p.id } }
+        backend.setGain(Gain.factor(item, enabled: prefs.loudness), next: next.map { Gain.factor($0, enabled: prefs.loudness) } ?? 1)
     }
 
     // MARK: - Backend events
@@ -830,6 +850,7 @@ import os
             listen = l
         }
         fadeTowardsTheEnd(positionMs: positionMs)
+        catchUpSleep(playing: true)
         emitState(active)
         periodic()
         retryLyricsIfDue()

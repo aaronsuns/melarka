@@ -209,6 +209,97 @@ final class SleepTimerTests: EngineTestCase {
         XCTAssertNil(lastState(.episode)?.sleepRemainingMs)
     }
 
+    // MARK: - The phone asleep
+
+    /// The scheduler's clock stops while the phone sleeps (paused, locked); the deadline is wall time. Played
+    /// again after the deadline passed: the timer is over (it would have paused a paused player), not a pause now.
+    func testADeadlinePassedWhileAsleepIsOverOnPlay() {
+        playMusic()
+        engine.handle(.sleepTimer(.minutes(15)))
+        engine.pause()
+        advanceClock(20 * 60)                                  // asleep: the scheduler did not move
+        engine.play()
+        XCTAssertTrue(engine.playing)
+        XCTAssertNil(lastState(.track)?.sleepRemainingMs, "never 0:00 while it plays on")
+        XCTAssertTrue(backend.volumes.allSatisfy { $0 == 1 })
+        scheduler.advance(20 * 60)                             // the late job, once awake: cancelled
+        XCTAssertTrue(engine.playing)
+        XCTAssertFalse(backend.volumes.contains { $0 < 1 })
+    }
+
+    /// Woken inside the last 10 s (by wall time): the fade starts at once, on the next play or tick.
+    func testTheFadeStartsByWallTimeWhenTheSchedulerIsLate() {
+        playMusic()
+        engine.handle(.sleepTimer(.minutes(15)))
+        engine.pause()
+        advanceClock(15 * 60 - 5)
+        engine.play()
+        XCTAssertTrue(engine.playing)
+        scheduler.advance(10)
+        XCTAssertFalse(engine.playing)
+        XCTAssertTrue(backend.volumes.contains(0))
+        XCTAssertEqual(backend.volumes.last, 1)
+        XCTAssertNil(lastState(.track)?.sleepRemainingMs)
+        let volumes = backend.volumes.count
+        scheduler.advance(15 * 60)                             // the original job never runs a second fade
+        XCTAssertEqual(backend.volumes.count, volumes)
+    }
+
+    func testATickPastTheFadeStartStartsIt() {
+        playMusic()
+        engine.handle(.sleepTimer(.minutes(15)))
+        advanceClock(15 * 60 - 8)
+        backend.play(to: 500)
+        scheduler.advance(10)
+        XCTAssertFalse(engine.playing)
+        XCTAssertEqual(backend.volumes.last, 1)
+    }
+
+    // MARK: - End of track with the modes and never-stop
+
+    /// Repeat all at the last item: the new pass starts with the first item, loaded but not played.
+    func testEndOfTrackUnderRepeatAllWrapsPaused() {
+        engine.handle(.setModes(shuffle: false, repeatMode: .all))
+        engine.handle(.setQueue(q([1, 2], index: 1, pos: 0, play: true)))
+        backend.start()
+        engine.handle(.sleepTimer(.endOfTrack))
+        backend.finish()
+        XCTAssertEqual(engine.current?.id, "1")
+        XCTAssertEqual(backend.loads.last?.2, false)
+        XCTAssertFalse(engine.playing)
+        XCTAssertNil(lastState(.track)?.sleepRemainingMs)
+    }
+
+    /// Never-stop at the end of a list: the cached favorite it picks is loaded, not played.
+    func testEndOfTrackWithANeverStopFavoriteLoadsItPaused() {
+        cache.favorites = [trackModel(9)]
+        playMusic([1])
+        engine.handle(.sleepTimer(.endOfTrack))
+        backend.finish()
+        XCTAssertEqual(engine.current?.id, "9")
+        XCTAssertEqual(backend.loads.last?.2, false)
+        XCTAssertFalse(engine.playing)
+    }
+
+    /// A favorites queue whose refill only arrives after the stop: the new tracks are queued, nothing plays.
+    func testARefillAfterTheStopStaysPaused() async {
+        api.refillError = LarkError.badResponse
+        engine.handle(.setQueue(q([1], index: 0, pos: 0, play: true, source: .favorites)))
+        backend.start()
+        await engine.idle()
+        engine.handle(.sleepTimer(.endOfTrack))
+        backend.finish()
+        XCTAssertFalse(engine.playing)
+        let loads = backend.loads.count
+        api.refillError = nil
+        api.randomFavoritesAnswer = ("favorites", [trackModel(5), trackModel(6)])
+        scheduler.advance(PlayerEngine.refillRetry)
+        await engine.idle()
+        XCTAssertTrue(engine.music.items.contains { $0.id == "5" }, "the refill arrived")
+        XCTAssertFalse(engine.playing)
+        XCTAssertEqual(backend.loads.count, loads)
+    }
+
     // MARK: - Sign-out
 
     func testResetDropsTheTimer() {
