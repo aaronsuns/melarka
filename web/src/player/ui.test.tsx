@@ -269,7 +269,9 @@ test("the mini player's ⏮: within the first 3 s the previous track, later a re
   expect(await screen.findByText("歌2")).toBeInTheDocument();
   const mini = document.querySelector(".mini") as HTMLElement;
   // ⏮ ▶ ⏭, in that order.
-  expect(within(mini).getAllByRole("button").slice(1).map((b) => b.textContent)).toEqual(["⏮", "⏸", "⏭"]);
+  expect(within(mini).getAllByRole("button").slice(1).map((b) => b.getAttribute("aria-label"))).toEqual(["上一首", "暂停", "下一首"]);
+  // Glyphs, not text: SVG icons that render the same in every font.
+  for (const b of within(mini).getAllByRole("button").slice(1)) expect(b.querySelector("svg")).not.toBeNull();
   audio.currentTime = 12;
   await userEvent.click(within(mini).getByRole("button", { name: "上一首" }));
   expect(audio.currentTime).toBe(0);

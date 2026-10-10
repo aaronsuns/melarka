@@ -31,8 +31,14 @@ function EpisodeResume() {
 // The episode mini player while an episode owns playback, else the music one.
 export function ShellPlayer() {
   const ep = useEpisodes();
-  if (ep.active && ep.current) return <EpisodeMini />;
   // One grid row in .shell, whichever shows.
+  if (ep.active && ep.current) {
+    return (
+      <div className="shell-player">
+        <EpisodeMini />
+      </div>
+    );
+  }
   return (
     <div className="shell-player">
       <EpisodeResume />

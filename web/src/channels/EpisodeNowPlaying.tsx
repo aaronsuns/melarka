@@ -4,7 +4,10 @@ import { Cover } from "../components/Cover";
 import { duration } from "../format";
 import { useT } from "../i18n/i18n";
 import { QueueRows, entryKeys } from "../player/QueueSheet";
+import { BackwardFillIcon, ChevronDownIcon, ForwardFillIcon, ListIcon, PauseFillIcon, PlayFillIcon, SkipBackIcon, SkipForwardIcon } from "../components/icons";
+import { NowBackground, rangeFill } from "../player/NowBackground";
 import { SleepTimerMenu } from "../player/SleepTimerMenu";
+import { useTrackSwipe } from "../player/swipe";
 import { EPISODE_ORDERS } from "./episodeQueue";
 import { EPISODE_RATES, useEpisodes, useEpisodesProgress } from "./EpisodesProvider";
 
@@ -64,6 +67,8 @@ export function EpisodeNowPlaying({ onClose }: { onClose: () => void }) {
   const sliderRef = useRef<HTMLInputElement>(null);
   const scrubEnd = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cur = ep.current;
+  // A sideways swipe on the artwork or the title: left = next episode, right = previous.
+  const swipeRef = useTrackSwipe(".now-art, .now-meta", { next: () => { if (ep.index < ep.queue.length - 1) ep.next(); }, prev: ep.prev });
   const seekRef = useRef(ep.seek);
   seekRef.current = ep.seek;
 
@@ -102,12 +107,13 @@ export function EpisodeNowPlaying({ onClose }: { onClose: () => void }) {
   const dur = progress.duration > 0 ? progress.duration : cur.duration_s;
   const pos = scrub ?? progress.position;
   return (
-    <div className="now episode-now" role="dialog" aria-label={t("episodes.nowPlaying")} data-no-music-prime="">
+    <div className="now episode-now" role="dialog" aria-label={t("episodes.nowPlaying")} data-no-music-prime="" ref={swipeRef}>
+      <NowBackground seed={cur.channel_id} src={cur.thumbnail} />
       <div className="now-top">
-        <button className="icon" aria-label={t("now.close")} onClick={onClose}>⌄</button>
+        <button className="icon" aria-label={t("now.close")} onClick={onClose}><ChevronDownIcon /></button>
         <span className="badge">{t("channels.title")}</span>
         <span className="now-top-end">
-          <button className="icon" aria-label={t("episodes.queue")} aria-pressed={showQueue} onClick={() => setShowQueue((s) => !s)}>☰</button>
+          <button className="icon" aria-label={t("episodes.queue")} aria-pressed={showQueue} onClick={() => setShowQueue((s) => !s)}><ListIcon /></button>
           <SleepTimerMenu />
         </span>
       </div>
@@ -131,6 +137,7 @@ export function EpisodeNowPlaying({ onClose }: { onClose: () => void }) {
         max={Math.max(1, Math.round(dur))}
         step={1}
         value={Math.round(pos)}
+        style={rangeFill(pos, dur)}
         onInput={(e) => setScrub(Number((e.target as HTMLInputElement).value))}
         onPointerUp={endScrub}
         onTouchEnd={endScrub}
@@ -138,11 +145,13 @@ export function EpisodeNowPlaying({ onClose }: { onClose: () => void }) {
       />
       <div className="now-times muted small"><span>{duration(pos * 1000)}</span><span>-{duration(Math.max(0, dur - pos) * 1000)}</span></div>
       <div className="now-controls">
-        <button className="icon big" aria-label={t("episodes.previous")} onClick={ep.prev}>⏮</button>
-        <button className="icon big" aria-label={t("episodes.back15")} onClick={() => ep.skip(-15)}>↺</button>
-        <button className="icon huge" aria-label={ep.playing ? t("common.pause") : t("common.play")} onClick={ep.toggle}>{ep.playing ? "⏸" : "▶"}</button>
-        <button className="icon big" aria-label={t("episodes.forward30")} onClick={() => ep.skip(30)}>↻</button>
-        <button className="icon big" aria-label={t("episodes.next")} disabled={ep.index >= ep.queue.length - 1} onClick={ep.next}>⏭</button>
+        <button className="icon transport small-glyph" aria-label={t("episodes.previous")} onClick={ep.prev}><BackwardFillIcon size={30} /></button>
+        <button className="icon transport" aria-label={t("episodes.back15")} onClick={() => ep.skip(-15)}><SkipBackIcon seconds={15} size={34} /></button>
+        <button className="icon transport play" aria-label={ep.playing ? t("common.pause") : t("common.play")} onClick={ep.toggle}>
+          {ep.playing ? <PauseFillIcon size={52} /> : <PlayFillIcon size={52} />}
+        </button>
+        <button className="icon transport" aria-label={t("episodes.forward30")} onClick={() => ep.skip(30)}><SkipForwardIcon seconds={30} size={34} /></button>
+        <button className="icon transport small-glyph" aria-label={t("episodes.next")} disabled={ep.index >= ep.queue.length - 1} onClick={ep.next}><ForwardFillIcon size={30} /></button>
       </div>
       <div className="segmented now-speed" role="group" aria-label={t("episodes.speed")}>
         {EPISODE_RATES.map((r) => (

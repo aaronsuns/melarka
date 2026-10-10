@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -187,6 +187,29 @@ it("the mini players' ⏮ go through the bridge's prev, for music and for an epi
   n.post.mockClear();
   await userEvent.click(screen.getByRole("button", { name: "上一集" }));
   expect(n.post.mock.calls.map(([m]) => m)).toEqual([{ type: "prev", kind: "episode" }]);
+});
+
+it("a swipe on the mini players goes through the bridge's next and prev, for music and for an episode", async () => {
+  mockFetch({});
+  renderPlayer(<><Probe /><EProbe /><ShellPlayer /></>);
+  n.emit({ type: "queue", kind: "track", items: [trackItem(track1), trackItem(track2)], index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "track", itemId: "1", index: 0, playing: true }));
+  const swipe = (el: Element, dx: number) => {
+    const at = { clientX: 200, clientY: 20, pointerId: 1, isPrimary: true, pointerType: "touch", button: 0 };
+    fireEvent.pointerDown(el, at);
+    fireEvent.pointerMove(window, { ...at, clientX: 200 + dx });
+    fireEvent.pointerUp(window, { ...at, clientX: 200 + dx });
+  };
+  n.post.mockClear();
+  swipe(document.querySelector(".mini-info")!, -120);
+  swipe(document.querySelector(".mini-info")!, 120);
+  expect(n.post.mock.calls.map(([m]) => m)).toEqual([{ type: "next", kind: "track" }, { type: "prev", kind: "track" }]);
+  n.emit({ type: "queue", kind: "episode", items: [episodeItem(ep("a")), episodeItem(ep("b"))], index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "episode", itemId: "a", index: 0, playing: true }));
+  await waitFor(() => expect(document.querySelector(".episode-mini")).not.toBeNull());
+  n.post.mockClear();
+  swipe(document.querySelector(".episode-mini .mini-info")!, -120);
+  expect(n.post.mock.calls.map(([m]) => m)).toEqual([{ type: "next", kind: "episode" }]);
 });
 
 it("playList and jump start a new queue at 0; enqueueNext keeps the current item playing (setQueue without positionMs)", () => {

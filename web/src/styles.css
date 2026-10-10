@@ -6,17 +6,35 @@
   --muted: #9a9a9a;
   --accent: #1ed760;
   --danger: #ff5a5f;
-  --radius: 10px;
+  /* Hairlines between list rows and around bars. */
+  --separator: rgba(255, 255, 255, .09);
+  /* The bars over the content (mini player, tab bar): a translucent material. */
+  --material: rgba(24, 24, 26, .96);
+  --material-solid: #1c1c1e;
+  /* Corner radii: small (thumbnails, badges), default (cards, fields), large (sheets, big artwork). */
+  --radius-s: 8px;
+  --radius: 12px;
+  --radius-l: 16px;
+  /* Type scale (iOS-like): large title, title, headline, body, subhead, footnote, caption. */
+  --fs-large: 28px;
+  --fs-title: 20px;
+  --fs-headline: 17px;
+  --fs-body: 15px;
+  --fs-sub: 14px;
+  --fs-foot: 13px;
+  --fs-caption: 12px;
   --tab-h: 56px;
   --mini-h: 64px;
   color-scheme: dark;
+  accent-color: var(--accent);
 }
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; height: 100%; }
 body {
+  -webkit-font-smoothing: antialiased;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  font: var(--fs-body)/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; min-height: 44px; }
@@ -33,9 +51,10 @@ a { color: inherit; text-decoration: none; }
 .login-form { display: grid; gap: 14px; width: min(340px, 100%); }
 .login-form label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
 input, select {
-  font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid #333;
+  font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--separator);
   border-radius: var(--radius); padding: 12px; min-height: 44px; width: 100%;
 }
+input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 /* iOS Safari zooms the page when focusing a field under 16px. */
 input, select, textarea { font-size: 16px; }
 .primary { background: var(--accent); color: #000; font-weight: 600; border-radius: 999px; padding: 0 20px; }
@@ -43,81 +62,96 @@ input, select, textarea { font-size: 16px; }
 .error { color: var(--danger); margin: 0; }
 .shell { display: grid; grid-template-rows: 1fr auto auto; height: 100%; }
 .content { overflow-y: auto; padding: calc(12px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
-.page-title { font-size: 26px; margin: 8px 0 16px; }
+.page-title { font-size: var(--fs-large); font-weight: 700; letter-spacing: -.01em; line-height: 1.2; margin: 8px 0 16px; }
 .tabs {
   display: grid; grid-template-columns: repeat(4, 1fr); height: calc(var(--tab-h) + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom); background: #0c0c0c; border-top: 1px solid #222;
+  padding-bottom: env(safe-area-inset-bottom);
 }
-.tabs a { display: grid; place-items: center; color: var(--muted); font-size: 13px; }
-.tabs a.active { color: var(--text); font-weight: 600; }
+.tabs a { display: grid; place-items: center; color: var(--muted); font-size: var(--fs-foot); font-weight: 500; transition: color .15s; }
+.tabs a.active { color: var(--accent); font-weight: 600; }
 
 .cover { position: relative; overflow: hidden; display: grid; place-items: center; flex: none; color: rgba(255,255,255,.85); font-weight: 600; }
 /* The cover fades in over the initials tile, which keeps its size: no layout shift. */
 .cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s; }
 .cover-img.loaded { opacity: 1; }
 .tracks { list-style: none; margin: 0; padding: 0; }
-.track { position: relative; display: flex; align-items: center; border-radius: var(--radius); }
+.track { position: relative; display: flex; align-items: center; border-radius: var(--radius-s); }
+/* An inset hairline between rows, from the title's edge (the 44 px cover + 12 px gap). */
+.track + .track::before { content: ""; position: absolute; top: 0; left: 56px; right: 0; border-top: .5px solid var(--separator); }
 .track.current .track-title { color: var(--accent); }
 .track.broken { opacity: .4; }
-.track-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 6px 0; text-align: left; }
-.track-text { flex: 1; min-width: 0; display: grid; }
-.track-sub { font-size: 13px; }
-.track-meta { display: grid; justify-items: end; font-size: 12px; gap: 2px; }
-.badge { font-size: 10px; border: 1px solid #444; border-radius: 4px; padding: 0 4px; }
+.track-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px 0; text-align: left; }
+.track-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.track-sub { font-size: var(--fs-foot); }
+.track-meta { display: grid; justify-items: end; font-size: var(--fs-caption); gap: 4px; font-variant-numeric: tabular-nums; }
+.badge { font-size: 10px; font-weight: 600; letter-spacing: .02em; line-height: 16px; background: rgba(255,255,255,.08); color: var(--muted); border-radius: 4px; padding: 0 5px; }
 .heart { color: var(--accent); }
 .track-more { width: 44px; font-size: 20px; color: var(--muted); }
+@media (hover: hover) { .track-main:hover:not(:disabled) .track-title { text-decoration: underline; text-decoration-color: var(--separator); text-underline-offset: 3px; } }
 .menu {
   position: absolute; right: 8px; top: 100%; z-index: 20; display: grid; min-width: 200px;
-  background: var(--surface-2); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.5); overflow: hidden;
+  background: #2c2c2e; border-radius: var(--radius); box-shadow: 0 12px 32px rgba(0,0,0,.55); overflow: hidden;
 }
-.menu button { text-align: left; padding: 0 16px; border-bottom: 1px solid #333; }
+.menu button { text-align: left; padding: 0 16px; border-bottom: .5px solid var(--separator); }
+.menu button:last-child { border-bottom: 0; }
 .danger { color: var(--danger); }
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 50; display: grid; align-items: end; }
 .sheet {
-  background: var(--surface); border-radius: 16px 16px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--surface); border-radius: var(--radius-l) var(--radius-l) 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
   display: grid; gap: 4px; max-height: 80vh; overflow-y: auto;
 }
-.sheet h2 { font-size: 17px; margin: 0 0 8px; }
+.sheet h2 { font-size: var(--fs-headline); margin: 0 0 8px; }
 .sheet-row { display: flex; justify-content: space-between; gap: 12px; padding: 0 4px; text-align: left; }
 .sheet-new { display: flex; gap: 8px; margin-top: 8px; }
 .sheet-cancel { color: var(--muted); }
 
-.small { font-size: 12px; }
-.section-title { font-size: 18px; margin: 20px 0 8px; }
-.resume { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); padding: 12px; border-radius: var(--radius); }
+.small { font-size: var(--fs-caption); }
+.section-title { font-size: var(--fs-title); font-weight: 700; letter-spacing: -.01em; margin: 24px 0 8px; }
+.resume { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); padding: 12px 16px; border-radius: var(--radius); }
 /* Home's quick-play row: three equal pill buttons; a long label (en, sv) wraps inside its button. */
 .quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 4px 0 8px; }
 .secondary.quick {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  min-height: 56px; padding: 6px 6px; border-radius: 14px; background: var(--surface);
-  font-size: 13px; line-height: 1.2; text-align: center;
+  min-height: 56px; padding: 8px; border-radius: var(--radius); background: var(--surface); border-color: transparent;
+  font-size: var(--fs-foot); font-weight: 500; line-height: 1.2; text-align: center;
 }
 .quick-icon { font-size: 18px; line-height: 1; }
 /* A tab's own action row (Library → 歌曲 / 收藏 shuffle). */
 .tab-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
-.tab-actions .secondary { padding: 0 14px; font-size: 14px; }
-.mini-empty { position: relative; display: flex; align-items: center; justify-content: center; height: var(--mini-h); padding: 0 8px; background: var(--surface); border-top: 1px solid #222; }
-.mini-shuffle { min-height: 44px; padding: 0 16px; border: 1px solid #444; border-radius: 999px; font-size: 14px; }
+.tab-actions .secondary { padding: 0 16px; font-size: var(--fs-sub); }
+.mini-empty { position: relative; display: flex; align-items: center; justify-content: center; height: var(--mini-h); padding: 0 8px; }
+.mini-shuffle { min-height: 40px; padding: 0 16px; border-radius: 999px; background: rgba(255,255,255,.1); font-size: var(--fs-sub); font-weight: 600; }
 .search-input { margin: 4px 0 12px; }
 .cards { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x mandatory; }
 .card { flex: none; width: 120px; display: grid; gap: 4px; scroll-snap-align: start; }
-.card-title { font-size: 14px; }
-.card-sub { font-size: 12px; }
+.card .cover { border-radius: var(--radius-s); }
+.card-title { font-size: var(--fs-sub); font-weight: 500; margin-top: 4px; }
+.card-sub { font-size: var(--fs-caption); }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { display: flex; align-items: center; gap: 8px; max-width: 100%; background: var(--surface); border-radius: 999px; padding: 8px 12px 8px 4px; min-height: 44px; }
 
-.segmented { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }
-.segmented > * { flex: none; padding: 0 14px; min-height: 44px; display: grid; place-items: center; border-radius: 999px; background: var(--surface); color: var(--muted); }
-.segmented [aria-selected="true"], .segmented [aria-pressed="true"] { background: var(--text); color: #000; }
+.segmented { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; scrollbar-width: none; }
+.segmented::-webkit-scrollbar { display: none; }
+.segmented > * { flex: none; padding: 0 16px; min-height: 36px; height: 36px; display: grid; place-items: center; border-radius: 999px; background: var(--surface); color: var(--muted); font-size: var(--fs-sub); font-weight: 500; transition: background .15s, color .15s; }
+.segmented [aria-selected="true"], .segmented [aria-pressed="true"] { background: var(--text); color: #000; font-weight: 600; }
+.now .segmented > * { background: rgba(255,255,255,.12); color: var(--text); }
+.now .segmented [aria-pressed="true"] { background: #fff; color: #000; }
+@media (max-width: 479px) {
+  .content .segmented { margin-right: -16px; padding-right: 28px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+}
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px 12px; }
 .grid .card { width: auto; }
 .grid .cover { width: 100% !important; height: auto !important; aspect-ratio: 1; }
 .more { display: grid; place-items: center; padding: 12px; }
 .hero { display: flex; gap: 16px; align-items: flex-end; margin: 8px 0 16px; }
 .hero-text { display: grid; gap: 4px; min-width: 0; }
-.hero-title { font-size: 22px; margin: 0; overflow-wrap: anywhere; }
-.actions { display: flex; gap: 10px; margin-bottom: 12px; }
-.secondary { border: 1px solid #444; border-radius: 999px; padding: 0 18px; }
+.hero-title { font-size: 22px; font-weight: 700; margin: 0; overflow-wrap: anywhere; }
+.actions { display: flex; gap: 8px; margin-bottom: 12px; }
+/* A secondary button: a quiet filled pill (no outline ring). */
+.secondary { border: 1px solid transparent; border-radius: 999px; padding: 0 16px; background: rgba(255,255,255,.08); font-weight: 500; transition: background .15s, transform .1s; }
+.secondary:active:not(:disabled) { transform: scale(.97); }
+.secondary:disabled { opacity: .45; }
+@media (hover: hover) { .secondary:hover:not(:disabled) { background: rgba(255,255,255,.13); } }
 
 .inline-form { display: flex; gap: 8px; margin-bottom: 12px; }
 .inline-form .primary { flex: none; }
@@ -125,37 +159,78 @@ input, select, textarea { font-size: 16px; }
 .row-with-actions { display: flex; align-items: center; }
 .row-with-actions > .row { flex: 1; min-width: 0; }
 .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; min-height: 56px; }
-.page-title-btn { display: flex; align-items: center; width: 100%; text-align: left; font: inherit; font-size: 26px; padding: 0; }
+.page-title-btn { display: flex; align-items: center; width: 100%; text-align: left; font: inherit; font-size: var(--fs-large); font-weight: 700; padding: 0; }
 
-.icon { min-width: 44px; font-size: 20px; }
-.icon.big { font-size: 28px; }
-.icon.huge { font-size: 44px; width: 72px; height: 72px; border-radius: 50%; background: var(--text); color: #000; }
+/* Icon buttons: a 44 px target, a glyph inside, a press that dims and shrinks it. */
+.icon { min-width: 44px; display: inline-grid; place-items: center; font-size: 20px; transition: transform .12s ease, opacity .12s ease; }
+.icon:active:not(:disabled) { transform: scale(.88); opacity: .7; }
+.icon.on { color: var(--accent); }
 .mini {
-  position: relative; display: flex; align-items: center; gap: 4px; height: var(--mini-h); padding: 0 8px;
-  background: var(--surface); border-top: 1px solid #222;
+  position: relative; display: flex; align-items: center; gap: 0; height: var(--mini-h); padding: 0 4px 0 8px;
 }
-.mini-progress { position: absolute; top: 0; left: 0; height: 2px; background: var(--accent); }
-.mini-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left; }
+/* The bottom bars (the player strip and the tabs): one translucent material
+   the content scrolls under; without backdrop-filter, a solid bar. The mini
+   player is a raised card on it. */
+/* The strip's material is on a ::before: backdrop-filter on .shell-player
+   itself would become the containing block of the Now Playing inside it. */
+.tabs, .shell-player::before { background: var(--material-solid); }
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .tabs, .shell-player::before { background: var(--material); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); }
+}
+.shell-player { position: relative; isolation: isolate; padding-top: 8px; }
+.shell-player::before { content: ""; position: absolute; inset: 0; z-index: -1; border-top: .5px solid var(--separator); pointer-events: none; }
+.shell-player:empty { display: none; }
+.mini, .mini-empty { margin: 0 8px 8px; border-radius: 14px; }
+.mini { background: rgba(255,255,255,.07); box-shadow: 0 4px 16px rgba(0,0,0,.3), inset 0 0 0 .5px rgba(255,255,255,.08); }
+/* A thin progress line along the card's bottom edge. */
+.mini-track { position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; border-radius: 1px; background: rgba(255,255,255,.12); overflow: hidden; pointer-events: none; }
+.mini-progress { height: 100%; background: var(--text); border-radius: 1px; }
+.mini-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; text-align: left; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.mini-info .cover { border-radius: var(--radius-s) !important; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+.mini-info .track-text > :first-child { font-weight: 600; }
+.mini-btn { width: 44px; height: 44px; min-height: 44px; padding: 0; color: var(--text); }
+.mini-close { width: 40px; color: var(--muted); }
 /* Autoplay was refused: a full-width strip on top of the mini player. */
 .mini-tap {
-  position: absolute; left: 0; right: 0; bottom: 100%; min-height: 44px; padding: 0 16px;
-  background: var(--surface); border-top: 1px solid #222; color: var(--accent); font-weight: 600;
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); min-height: 44px; padding: 0 16px;
+  border-radius: var(--radius); background: var(--material-solid); color: var(--accent); font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45);
 }
+
+/* Now Playing: the blurred artwork full-bleed behind one centred column. */
 .now {
-  position: fixed; inset: 0; z-index: 40; background: linear-gradient(180deg, #2b2b2b, var(--bg) 60%);
+  position: fixed; inset: 0; z-index: 40; background: #0d0d0d;
   display: flex; flex-direction: column; gap: 12px;
-  padding: calc(12px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+  padding: calc(8px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+  --muted: rgba(255, 255, 255, .72);
 }
-.now-top { display: flex; justify-content: space-between; align-items: center; }
-.now-art { flex: 1; display: grid; place-items: center; min-height: 0; }
-.now-art .cover { width: min(320px, 40vh, calc(100vw - 64px)) !important; height: min(320px, 40vh, calc(100vw - 64px)) !important; }
+/* (Not the edit sheets opened from here: they are fixed overlays of their own.) */
+.now > :not(.now-bg, .sheet-backdrop) { position: relative; z-index: 1; width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
+.now-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.now-bg-tile, .now-bg-img { position: absolute; inset: -12%; width: 124%; height: 124%; }
+.now-bg-tile { filter: blur(40px) brightness(.55) saturate(1.2); }
+.now-bg-img { object-fit: cover; filter: blur(60px) brightness(.5) saturate(1.5); transform: translateZ(0); opacity: 0; transition: opacity .6s ease; }
+.now-bg-img.loaded { opacity: 1; }
+/* Keeps text at WCAG AA over any artwork: even pure white artwork ends up no
+   lighter than #4c4c4c (brightness .5, then at least 40% black), where the
+   72% white secondary text is 5.4:1 and the 55% white lyric lines (large
+   text) 3.9:1. */
+.now-bg-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.4) 0%, rgba(0,0,0,.45) 50%, rgba(0,0,0,.62) 100%); }
+.now .badge { background: rgba(255,255,255,.14); color: rgba(255,255,255,.85); }
+.now .icon { color: var(--text); }
+.now-top { display: flex; justify-content: space-between; align-items: center; z-index: 2 !important; }
+.now-top > :first-child { margin-left: -10px; }
+.now-top-end { margin-right: -10px; }
+.now-top .icon { width: 44px; height: 44px; opacity: .9; }
+.now-art { flex: 1; display: grid; place-items: center; min-height: 0; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.now-art .cover { width: min(340px, 42vh, calc(100vw - 48px)) !important; height: min(340px, 42vh, calc(100vw - 48px)) !important; border-radius: 12px !important; box-shadow: 0 20px 50px rgba(0,0,0,.5); transition: transform .3s ease; }
 .now-queue { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 0; }
 .now-top-end { display: flex; align-items: center; }
 /* Now Playing's ⋯ menu (the sleep timer) and its 🌙 chip. */
 .sleep-menu { position: relative; display: flex; align-items: center; gap: 4px; }
 .sleep-menu .menu { right: 0; }
 .menu-title { padding: 12px 16px 6px; font-size: 13px; }
-.sleep-chip { padding: 0 12px; min-height: 36px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.sleep-chip { padding: 0 12px; min-height: 32px; font-size: var(--fs-sub); font-variant-numeric: tabular-nums; background: rgba(255,255,255,.14); }
 button.now-art { padding: 0; width: 100%; }
 /* Lyrics take the cover's place; the active synced line is bright and centred. */
 .lyrics { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; text-align: center; scrollbar-width: none; }
@@ -164,8 +239,8 @@ button.now-art { padding: 0; width: 100%; }
 .lyrics-plain p { overflow-wrap: anywhere; margin: 0; padding: 6px 0; font-size: 17px; line-height: 1.5; color: var(--muted); }
 /* The 4% side padding leaves room for the active line's scale-up (3% each side), so it never widens the scroller. */
 .lyrics-synced { list-style: none; margin: 0; padding: 30% 4%; }
-.lyrics-synced button { width: 100%; transform-origin: center; overflow-wrap: anywhere; padding: 6px 8px; font-size: 18px; line-height: 1.4; color: var(--muted); transition: color .2s, transform .2s; }
-.lyrics-synced button.active { color: var(--text); font-weight: 600; transform: scale(1.06); }
+.lyrics-synced button { width: 100%; transform-origin: center; overflow-wrap: anywhere; padding: 8px; font-size: 20px; font-weight: 600; line-height: 1.35; color: rgba(255,255,255,.55); transition: color .2s, transform .2s; }
+.lyrics-synced button.active { color: #fff; font-weight: 700; transform: scale(1.06); }
 /* Long-press aligns a line: no text selection or iOS callout on hold. */
 .lyrics-synced button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .lyrics-synced button.aligned { color: var(--accent); }
@@ -177,18 +252,38 @@ button.now-art { padding: 0; width: 100%; }
 .lyrics-rejected-list { margin-top: 12px; }
 .lyrics-rejected-list h3 { margin: 8px 0 0; font-size: 15px; }
 .lyrics-search { display: flex; gap: 8px; flex-wrap: wrap; }
-.lyrics-cand { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 4px; border-bottom: 1px solid #333; }
+.lyrics-cand { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 4px; border-bottom: .5px solid var(--separator); }
 .lyrics-cand-pick { display: grid; gap: 2px; text-align: left; min-width: 0; background: none; border: 0; color: inherit; padding: 0; }
 .lyrics-cand.selected .lyrics-cand-pick { color: var(--accent); }
 .lyrics-cand-confirm { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
 .lyrics-none { margin-top: 12px; }
 .lyrics-cand-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .lyrics-cand-preview { white-space: pre-line; }
-.now-meta h2 { margin: 0; font-size: 22px; }
-.now-meta p { margin: 4px 0 0; }
-.now input[type="range"] { padding: 0; height: 44px; accent-color: var(--accent); background: none; border: 0; }
-.now-times { display: flex; justify-content: space-between; margin-top: -8px; }
-.now-controls { display: flex; justify-content: space-around; align-items: center; }
+.now-meta { touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.now-meta h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+.now-meta p { margin: 4px 0 0; font-size: var(--fs-headline); }
+/* The seek bar: a thin track that thickens while dragged; the played part white. */
+.now input[type="range"] {
+  -webkit-appearance: none; appearance: none; padding: 0; height: 32px; min-height: 32px; margin-top: 4px; margin-bottom: 0; background: none; border: 0; cursor: pointer;
+  --pct: 0%;
+}
+.now input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px; background: linear-gradient(to right, rgba(255,255,255,.9) var(--pct), rgba(255,255,255,.22) var(--pct));
+  transition: height .15s;
+}
+.now input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,.22); }
+.now input[type="range"]::-moz-range-progress { height: 6px; border-radius: 3px; background: rgba(255,255,255,.9); }
+.now input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -4px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.now input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: #fff; }
+.now input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.now-times { display: flex; justify-content: space-between; margin-top: -6px; font-variant-numeric: tabular-nums; font-weight: 500; }
+.now-controls { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+/* Transport: bare filled glyphs, no rings or discs; a 56/80 px target. */
+.transport { width: 64px; height: 64px; min-height: 64px; padding: 0; color: var(--text); }
+.transport.play { width: 80px; height: 80px; }
+.transport.small-glyph { width: 52px; }
+.transport:disabled { opacity: .3; }
+.now-controls .mode { width: 48px; height: 48px; }
 /* Shuffle / repeat: muted while off; on, green with a dot underneath. */
 .mode { position: relative; color: var(--text); opacity: .7; }
 .mode[aria-pressed="true"] { color: var(--accent); opacity: 1; }
@@ -196,24 +291,30 @@ button.now-art { padding: 0; width: 100%; }
   content: ""; position: absolute; left: 50%; bottom: 2px; width: 4px; height: 4px; margin-left: -2px;
   border-radius: 50%; background: var(--accent);
 }
-.now-actions { display: flex; justify-content: center; gap: 24px; }
-.field { display: grid; gap: 6px; margin: 16px 0; color: var(--muted); }
-.field-check-row { display: flex; align-items: center; gap: 10px; color: var(--text); }
-.field-check input[type="checkbox"] { width: 22px; height: 22px; margin: 0; }
+.now-actions { display: flex; justify-content: space-evenly; gap: 8px; }
+.now-actions .icon { width: 44px; height: 44px; color: rgba(255,255,255,.82); }
+.now-actions .icon.on { color: var(--accent); }
+.now-actions .secondary.danger { min-height: 36px; }
+.field { display: grid; gap: 8px; margin: 16px 0; color: var(--muted); font-size: var(--fs-foot); }
+.field > select, .field > input { font-size: 16px; }
+/* A settings toggle: the label on the left, its switch on the right. */
+.field-check-row { display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; color: var(--text); font-size: var(--fs-body); }
+.field-check input[type="checkbox"]:not(.switch) { width: 22px; height: 22px; margin: 0; }
 
-.settings-link { min-height: 44px; display: flex; align-items: center; }
-.user-row { display: grid; gap: 6px; padding: 8px 0; border-bottom: 1px solid #222; }
+.settings-link { min-height: 48px; display: flex; align-items: center; justify-content: space-between; border-bottom: .5px solid var(--separator); }
+.settings-link::after { content: ""; width: 8px; height: 8px; margin-right: 4px; border-top: 2px solid var(--muted); border-right: 2px solid var(--muted); transform: rotate(45deg); opacity: .7; }
+.user-row { display: grid; gap: 8px; padding: 8px 0; border-bottom: .5px solid var(--separator); }
 .user-row-main { display: flex; align-items: center; gap: 10px; }
 .user-row-main .ellipsis { flex: 1; }
 .yt-thumb { flex: none; border-radius: 8px; object-fit: cover; }
 .yt-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .job-actions { display: flex; gap: 8px; justify-self: end; }
 
-.check-row { display: flex; align-items: center; gap: 2px; min-height: 56px; padding: 4px 0; border-bottom: 1px solid #222; }
+.check-row { display: flex; align-items: center; gap: 2px; min-height: 56px; padding: 4px 0; border-bottom: .5px solid var(--separator); }
 .check-tap { flex: none; width: 44px; height: 44px; display: grid; place-items: center; }
 .check-tap input[type="checkbox"] { width: 22px; height: 22px; }
 .check-row .track-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; text-align: left; }
-.lib-row { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid #222; }
+.lib-row { display: grid; gap: 4px; padding: 12px 0; border-bottom: .5px solid var(--separator); }
 .lib-row-main { display: flex; align-items: center; gap: 10px; }
 .lib-row-main .ellipsis { flex: 1; }
 .link-card { display: grid; gap: 8px; }
@@ -234,14 +335,14 @@ button.now-art { padding: 0; width: 100%; }
 .tag-remove { min-width: 44px; min-height: 44px; margin: -8px -14px -8px -6px; color: var(--muted); }
 .chip-clear { opacity: .7; }
 .now-lyric-strip { text-align: center; min-height: 3.2em; }
-.now-lyric-strip p { margin: 0; padding: 2px 0; font-size: 15px; line-height: 1.4; color: var(--muted); }
+.now-lyric-strip p { margin: 0; padding: 2px 0; font-size: var(--fs-body); line-height: 1.4; color: var(--muted); }
 .now-lyric-strip p.active { color: var(--text); font-weight: 600; }
 
 .offline-usage { display: grid; gap: 4px; }
 .offline-usage progress { width: 100%; height: 8px; accent-color: var(--accent); }
 .offline-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
 .cached-mark { color: var(--muted); font-size: 11px; }
-.mini-notice { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 6px); margin: 0; padding: 8px 12px; border-radius: 10px; background: #2a2a2a; color: var(--text); font-size: 13px; text-align: center; }
+.mini-notice { position: absolute; left: 4px; right: 4px; bottom: calc(100% + 8px); margin: 0; padding: 8px 12px; border-radius: var(--radius); background: #2c2c2e; box-shadow: 0 6px 18px rgba(0,0,0,.45); color: var(--text); font-size: 13px; text-align: center; }
 
 .status-link { display: inline-flex; align-items: center; min-height: 36px; color: var(--muted); font-size: 13px; white-space: nowrap; }
 .job-highlight { background: rgba(255,255,255,.12); border-radius: 10px; transition: background .5s; }
@@ -252,8 +353,7 @@ button.now-art { padding: 0; width: 100%; }
 .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 
 /* The episode mini player: the music one's layout, a hint of the channel colour. */
-.episode-mini { border-top-color: var(--accent); }
-.episode-mini .icon { font-size: 18px; }
+.episode-mini .mini-progress { background: var(--accent); }
 
 /* Channels */
 .tabs { grid-template-columns: repeat(5, 1fr); }
@@ -261,7 +361,7 @@ button.now-art { padding: 0; width: 100%; }
 /* 视频: six tabs while Channels is on (≈ 60 px each at 360 px). */
 .tabs.tabs-6 { grid-template-columns: repeat(6, 1fr); }
 .tabs.tabs-6 a { font-size: 12px; }
-.tab-badge { position: absolute; top: 6px; left: calc(50% + 14px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #000; font-size: 10px; line-height: 16px; text-align: center; }
+.tab-badge { position: absolute; top: 6px; left: calc(50% + 14px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #000; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .episode-row .episode-link { display: flex; align-items: center; gap: 12px; min-width: 0; grid-column: 1 / 3; }
 .unplayed-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
@@ -276,7 +376,7 @@ button.now-art { padding: 0; width: 100%; }
 .episode-page { display: grid; gap: 10px; }
 .episode-video { width: 100%; max-height: 50vh; background: #000; border-radius: var(--radius); }
 .episode-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.notice-strip { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: 10px; background: #2a2a2a; }
+.notice-strip { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: var(--radius); background: var(--surface); }
 .pre-line { white-space: pre-line; margin: 0; }
 .secondary.primary { background: var(--text); color: #000; border-color: var(--text); }
 .secondary.danger { border-color: var(--danger); } /* .danger (existing) sets the colour */
@@ -306,9 +406,9 @@ button.now-art { padding: 0; width: 100%; }
 /* 最新's sort/filter, play-all, 按频道 sections, the episode Now Playing and its queue. */
 .channel-group { margin: 8px 0 20px; }
 .channel-group-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.channel-group-head h2 { margin: 0; font-size: 17px; }
+.channel-group-head h2 { margin: 0; font-size: var(--fs-headline); }
 .channel-group-head h2 a { color: inherit; }
-.episode-now .now-art .cover { border-radius: var(--radius); }
+.episode-now .now-art .cover { border-radius: var(--radius) !important; }
 .episode-now .now-meta a { color: inherit; }
 .episode-now .now-speed { justify-content: center; margin-bottom: 0; }
 .episode-queue { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -332,7 +432,8 @@ button.now-art { padding: 0; width: 100%; }
 }
 .icon:disabled { opacity: 0.35; }
 .shell-player { min-width: 0; }
-.episode-resume button { width: 100%; min-height: 40px; padding: 0 16px; background: var(--surface); border: 0; border-top: 1px solid #222; color: var(--accent); font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.episode-resume { margin: 0 8px 6px; }
+.episode-resume button { width: 100%; min-height: 40px; padding: 0 16px; background: rgba(255,255,255,.07); border: 0; border-radius: var(--radius); color: var(--accent); font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 视频: cards in a 16:9 grid (two columns on a phone), and the watch page. */
 .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 10px; }
@@ -458,4 +559,26 @@ input.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2
   .icon-btn.filled:hover:not(:disabled) { filter: brightness(1.1); }
   .icon-btn.plain:hover { color: var(--text); background: rgba(255,255,255,.06); }
   .pill-tabs > button:hover:not([aria-selected="true"]), .seg > button:hover:not([aria-pressed="true"]) { color: var(--text); }
+}
+
+/* The bars float over the content: the content runs under the mini player
+   (its last row scrolls clear of it) and the material blurs what passes. */
+@supports selector(:has(a)) {
+  .shell { --player-h: 0px; }
+  .shell:has(> .shell-player > .mini, > .shell-player > .mini-empty) { --player-h: calc(var(--mini-h) + 16px); }
+  .shell:has(> .shell-player > .episode-resume) { --player-h: calc(var(--mini-h) + 62px); }
+  .shell > .content { grid-row: 1 / 4; grid-column: 1; padding-bottom: calc(16px + var(--player-h) + var(--tab-h) + env(safe-area-inset-bottom)); }
+  /* Above the tabs: the Now Playing inside it must cover them. */
+  .shell > .shell-player { grid-row: 2; grid-column: 1; z-index: 6; align-self: end; }
+  .shell > .tabs { grid-row: 3; grid-column: 1; z-index: 5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon, .secondary, .now-bg-img, .now-art .cover, .tabs a { transition: none; }
+  .icon:active:not(:disabled), .secondary:active:not(:disabled) { transform: none; }
+  .lyrics-synced button { transition: color .2s; }
+  .lyrics-synced button.active { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .tabs, .shell-player::before { background: var(--material-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }

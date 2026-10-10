@@ -151,7 +151,12 @@ test("the episode mini player is ⏮ ▶ ⏭ ✕: ⏮ within 3 s goes back an ep
   const { episode, eps } = setup({ routes: progressOk(1, 2, 3) });
   act(() => eps().play([ep(1), ep(2), ep(3)], 1));
   const mini = document.querySelector(".episode-mini") as HTMLElement;
-  expect([...mini.querySelectorAll("button.icon")].map((b) => b.textContent)).toEqual(["⏮", "⏸", "⏭", "✕"]);
+  expect([...mini.querySelectorAll("button.icon")].map((b) => b.getAttribute("aria-label"))).toEqual(["上一集", "暂停", "下一集", "关闭节目播放器"]);
+  // Glyphs, not text: SVG icons that render the same in every font.
+  for (const b of mini.querySelectorAll("button.icon")) {
+    expect(b.textContent).toBe("");
+    expect(b.querySelector("svg")).not.toBeNull();
+  }
   expect(mini.closest("[data-no-music-prime]")).not.toBeNull();
   episode.currentTime = 100;
   act(() => screen.getByRole("button", { name: "上一集" }).click());

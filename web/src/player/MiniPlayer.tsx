@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Cover, coverUrl } from "../components/Cover";
+import { BackwardFillIcon, ForwardFillIcon, PauseFillIcon, PlayFillIcon } from "../components/icons";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { CurrentLine, syncedLines, useLyrics } from "./Lyrics";
 import { NowPlaying } from "./NowPlaying";
 import { usePlayer, usePlayerProgress } from "./PlayerProvider";
+import { useTrackSwipe } from "./swipe";
 
 export function MiniPlayer() {
   const t = useT();
@@ -12,6 +14,8 @@ export function MiniPlayer() {
   const { position, duration } = usePlayerProgress();
   const [open, setOpen] = useState(false);
   const track = p.current;
+  // A sideways swipe on the cover and title: left = next, right = previous.
+  const swipeRef = useTrackSwipe(".mini-info", { next: p.next, prev: p.prev });
   // Fetched here, not in Now Playing: the mini player shows the current line
   // too, and Now Playing opens straight onto lyrics it already has.
   const { lyrics, reload } = useLyrics(track?.id);
@@ -35,8 +39,8 @@ export function MiniPlayer() {
   const pct = duration > 0 ? Math.min(100, (position / duration) * 100) : 0;
   return (
     <>
-      <div className="mini">
-        <div className="mini-progress" style={{ width: `${pct}%` }} />
+      <div className="mini" ref={swipeRef}>
+        <div className="mini-track"><div className="mini-progress" style={{ width: `${pct}%` }} /></div>
         {p.notice && <p className="mini-notice" role="status">{p.notice}</p>}
         {p.needsTap && (
           // Deliberately no onClick, and not inside .mini-info: tapping it is
@@ -45,7 +49,7 @@ export function MiniPlayer() {
           // be a second start (or, via toggle(), a pause).
           <button type="button" className="mini-tap">{t("player.tapToPlayFavorites")}</button>
         )}
-        <button className="mini-info" onClick={() => setOpen(true)}>
+        <button className="mini-info" data-swipe-surface="" onClick={() => setOpen(true)}>
           <Cover seed={track.album || track.title} label={track.title} size={44} src={coverUrl("track", track.id)} />
           <span className="track-text">
             <span className="ellipsis">{track.title}</span>
@@ -53,9 +57,11 @@ export function MiniPlayer() {
           </span>
         </button>
         {/* ⏮ as in Now Playing: the previous track in the first 3 s, else a restart. */}
-        <button className="icon" aria-label={t("common.previous")} onClick={p.prev}>⏮</button>
-        <button className="icon" aria-label={p.playing ? t("common.pause") : t("common.play")} onClick={p.toggle}>{p.playing ? "⏸" : "▶"}</button>
-        <button className="icon" aria-label={t("common.next")} onClick={p.next}>⏭</button>
+        <button className="icon mini-btn" aria-label={t("common.previous")} onClick={p.prev}><BackwardFillIcon size={22} /></button>
+        <button className="icon mini-btn mini-play" aria-label={p.playing ? t("common.pause") : t("common.play")} onClick={p.toggle}>
+          {p.playing ? <PauseFillIcon size={26} /> : <PlayFillIcon size={26} />}
+        </button>
+        <button className="icon mini-btn" aria-label={t("common.next")} onClick={p.next}><ForwardFillIcon size={22} /></button>
       </div>
       {open && <NowPlaying lyrics={lyrics} reloadLyrics={reload} onClose={() => setOpen(false)} />}
     </>

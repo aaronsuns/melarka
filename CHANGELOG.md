@@ -27,6 +27,21 @@ the iPhone app share one version number.
   the web app once the server answers, and the music plays on. Covers are now cached with the
   songs, so the lock screen and the car show them offline too.
 
+### Changed
+
+- **A new look, players first**: the players' buttons are clean filled glyphs (play and pause
+  without a ring, double-arrow previous and next, clock arrows for the 15/30 s skips), with a
+  44 px or larger tap target and a press effect. Now Playing shows the artwork blurred and
+  darkened behind everything (the cover's own colours when a song has none), a thinner seek bar,
+  icons in place of emoji for favorite, not for me, edit, tags, lyrics and delete, and on a wide
+  screen one centred column. The mini player is a raised card on a translucent bar with a thin
+  progress line. The rest of the app gets one type scale, spacing, corner radii, list separators,
+  quieter secondary buttons and switches in Settings. Reduced motion is respected.
+- **Swipe to change track**: on the mini player, and on Now Playing's cover and title, swipe
+  left for the next track and right for the previous one (the same as ⏮: in the first 3 s the
+  previous track, later a restart). The content follows the finger and springs back; vertical
+  scrolling, buttons and the seek bar are unaffected. Episodes work the same way.
+
 ### Fixed
 
 - "Continue listening" no longer appears after you pause music. It is offered only when a
