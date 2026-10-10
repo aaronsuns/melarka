@@ -121,7 +121,7 @@ extension AVPlayerBackend {
         b.load(.file(a), startMs: 0, autoplay: true, rate: 1, gain: 1, generation: 1)
         let mark = d.events.count, tickMark = d.ticks.count
         b.load(.file(c), startMs: 0, autoplay: true, rate: 1, gain: 1, generation: 2)
-        try await waitUntil(timeout: 10) { d.has("finished:2") }
+        try await waitUntil(timeout: 10, state: { b.debugState(d) }) { d.has("finished:2") }
         try await Task.sleep(nanoseconds: 300_000_000)
         XCTAssertFalse(d.events[mark...].contains { $0.hasSuffix(":1") }, "\(d.events)")
         XCTAssertTrue(d.ticks[tickMark...].allSatisfy { $0.generation == 2 })

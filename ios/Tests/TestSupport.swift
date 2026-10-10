@@ -31,27 +31,63 @@ extension XCTestCase {
     /// outside any window as hidden and lets its web content process be throttled and suspended while the test
     /// waits on it, so loads and script calls then take as long as the system pleases.
     @MainActor func onScreenWebView(_ configuration: WKWebViewConfiguration) throws -> WKWebView {
+        let web = WKWebView(frame: .zero, configuration: configuration)
+        try putOnScreen(web)
+        return web
+    }
+
+    /// Hosts `web` (one the code under test made) in a visible window of the test host until the test ends.
+    @MainActor func putOnScreen(_ web: WKWebView) throws {
+        guard web.window == nil else { return }
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
                                   "the test host has no window scene")
         let window = UIWindow(windowScene: scene)
-        let web = WKWebView(frame: window.bounds, configuration: configuration)
+        web.frame = window.bounds
         window.addSubview(web)
         window.isHidden = false
         addTeardownBlock { @MainActor in
             web.removeFromSuperview()
             window.isHidden = true
         }
-        return web
+    }
+
+    /// Loads `html` at `base` in `web`, on screen, and waits for that navigation to finish: its own
+    /// `didFinish`, or an error naming why it failed (a failed navigation, a web content process that died).
+    /// The deadline only bounds a broken simulator: a loaded CI machine can take many seconds to start WebKit.
+    @MainActor func loadHTML(_ web: WKWebView, _ html: String, base: URL, timeout: TimeInterval = 60,
+                             file: StaticString = #filePath, line: UInt = #line) async throws {
+        try putOnScreen(web)
+        let nav = NavigationWaiter()
+        let previous = web.navigationDelegate
+        web.navigationDelegate = nav
+        defer { web.navigationDelegate = previous }
+        nav.navigation = web.loadHTMLString(html, baseURL: base)
+        try await waitUntil(timeout: timeout, file: file, line: line, state: { "loading \(base): \(nav.state)" }) { nav.finished || nav.failure != nil }
+        if let failure = nav.failure { throw NavigationFailed(base: base, reason: failure) }
     }
 }
 
-/// Calls `done` once, on the first finished navigation.
-final class OneShotNavDelegate: NSObject, WKNavigationDelegate {
-    private var done: (() -> Void)?
-    init(_ done: @escaping () -> Void) { self.done = done }
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        done?(); done = nil
+struct NavigationFailed: Error, CustomStringConvertible {
+    let base: URL
+    let reason: String
+    var description: String { "loading \(base) failed: \(reason)" }
+}
+
+/// Follows one navigation: finished, failed, or its web content process gone.
+final class NavigationWaiter: NSObject, WKNavigationDelegate {
+    var navigation: WKNavigation?
+    private(set) var finished = false
+    private(set) var failure: String?
+    private(set) var state = "started"
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) { if navigation == self.navigation { state = "committed" } }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { if navigation == self.navigation { finished = true } }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        if navigation == self.navigation { failure = "\(error)" }
     }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if navigation == self.navigation { failure = "\(error)" }
+    }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { failure = "the web content process terminated" }
 }
 
 // MARK: - HTTP stubbing
@@ -140,14 +176,20 @@ func XCTAssertThrowsErrorAsync<T>(_ expr: @autoclosure () async throws -> T, _ c
     static func webKit() async throws {
         guard !webKitReady else { return }
         let started = Date()
-        let web = WKWebView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
-        let nav = OneShotNavDelegate {}
-        web.navigationDelegate = nav
-        web.loadHTMLString("<html><body>warm-up</body></html>", baseURL: URL(string: "https://warm-up.test/")!)
-        try await waitUntil(timeout: 120) {
-            (try? await web.evaluateJavaScript("document.body.textContent") as? String) == "warm-up"
+        // On screen, like the tests' own web views: a hidden one may be throttled.
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else {
+            throw NavigationFailed(base: URL(string: "https://warm-up.test/")!, reason: "the test host has no window scene")
         }
-        withExtendedLifetime(nav) {}
+        let window = UIWindow(windowScene: scene)
+        let web = WKWebView(frame: window.bounds)
+        window.addSubview(web)
+        window.isHidden = false
+        defer { web.removeFromSuperview(); window.isHidden = true }
+        let nav = NavigationWaiter()
+        web.navigationDelegate = nav
+        nav.navigation = web.loadHTMLString("<html><body>warm-up</body></html>", baseURL: URL(string: "https://warm-up.test/")!)
+        try await waitUntil(timeout: 120, state: { "warm-up: \(nav.state) \(nav.failure ?? "")" }) { nav.finished || nav.failure != nil }
+        if let failure = nav.failure { throw NavigationFailed(base: URL(string: "https://warm-up.test/")!, reason: failure) }
         webKitReady = true
         print("cold start: WebKit ready in \(String(format: "%.1f", Date().timeIntervalSince(started))) s")
     }
@@ -169,16 +211,47 @@ func XCTAssertThrowsErrorAsync<T>(_ expr: @autoclosure () async throws -> T, _ c
     }
 }
 
+// MARK: - Bounded awaits
+
+@MainActor final class ResultBox<T> { var value: T? }
+
+struct StillWaiting: Error, CustomStringConvertible {
+    let what: String
+    let seconds: TimeInterval
+    var description: String { "\(what) did not return within \(seconds) s" }
+}
+
+/// Runs `op` and waits at most `seconds` for it to return. For system calls that cannot be cancelled and,
+/// on a struggling simulator, sometimes never call back (WebKit's cookie store): the test fails with what it
+/// was waiting for instead of hanging until the test runner's own limit.
+@MainActor func within<T>(_ seconds: TimeInterval, _ what: String, file: StaticString = #filePath, line: UInt = #line,
+                          _ op: @escaping @MainActor () async -> T) async throws -> T {
+    let box = ResultBox<T>()
+    let task = Task { @MainActor in box.value = await op() }
+    do {
+        try await waitUntil(timeout: seconds, file: file, line: line) { box.value != nil }
+    } catch is WaitTimeout {
+        task.cancel()
+        throw StillWaiting(what: what, seconds: seconds)
+    }
+    return box.value!
+}
+
 // MARK: - Cookies
 
 extension WKHTTPCookieStore {
+    /// Every cookie in the store, or an error after 30 s.
+    @MainActor func cookies(file: StaticString = #filePath, line: UInt = #line) async throws -> [HTTPCookie] {
+        try await within(30, "WKHTTPCookieStore.allCookies", file: file, line: line) { await self.allCookies() }
+    }
+
     /// Sets `cookie` and waits until the store hands it back. `setCookie` can return before `allCookies()`
-    /// includes the cookie (the store forwards it to WebKit's network process, which a cold simulator may still
-    /// be starting), so code that reads the store next would not see it yet.
+    /// includes the cookie (the store forwards it to WebKit's network process), so code that reads the store
+    /// next would not see it yet.
     @MainActor func setCookieAndWait(_ cookie: HTTPCookie, file: StaticString = #filePath, line: UInt = #line) async throws {
-        await setCookie(cookie)
+        _ = try await within(30, "WKHTTPCookieStore.setCookie", file: file, line: line) { await self.setCookie(cookie); return true }
         try await waitUntil(timeout: 30, file: file, line: line, state: { "cookie \(cookie.name) for \(cookie.domain) not in the store" }) {
-            await self.allCookies().contains { $0.name == cookie.name && $0.domain == cookie.domain && $0.value == cookie.value }
+            (try? await self.cookies()).map { $0.contains { $0.name == cookie.name && $0.domain == cookie.domain && $0.value == cookie.value } } ?? false
         }
     }
 }

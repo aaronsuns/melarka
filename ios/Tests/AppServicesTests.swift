@@ -12,6 +12,9 @@ final class AppServicesTests: XCTestCase {
         let s = AppServices(defaults: defaults, secrets: MemorySecretStore())
         let server = URL(string: "https://signout.lark.test/")!
         await s.setServerURL(server)
+        // The app's web view, on screen with a page of the server loaded, as when the user signs in: a store
+        // nothing has used yet may not answer at all on a loaded simulator.
+        try await loadHTML(s.web(for: server), "<html></html>", base: server)
         let store = s.web(for: server).configuration.websiteDataStore.httpCookieStore
         let props: [HTTPCookiePropertyKey: Any] = [.name: "lark_token", .value: "T1", .domain: "signout.lark.test", .path: "/",
                                                    HTTPCookiePropertyKey("HttpOnly"): "TRUE"]
@@ -24,12 +27,12 @@ final class AppServicesTests: XCTestCase {
         XCTAssertNil(s.auth.token)
         var left: [HTTPCookie] = []
         try await waitUntil(timeout: 30, state: { "left: \(left.map(\.name))" }) {
-            left = await store.allCookies().filter { $0.domain == "signout.lark.test" }
+            left = try await store.cookies().filter { $0.domain == "signout.lark.test" }
             return left.map(\.name) == ["other"]
         }
         await s.harvestCookies(userId: 3)
         XCTAssertNil(s.auth.token)
-        for c in left { await store.deleteCookie(c) }
+        for c in left { _ = try await within(30, "deleteCookie") { await store.deleteCookie(c); return true } }
     }
 }
 
@@ -41,6 +44,9 @@ extension AppServicesTests {
         let s = AppServices(defaults: defaults, secrets: MemorySecretStore())
         let server = URL(string: "https://api401.lark.test/")!
         await s.setServerURL(server)
+        // The app's web view, on screen with a page of the server loaded, as when the user signs in: a store
+        // nothing has used yet may not answer at all on a loaded simulator.
+        try await loadHTML(s.web(for: server), "<html></html>", base: server)
         let store = s.web(for: server).configuration.websiteDataStore.httpCookieStore
         let props: [HTTPCookiePropertyKey: Any] = [.name: "lark_token", .value: "T9", .domain: "api401.lark.test", .path: "/",
                                                    HTTPCookiePropertyKey("HttpOnly"): "TRUE"]
@@ -53,7 +59,7 @@ extension AppServicesTests {
         await XCTAssertThrowsErrorAsync(try await api.queue()) { XCTAssertEqual($0 as? LarkError, .unauthorized) }
         XCTAssertNil(s.auth.token)
         try await waitUntil(timeout: 30, state: { "the session cookie is still in the store" }) {
-            await store.allCookies().filter { $0.name == "lark_token" && $0.domain == "api401.lark.test" }.isEmpty
+            try await store.cookies().filter { $0.name == "lark_token" && $0.domain == "api401.lark.test" }.isEmpty
         }
     }
 }

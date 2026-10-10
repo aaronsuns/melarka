@@ -171,6 +171,7 @@ import WebKit
         XCTAssertTrue(s.cache.cachedFavorites().isEmpty)
         XCTAssertFalse(FileManager.default.fileExists(atPath: serverDir.path))
         // Signing in on the new server: its own folder.
+        try await loadHTML(s.web(for: otherServer), "<html></html>", base: otherServer)   // a live store, as in the app
         let cookies = s.web(for: otherServer).configuration.websiteDataStore.httpCookieStore
         let props: [HTTPCookiePropertyKey: Any] = [.name: "lark_token", .value: "T2", .domain: "other.lark.test", .path: "/",
                                                    HTTPCookiePropertyKey("HttpOnly"): "TRUE"]
@@ -180,7 +181,7 @@ import WebKit
         let other = caches.appendingPathComponent(AppServices.serverKey(otherServer))
         try await waitUntil { s.cache.localURL(trackID: 2) != nil }
         XCTAssertEqual(s.cache.localURL(trackID: 2)?.path, other.appendingPathComponent("5/files/2.m4a").path)
-        await cookies.deleteCookie(cookie)
+        _ = try await within(30, "deleteCookie") { await cookies.deleteCookie(cookie); return true }
     }
 
     func testLegacyPerUserFoldersAreRemovedAtLaunch() throws {

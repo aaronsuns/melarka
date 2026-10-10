@@ -106,6 +106,7 @@ import WebKit
 
     func testChangeServerSignsOutStopsPlaybackAndForgetsTheServer() async throws {
         let s = makeServices()
+        try await loadHTML(s.web(for: Self.server), "<html></html>", base: Self.server)   // a live store, as in the app
         let cookies = s.web(for: Self.server).configuration.websiteDataStore.httpCookieStore
         let props: [HTTPCookiePropertyKey: Any] = [.name: "lark_token", .value: "T1", .domain: "settings.lark.test", .path: "/",
                                                    HTTPCookiePropertyKey("HttpOnly"): "TRUE"]
@@ -129,7 +130,7 @@ import WebKit
         XCTAssertNil(s.intentPlayer)
         var left: [HTTPCookie] = []                                    // cookies and token gone
         try await waitUntil(timeout: 30, state: { "left: \(left.map(\.name))" }) {
-            left = await cookies.allCookies().filter { $0.domain == "settings.lark.test" }
+            left = try await cookies.cookies().filter { $0.domain == "settings.lark.test" }
             return left.isEmpty
         }
         XCTAssertTrue(engine.music.items.isEmpty)                      // the old server's queue is wiped
@@ -156,11 +157,7 @@ import WebKit
         try await ColdStart.webKit()
         let s = makeServices()
         let web = s.web(for: Self.server)
-        let loaded = expectation(description: "loaded")
-        let nav = OneShotNavDelegate { loaded.fulfill() }
-        web.navigationDelegate = nav
-        web.loadHTMLString("<html><body>x</body></html>", baseURL: Self.server)   // no request: the origin only
-        await fulfillment(of: [loaded], timeout: 10)
+        try await loadHTML(web, "<html><body>x</body></html>", base: Self.server)   // no request: the origin only
         _ = try await web.evaluateJavaScript("localStorage.setItem('k', 'v'); 1")
         let types: Set<String> = [WKWebsiteDataTypeLocalStorage]
         func records() async -> [String] {

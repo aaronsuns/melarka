@@ -220,25 +220,27 @@ jobs:
         run: scripts/xcresult-failures.sh build/tests.xcresult
       - name: TEMP cold-start stress
         if: always()
-        timeout-minutes: 75
+        timeout-minutes: 100
         run: |
           set +e
           bad=0
-          for i in 1 2 3 4 5; do
+          run() { # name, extra args
+            local n=$1; shift
+            xcodebuild test-without-building -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$SIM_UDID" \
+              -derivedDataPath build/dd -resultBundlePath "build/$n.xcresult" \
+              -test-timeouts-enabled YES -maximum-test-execution-time-allowance 180 "$@" > "$n.log" 2>&1
+            local rc=$?; [ $rc -eq 0 ] || bad=1
+            echo "== $n: xcodebuild exit $rc; $(grep -h 'cold start:' "$n.log" | sort -u | tr '\n' ' ')"
+            scripts/xcresult-failures.sh "build/$n.xcresult"
+          }
+          for i in 1 2 3 4; do
             # A cold simulator each round, not waited for: the worst case for the first tests.
             xcrun simctl shutdown "$SIM_UDID" >/dev/null 2>&1
-            for j in 1 2 3; do (while :; do :; done) & done   # a loaded machine
-            xcodebuild test-without-building -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$SIM_UDID" \
-              -derivedDataPath build/dd -resultBundlePath "build/cold-$i.xcresult" \
-              -only-testing:LarkTests/AVPlayerBackendTests -only-testing:LarkTests/BridgeWebViewTests \
-              -only-testing:LarkTests/SettingsModelTests -only-testing:LarkTests/AppServicesTests \
-              -only-testing:LarkTests/CacheWiringTests \
-              -test-timeouts-enabled YES -maximum-test-execution-time-allowance 180 > "cold-$i.log" 2>&1
-            rc=$?; kill $(jobs -p) 2>/dev/null; wait 2>/dev/null
-            echo "== cold round $i: xcodebuild exit $rc; $(grep -h 'cold start:' "cold-$i.log" | sort -u | tr '\n' ' ')"
-            [ $rc -eq 0 ] || bad=1
-            scripts/xcresult-failures.sh "build/cold-$i.xcresult"
+            run "cold-$i" -only-testing:LarkTests/AVPlayerBackendTests -only-testing:LarkTests/BridgeWebViewTests \
+              -only-testing:LarkTests/SettingsModelTests -only-testing:LarkTests/AppServicesTests -only-testing:LarkTests/CacheWiringTests
           done
+          xcrun simctl shutdown "$SIM_UDID" >/dev/null 2>&1
+          run whole-suite-x3 -test-iterations 3
           exit $bad
       - run: python3 -m unittest discover -s scripts
 
