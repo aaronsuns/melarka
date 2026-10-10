@@ -287,3 +287,75 @@ func TestPurgeRefusesPathsOutsideTrash(t *testing.T) {
 		t.Fatal("purge deleted a file outside .lark-trash")
 	}
 }
+
+// MoveBroken trashes every track currently flagged broken (and on disk, not
+// already trashed) as Move does one; the rest are left alone. A file that
+// can't be moved is counted, and the others still go.
+func TestMoveBroken(t *testing.T) {
+	s, root, _, now := setup(t)
+	ctx := context.Background()
+	l, _ := s.Library.EnsureLibrary(ctx, "main", root, false)
+	for _, rel := range []string{"A/b1.mp3", "A/b2.mp3", "A/ok.mp3", "A/old.mp3"} {
+		os.WriteFile(filepath.Join(root, filepath.FromSlash(rel)), []byte("data"), 0o644)
+	}
+	ins := func(id int, rel string, broken int, extra string) {
+		if _, err := s.DB.Exec(`INSERT INTO tracks(id,library_id,rel_path,size,mtime,fingerprint,status,added_at,broken,broken_reason) VALUES (?,?,?,4,1,?,'kept',0,?,'bad')`, id, l.ID, rel, rel, broken); err != nil {
+			t.Fatal(err)
+		}
+		if extra != "" {
+			s.DB.Exec(`UPDATE tracks SET `+extra+` WHERE id=?`, id)
+		}
+	}
+	ins(2, "A/b1.mp3", 1, "")
+	ins(3, "A/b2.mp3", 1, "")
+	ins(4, "A/ok.mp3", 0, "")
+	ins(5, "A/gone.mp3", 1, "missing_since=1") // not on disk: not in the list either
+	ins(6, "A/old.mp3", 1, "status='pending'") // pending counts too
+	moved, failed, err := s.MoveBroken(ctx)
+	if err != nil || moved != 3 || failed != 0 {
+		t.Fatalf("moved=%d failed=%d err=%v", moved, failed, err)
+	}
+	status := func(id int) string {
+		var st string
+		s.DB.QueryRow(`SELECT status FROM tracks WHERE id=?`, id).Scan(&st)
+		return st
+	}
+	for id, want := range map[int]string{1: "kept", 2: "trashed", 3: "trashed", 4: "kept", 5: "kept", 6: "trashed"} {
+		if got := status(id); got != want {
+			t.Errorf("track %d status=%s want %s", id, got, want)
+		}
+	}
+	items, _ := s.List(ctx)
+	if len(items) != 3 || items[0].PurgeAt != now.Unix()+int64(Retention/time.Second) {
+		t.Fatalf("trash %+v", items)
+	}
+	// Idempotent: nothing left to move.
+	if moved, failed, err := s.MoveBroken(ctx); err != nil || moved != 0 || failed != 0 {
+		t.Fatalf("again moved=%d failed=%d err=%v", moved, failed, err)
+	}
+	// Restorable like any trashed track.
+	if err := s.Restore(ctx, 2); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "A", "b1.mp3")); err != nil {
+		t.Fatal("not restored")
+	}
+}
+
+func TestMoveBrokenCountsFailuresAndMovesTheRest(t *testing.T) {
+	s, root, _, _ := setup(t)
+	ctx := context.Background()
+	l, _ := s.Library.EnsureLibrary(ctx, "main", root, false)
+	os.WriteFile(filepath.Join(root, "A", "b.mp3"), []byte("data"), 0o644)
+	s.DB.Exec(`INSERT INTO tracks(id,library_id,rel_path,size,mtime,fingerprint,status,added_at,broken) VALUES (2,?,'A/vanished.mp3',4,1,'v','kept',0,1)`, l.ID)
+	s.DB.Exec(`INSERT INTO tracks(id,library_id,rel_path,size,mtime,fingerprint,status,added_at,broken) VALUES (3,?,'A/b.mp3',4,1,'b','kept',0,1)`, l.ID)
+	moved, failed, err := s.MoveBroken(ctx)
+	if err != nil || moved != 1 || failed != 1 {
+		t.Fatalf("moved=%d failed=%d err=%v", moved, failed, err)
+	}
+	var st string
+	s.DB.QueryRow(`SELECT status FROM tracks WHERE id=3`).Scan(&st)
+	if st != "trashed" {
+		t.Fatalf("status=%s", st)
+	}
+}

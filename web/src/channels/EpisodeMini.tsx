@@ -29,9 +29,10 @@ export function EpisodeMini() {
           <span className="ellipsis muted small">{cur.channel_title}</span>
         </span>
       </button>
-      <button className="icon" aria-label={t("episodes.back15")} onClick={() => ep.skip(-15)}>↺</button>
+      {/* ⏮ ▶ ⏭ as the music bar (the ±15/30 s skips are in Now Playing): ⏮ in the first 3 s goes back an episode, else restarts it. */}
+      <button className="icon" aria-label={t("episodes.previous")} onClick={ep.prev}>⏮</button>
       <button className="icon" aria-label={ep.playing ? t("common.pause") : t("common.play")} onClick={ep.toggle}>{ep.playing ? "⏸" : "▶"}</button>
-      <button className="icon" aria-label={t("episodes.forward30")} onClick={() => ep.skip(30)}>↻</button>
+      <button className="icon" aria-label={t("episodes.next")} disabled={ep.index >= ep.queue.length - 1} onClick={ep.next}>⏭</button>
       <button className="icon" aria-label={t("episodes.close")} onClick={ep.close}>✕</button>
     </div>
     {open && <EpisodeNowPlaying onClose={() => setOpen(false)} />}

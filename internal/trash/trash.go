@@ -127,6 +127,47 @@ func (s *Service) Move(ctx context.Context, trackID int64) error {
 	return err
 }
 
+// MoveBroken moves every track currently flagged broken into the trash, one
+// Move at a time (so each is restorable until it is purged), and reports how
+// many went and how many could not be moved. Only the tracks the admin
+// console lists count: broken, not trashed, not missing from disk. A file
+// that fails is logged and skipped; the rest still go. Running it again
+// moves nothing.
+func (s *Service) MoveBroken(ctx context.Context) (moved, failed int, err error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT id FROM tracks WHERE broken=1 AND status!='trashed' AND missing_since IS NULL ORDER BY id`)
+	if err != nil {
+		return 0, 0, err
+	}
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return 0, 0, err
+		}
+		ids = append(ids, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, 0, err
+	}
+	for _, id := range ids {
+		if err := ctx.Err(); err != nil {
+			return moved, failed, err
+		}
+		switch err := s.Move(ctx, id); {
+		case err == nil:
+			moved++
+		case errors.Is(err, ErrNotFound):
+			// trashed meanwhile: nothing to do
+		default:
+			failed++
+			s.Log.Warn("trash broken: could not move", "track", id, "err", err)
+		}
+	}
+	return moved, failed, nil
+}
+
 // Restore puts a trashed track's file back at its original path
 // (trash_orig_rel), not at the current (trash) rel_path.
 //

@@ -11,7 +11,7 @@ import { EventBuffer } from "./events";
 import { activeLine, getLyrics, isBlankLine, onLyrics, prefetchLyrics } from "./lyricsCache";
 import { chooseNext, isLocalChoice, type ChooseOpts, type NextChoice } from "./nextTrack";
 import { BlobPreloader, BLOB_MAX_BYTES, estimateHighBytes } from "./preload";
-import { claimSession, onSessionClaim, ownsSession } from "./sessionOwner";
+import { claimSession, musicSounded, onSessionClaim, ownsSession } from "./sessionOwner";
 import { appendable, current, emptyQueue, needsRefill, queueReducer, saveUpNext, storedUpNext, upcoming, type QueueAction, type QueueState } from "./queue";
 import { hasNative } from "../native/bridge";
 import { gainFactor } from "./gain";
@@ -1497,6 +1497,7 @@ function WebPlayerProvider({
       }
       if (audio.src.startsWith("data:") || audio.muted) return;
       claimSession("music", { force: true });
+      musicSounded();
     };
     audio.addEventListener("playing", onPlaying);
     return () => audio.removeEventListener("playing", onPlaying);

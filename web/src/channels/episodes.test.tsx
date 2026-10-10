@@ -147,15 +147,22 @@ test("speed is applied, kept across loads and remembered", () => {
   expect(localStorage.getItem("lark.episodeRate")).toBe("1.5");
 });
 
-test("the episode mini player skips, pauses and closes back to music", async () => {
-  const { episode, eps } = setup();
-  act(() => eps().play([ep(1)], 0));
+test("the episode mini player is ⏮ ▶ ⏭ ✕: ⏮ within 3 s goes back an episode, later restarts; it closes back to music", () => {
+  const { episode, eps } = setup({ routes: progressOk(1, 2, 3) });
+  act(() => eps().play([ep(1), ep(2), ep(3)], 1));
+  const mini = document.querySelector(".episode-mini") as HTMLElement;
+  expect([...mini.querySelectorAll("button.icon")].map((b) => b.textContent)).toEqual(["⏮", "⏸", "⏭", "✕"]);
+  expect(mini.closest("[data-no-music-prime]")).not.toBeNull();
   episode.currentTime = 100;
-  act(() => screen.getByRole("button", { name: "后退 15 秒" }).click());
-  expect(episode.currentTime).toBe(85);
-  act(() => screen.getByRole("button", { name: "前进 30 秒" }).click());
-  expect(episode.currentTime).toBe(115);
-  expect(screen.getByText("第1集")).toBeInTheDocument();
+  act(() => screen.getByRole("button", { name: "上一集" }).click());
+  expect(episode.currentTime).toBe(0);
+  expect(eps().current?.title).toBe("第2集");
+  episode.currentTime = 2;
+  act(() => screen.getByRole("button", { name: "上一集" }).click());
+  expect(eps().current?.title).toBe("第1集");
+  act(() => screen.getByRole("button", { name: "下一集" }).click());
+  expect(eps().current?.title).toBe("第2集");
+  expect(screen.getByText("第2集")).toBeInTheDocument();
   act(() => screen.getByRole("button", { name: "关闭节目播放器" }).click());
   expect(episode.pause).toHaveBeenCalled();
   expect(ownsSession("music")).toBe(true);
@@ -497,6 +504,73 @@ test("继续收听 shows only while music owns the session (not over a preview o
   expect(screen.getByRole("button", { name: "继续收听 第2集" })).toBeInTheDocument();
   act(() => claimSession("video"));
   expect(screen.queryByRole("button", { name: /继续收听/ })).toBeNull();
+});
+
+// ---- 继续收听 only when the episode was the last thing that played ----
+
+const restore1: Routes = { ...progressOk(1, 2), "GET /api/v1/episodes/episode0001": () => ({ body: ep(1, { position_s: 120 }) }) };
+
+test("episode plays → music plays → music paused: no 继续收听 (the bar is the paused music), not after a reload either", async () => {
+  const first = setup({ shell: true, routes: progressOk(1, 2) });
+  act(() => first.eps().playList([ep(1), ep(2)], 0));
+  expect(document.querySelector(".episode-mini")).not.toBeNull();
+  act(() => first.player().playList([tr(1)], 0));
+  act(() => first.music.fire("playing"));
+  expect(first.eps().active).toBe(false);
+  act(() => first.player().pause());
+  expect(first.player().playing).toBe(false);
+  expect(screen.getByText("t1")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /继续收听/ })).toBeNull();
+  // Not even when the session comes back to music from a preview.
+  act(() => claimSession("preview"));
+  act(() => claimSession("music"));
+  expect(screen.queryByRole("button", { name: /继续收听/ })).toBeNull();
+  // The episode stays resumable from 频道, at its place in the queue.
+  expect(first.eps().current?.title).toBe("第1集");
+  first.unmount();
+  resetSessionOwner();
+  cleanup();
+  const again = setup({ shell: true, routes: restore1 });
+  await waitFor(() => expect(again.eps().current?.position_s).toBe(120));
+  expect(screen.queryByRole("button", { name: /继续收听/ })).toBeNull();
+});
+
+test("episode plays → episode paused: 继续收听 is offered once it is set aside, and after a reload", async () => {
+  const first = setup({ shell: true, routes: progressOk(1, 2) });
+  act(() => first.eps().playList([ep(1), ep(2)], 0));
+  act(() => first.eps().pause());
+  expect(first.eps().playing).toBe(false);
+  // Still the episode's bar while it is active.
+  expect(document.querySelector(".episode-mini")).not.toBeNull();
+  // A preview sets it aside; when the preview ends the session is music's, but music never played.
+  act(() => claimSession("preview"));
+  act(() => claimSession("music"));
+  expect(first.eps().active).toBe(false);
+  expect(screen.getByRole("button", { name: "继续收听 第1集" })).toBeInTheDocument();
+  first.unmount();
+  resetSessionOwner();
+  cleanup();
+  const again = setup({ shell: true, routes: restore1 });
+  expect(await screen.findByRole("button", { name: "继续收听 第1集" })).toBeInTheDocument();
+  // Music playing afterwards takes the offer away.
+  act(() => again.player().playList([tr(1)], 0));
+  act(() => again.music.fire("playing"));
+  act(() => again.player().pause());
+  expect(screen.queryByRole("button", { name: /继续收听/ })).toBeNull();
+});
+
+test("what played last is kept per user", () => {
+  const first = setup({ routes: progressOk(1) });
+  act(() => first.eps().playList([ep(1)], 0));
+  expect(localStorage.getItem("lark.lastPlayed.0")).toBe("episode");
+  act(() => first.player().playList([tr(1)], 0));
+  act(() => first.music.fire("playing"));
+  expect(localStorage.getItem("lark.lastPlayed.0")).toBe("music");
+  // The silent unlock clip is not music playing.
+  act(() => first.eps().playList([ep(1)], 0));
+  first.music.src = "data:audio/wav;base64,xx";
+  act(() => first.music.fire("playing"));
+  expect(localStorage.getItem("lark.lastPlayed.0")).toBe("episode");
 });
 
 test("a restored queue never hides music resumed by a tap", async () => {

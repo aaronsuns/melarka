@@ -52,6 +52,8 @@ export function MiniPlayer() {
             <span className="ellipsis muted small">{p.error ?? <CurrentLine lines={syncedLines(lyrics)} offset={lyrics?.offset_ms ?? 0} fallback={track.artist || t("common.unknownArtist")} />}</span>
           </span>
         </button>
+        {/* ⏮ as in Now Playing: the previous track in the first 3 s, else a restart. */}
+        <button className="icon" aria-label={t("common.previous")} onClick={p.prev}>⏮</button>
         <button className="icon" aria-label={p.playing ? t("common.pause") : t("common.play")} onClick={p.toggle}>{p.playing ? "⏸" : "▶"}</button>
         <button className="icon" aria-label={t("common.next")} onClick={p.next}>⏭</button>
       </div>

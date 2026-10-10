@@ -9,6 +9,7 @@ import { EpisodesProvider, useEpisodes, useEpisodesProgress, type EpisodesPlayer
 import { loadStoredQueue, saveStoredQueue } from "../channels/episodeQueue";
 import SettingsPage from "../pages/SettingsPage";
 import { MiniPlayer } from "../player/MiniPlayer";
+import { ShellPlayer } from "../player/ShellPlayer";
 import { PlayerProvider, usePlayer, usePlayerProgress, type Player } from "../player/PlayerProvider";
 import { claimSession, ownsSession, resetSessionOwner } from "../player/sessionOwner";
 import { renderWithApp } from "../test/render";
@@ -170,6 +171,22 @@ it("the transport messages name their kind", () => {
   expect(p.needsTap).toBe(false);
   act(() => p.prime());
   expect(n.post).toHaveBeenCalledTimes(7);
+});
+
+it("the mini players' ⏮ go through the bridge's prev, for music and for an episode", async () => {
+  mockFetch({});
+  renderPlayer(<><Probe /><EProbe /><ShellPlayer /></>);
+  n.emit({ type: "queue", kind: "track", items: [trackItem(track1), trackItem(track2)], index: 1, source: "list" });
+  n.emit(stateEvent({ kind: "track", itemId: "2", index: 1, playing: true }));
+  n.post.mockClear();
+  await userEvent.click(screen.getByRole("button", { name: "上一首" }));
+  expect(n.post.mock.calls.map(([m]) => m)).toEqual([{ type: "prev", kind: "track" }]);
+  n.emit({ type: "queue", kind: "episode", items: [episodeItem(ep("a")), episodeItem(ep("b"))], index: 1, source: "list" });
+  n.emit(stateEvent({ kind: "episode", itemId: "b", index: 1, playing: true }));
+  await waitFor(() => expect(document.querySelector(".episode-mini")).not.toBeNull());
+  n.post.mockClear();
+  await userEvent.click(screen.getByRole("button", { name: "上一集" }));
+  expect(n.post.mock.calls.map(([m]) => m)).toEqual([{ type: "prev", kind: "episode" }]);
 });
 
 it("playList and jump start a new queue at 0; enqueueNext keeps the current item playing (setQueue without positionMs)", () => {
@@ -452,6 +469,47 @@ it("native plays one kind at a time: the other kind's playing state is cleared, 
   // 继续收听 on the episode plays it.
   n.post.mockClear();
   act(() => e.toggle());
+  expect(n.post).toHaveBeenLastCalledWith({ type: "play", kind: "episode" });
+});
+
+it("native: episode plays → music plays → music paused shows the paused music, no 继续收听, also after a reload", () => {
+  mockFetch({});
+  const first = renderPlayer(<><Probe /><EProbe /><ShellPlayer /></>);
+  n.emit({ type: "queue", kind: "track", items: [trackItem(track1)], index: 0, source: "list" });
+  n.emit({ type: "queue", kind: "episode", items: [episodeItem(ep("a"))], index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "episode", itemId: "a", playing: true }));
+  expect(document.querySelector(".episode-mini")).not.toBeNull();
+  n.emit(stateEvent({ kind: "episode", itemId: "a", playing: false }));
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: true }));
+  n.emit(stateEvent({ kind: "track", itemId: "1", playing: false }));
+  expect(e.active).toBe(false);
+  expect(screen.getByText("song 1")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /继续收听/ })).toBeNull();
+  first.unmount();
+  resetSessionOwner();
+  renderPlayer(<><Probe /><EProbe /><ShellPlayer /></>);
+  n.emit({ type: "queue", kind: "track", items: [trackItem(track1)], index: 0, source: "list" });
+  expect(e.current?.video_id).toBe("a");
+  expect(screen.queryByRole("button", { name: /继续收听/ })).toBeNull();
+});
+
+it("native: episode plays → episode paused, then set aside: 继续收听 is offered, also after a reload", () => {
+  mockFetch({});
+  const first = renderPlayer(<><Probe /><EProbe /><ShellPlayer /></>);
+  n.emit({ type: "queue", kind: "track", items: [trackItem(track1)], index: 0, source: "list" });
+  n.emit({ type: "queue", kind: "episode", items: [episodeItem(ep("a"))], index: 0, source: "list" });
+  n.emit(stateEvent({ kind: "episode", itemId: "a", playing: true }));
+  n.emit(stateEvent({ kind: "episode", itemId: "a", playing: false }));
+  act(() => claimSession("preview"));
+  act(() => claimSession("music"));
+  expect(screen.getByRole("button", { name: "继续收听 ep a" })).toBeInTheDocument();
+  first.unmount();
+  resetSessionOwner();
+  renderPlayer(<><Probe /><EProbe /><ShellPlayer /></>);
+  n.emit({ type: "queue", kind: "track", items: [trackItem(track1)], index: 0, source: "list" });
+  expect(screen.getByRole("button", { name: "继续收听 ep a" })).toBeInTheDocument();
+  n.post.mockClear();
+  act(() => screen.getByRole("button", { name: "继续收听 ep a" }).click());
   expect(n.post).toHaveBeenLastCalledWith({ type: "play", kind: "episode" });
 });
 

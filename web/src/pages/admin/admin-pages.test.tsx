@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { AuthProvider } from "../../auth/AuthProvider";
@@ -293,6 +293,62 @@ test("broken files section shows the path and a reason, or 无法读取 when the
   expect(screen.getByText("corrupt")).toBeInTheDocument();
   expect(screen.getByText("bad2.wma")).toBeInTheDocument();
   expect(screen.getByText("无法读取")).toBeInTheDocument();
+});
+
+test("全部删除 asks with the count, then moves every broken file to the trash at once", async () => {
+  const del = vi.fn(() => ({ status: 200, body: { trashed: 2 } }));
+  let list = [track(9, "坏歌1", { broken: true, path: "bad1.wma" }), track(10, "坏歌2", { broken: true, path: "bad2.wma" })];
+  const { f } = renderWithApp(<LibrariesPage />, {
+    role: "admin",
+    path: "/admin/libraries",
+    routes: {
+      "GET /api/v1/admin/libraries": () => ({ body: [] }),
+      "GET /api/v1/admin/scan/status": () => ({ body: [] }),
+      "GET /api/v1/tracks": () => ({ body: { items: list, next_cursor: "" } }),
+      "DELETE /api/v1/admin/broken-tracks": del,
+    },
+  });
+  await screen.findByText("bad1.wma");
+  await userEvent.click(screen.getByRole("button", { name: "全部删除" }));
+  const dialog = screen.getByRole("alertdialog");
+  expect(dialog).toHaveTextContent("把 2 个损坏文件移到回收站？30 天内可以在回收站恢复。");
+  // 取消 sends nothing.
+  await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(del).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "全部删除" }));
+  list = [];
+  await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "移到回收站" }));
+  expect(await screen.findByText("已把 2 个文件移到回收站")).toBeInTheDocument();
+  expect(del).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText("bad1.wma")).toBeNull();
+  expect(screen.getByText("没有损坏文件")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "全部删除" })).toBeNull();
+  // The list asks for every broken file, not just the first page.
+  expect(String(f.mock.calls.find(([u]) => String(u).includes("/tracks"))![0])).toContain("limit=500");
+});
+
+test("全部删除: when some files can't be moved, it says so and shows what is left", async () => {
+  let list = [track(9, "坏歌1", { broken: true, path: "bad1.wma" }), track(10, "坏歌2", { broken: true, path: "bad2.wma" })];
+  renderWithApp(<LibrariesPage />, {
+    role: "admin",
+    path: "/admin/libraries",
+    routes: {
+      "GET /api/v1/admin/libraries": () => ({ body: [] }),
+      "GET /api/v1/admin/scan/status": () => ({ body: [] }),
+      "GET /api/v1/tracks": () => ({ body: { items: list, next_cursor: "" } }),
+      "DELETE /api/v1/admin/broken-tracks": () => {
+        list = list.slice(1);
+        return { status: 500, body: { error: "1 of 2 damaged files could not be moved to the trash", code: "broken_trash_incomplete" } };
+      },
+    },
+  });
+  await screen.findByText("bad1.wma");
+  await userEvent.click(screen.getByRole("button", { name: "全部删除" }));
+  await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "移到回收站" }));
+  expect(await screen.findByText("有些损坏文件没能移到回收站")).toBeInTheDocument();
+  await vi.waitFor(() => expect(screen.queryByText("bad1.wma")).toBeNull());
+  expect(screen.getByText("bad2.wma")).toBeInTheDocument();
 });
 
 // ---------- SystemPage ----------

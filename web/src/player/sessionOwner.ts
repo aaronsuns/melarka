@@ -29,3 +29,17 @@ export function onSessionClaim(fn: (o: SessionOwner) => void): () => void {
 export function resetSessionOwner(): void {
   owner = "music";
 }
+
+// Music really sounding — not a claim alone: a preview, a video or an
+// episode closing hands the session back to music without music playing.
+// 继续收听 (lastPlayed.ts) follows this, not the owner.
+const soundedListeners = new Set<() => void>();
+
+export function musicSounded(): void {
+  soundedListeners.forEach((fn) => fn());
+}
+
+export function onMusicSounded(fn: () => void): () => void {
+  soundedListeners.add(fn);
+  return () => void soundedListeners.delete(fn);
+}

@@ -34,6 +34,12 @@ test("频道: paste a channel link, follow, the newest episodes download, ▶ �
   await row.getByRole("button", { name: "听" }).click();
   await stream;
   await expect(page.locator(".episode-mini")).toContainText("假节目 第3集");
+  // ⏮ ▶ ⏭ ✕ fit inside the viewport (360 px wide on chromium-360), the title keeps its room.
+  for (const name of ["上一集", /^(暂停|播放)$/, "下一集", "关闭节目播放器"]) {
+    const b = (await page.locator(".episode-mini").getByRole("button", { name }).boundingBox())!;
+    expect(b.x + b.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  }
+  expect((await page.locator(".episode-mini .mini-info").boundingBox())!.width).toBeGreaterThan(120);
   await expect.poll(async () => {
     const style = (await page.locator(".episode-mini .mini-progress").getAttribute("style")) ?? "";
     return parseFloat(/width:\s*([\d.]+)%/.exec(style)?.[1] ?? "0");

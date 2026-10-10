@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -52,6 +53,7 @@ func (s *Server) tagRoutes(a chi.Router) {
 
 func (s *Server) adminRoutes(adm chi.Router) {
 	adm.Delete("/tracks/{id}", s.trashTrack)
+	adm.Delete("/admin/broken-tracks", s.trashBrokenTracks)
 	adm.Put("/tracks/{id}/status", s.setTrackStatus)
 	adm.Patch("/tracks/{id}", s.patchTrack)
 	adm.Put("/tracks/{id}/tags", s.putTrackTags)
@@ -111,6 +113,24 @@ func (s *Server) trashTrack(w http.ResponseWriter, r *http.Request) {
 	default:
 		s.fail(w, err)
 	}
+}
+
+// trashBrokenTracks moves every damaged file the admin console lists into
+// the trash at once, as DELETE /tracks/{id} does one (restorable until it is
+// purged). {"trashed": n}; with nothing left it is {"trashed": 0}. When some
+// file could not be moved the rest still are, and the answer is a coded
+// error saying how many failed.
+func (s *Server) trashBrokenTracks(w http.ResponseWriter, r *http.Request) {
+	moved, failed, err := s.Trash.MoveBroken(r.Context())
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if failed > 0 {
+		writeCoded(w, 500, "broken_trash_incomplete", fmt.Sprintf("%d of %d damaged files could not be moved to the trash", failed, moved+failed))
+		return
+	}
+	writeJSON(w, 200, map[string]int{"trashed": moved})
 }
 
 func (s *Server) setTrackStatus(w http.ResponseWriter, r *http.Request) {

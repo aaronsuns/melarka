@@ -262,3 +262,20 @@ test("iOS tap on ▶: touchend starts the queue, the later click doesn't pause i
   expect(audio.pause).not.toHaveBeenCalled();
   expect(audio.play.mock.calls.length).toBe(plays + 1);
 });
+
+test("the mini player's ⏮: within the first 3 s the previous track, later a restart", async () => {
+  const { audio } = renderWithApp(<><Grab /><MiniPlayer /></>);
+  act(() => p.playList([tr(1), tr(2), tr(3)], 1));
+  expect(await screen.findByText("歌2")).toBeInTheDocument();
+  const mini = document.querySelector(".mini") as HTMLElement;
+  // ⏮ ▶ ⏭, in that order.
+  expect(within(mini).getAllByRole("button").slice(1).map((b) => b.textContent)).toEqual(["⏮", "⏸", "⏭"]);
+  audio.currentTime = 12;
+  await userEvent.click(within(mini).getByRole("button", { name: "上一首" }));
+  expect(audio.currentTime).toBe(0);
+  expect(p.current?.id).toBe(2);
+  audio.currentTime = 2;
+  await userEvent.click(within(mini).getByRole("button", { name: "上一首" }));
+  expect(await screen.findByText("歌1")).toBeInTheDocument();
+  expect(p.current?.id).toBe(1);
+});

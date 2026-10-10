@@ -165,6 +165,8 @@ export const api = {
   setEpisodeHidden: (id: string, on: boolean) => req<void>(on ? "PUT" : "DELETE", `/episodes/${encodeURIComponent(id)}/hide`),
   radio: (n: number, exclude: number[]) => req<Track[]>("GET", `/radio/next${qs({ n, exclude: exclude.join(",") || undefined })}`),
   trashTrack: (id: number) => req<void>("DELETE", `/tracks/${id}`),
+  // Every broken (damaged) file to the trash at once; how many went.
+  trashBroken: async () => (await req<{ trashed: number }>("DELETE", "/admin/broken-tracks")).trashed,
   setStatus: (id: number, status: "kept" | "pending") => req<void>("PUT", `/tracks/${id}/status`, { status }),
   randomTracks: (n: number, exclude: number[], opts: { tag?: string } = {}) =>
     req<Track[]>("GET", `/tracks/random${qs({ n, exclude: exclude.join(",") || undefined, tag: opts.tag })}`),
