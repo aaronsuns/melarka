@@ -68,6 +68,12 @@ export class FakeAudio extends EventTarget {
   // HAVE_ENOUGH_DATA / NETWORK_IDLE unless a test says otherwise.
   readyState = 4;
   networkState = 1;
+  // What is downloaded, as [start, end] seconds (TimeRanges-like); nothing unless a test says otherwise.
+  bufferedRanges: [number, number][] = [];
+  get buffered() {
+    const r = this.bufferedRanges;
+    return { length: r.length, start: (i: number) => r[i][0], end: (i: number) => r[i][1] };
+  }
   get src() {
     return this._src;
   }

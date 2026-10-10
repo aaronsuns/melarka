@@ -208,8 +208,10 @@ input, select, textarea { font-size: 16px; }
 .now > :not(.now-bg, .sheet-backdrop) { position: relative; z-index: 1; width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
 .now-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
 .now-bg-tile, .now-bg-img { position: absolute; inset: -12%; width: 124%; height: 124%; }
-.now-bg-tile { filter: blur(40px) brightness(.55) saturate(1.2); }
-.now-bg-img { object-fit: cover; filter: blur(60px) brightness(.5) saturate(1.5); transform: translateZ(0); opacity: 0; transition: opacity .6s ease; }
+/* The tile is already a soft gradient: darkened (as brightness(.55)) by an overlay, not a filter. */
+.now-bg-tile::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+/* A tiny canvas (NowBackground.tsx), already blurred and darkened, stretched smoothly: no CSS filter. */
+.now-bg-img { display: block; opacity: 0; transition: opacity .6s ease; }
 .now-bg-img.loaded { opacity: 1; }
 /* Keeps text at WCAG AA over any artwork: even pure white artwork ends up no
    lighter than #4c4c4c (brightness .5, then at least 40% black), where the

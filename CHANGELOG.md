@@ -8,6 +8,16 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A track stuck at 0:00 while "playing"**: in browsers whose media engine can stall with the
+  audio already downloaded (WebKit on Linux), the web player now reloads the track where it
+  stands after 2.5 s, at most twice per track, instead of showing a frozen track (not while the
+  page is hidden or a network retry is pending).
+- **Now Playing's background is cheap**: the blurred artwork is painted once into a tiny canvas
+  and stretched, instead of a large CSS blur over the whole screen. Same look; about half the
+  memory in WebKit (1.1 GB to 0.5 GB on Linux), which matters on older iPhones.
+
 ## [0.2.1] - 2026-10-10
 
 ### Added
