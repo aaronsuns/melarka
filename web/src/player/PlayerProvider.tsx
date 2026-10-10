@@ -923,7 +923,9 @@ function WebPlayerProvider({
     let since = Date.now();
     const timer = setInterval(() => {
       const t = audio.currentTime;
-      if (t !== last || audio.paused || audio.seeking || audio.src.startsWith("data:") || !bufferedAt(audio, t)) {
+      // Hidden, the page's timers and media may be throttled (not stuck); a
+      // network retry already reloads the track its own way.
+      if (t !== last || audio.paused || audio.seeking || audio.src.startsWith("data:") || isHidden() || netRetry.current || !bufferedAt(audio, t)) {
         last = t;
         since = Date.now();
         return;
@@ -936,10 +938,11 @@ function WebPlayerProvider({
       pendingSeek.current = t;
       if (listen.current) listen.current.lastTime = t;
       audio.src = srcFor(track);
+      applyVolume(track); // the track's gain and any sleep-timer fade, as load() sets them
       playOrAskTap(track.id);
     }, STUCK_CHECK_MS);
     return () => clearInterval(timer);
-  }, [playing, audio, srcFor, playOrAskTap]);
+  }, [playing, audio, srcFor, playOrAskTap, applyVolume]);
   // A seek (from anywhere) cancels a pending stall switch.
   useEffect(() => {
     audio.addEventListener("seeking", clearStall);
