@@ -220,6 +220,7 @@ jobs:
         run: scripts/xcresult-failures.sh build/tests.xcresult
       - name: TEMP cold-start stress
         if: always()
+        timeout-minutes: 75
         run: |
           set +e
           bad=0
