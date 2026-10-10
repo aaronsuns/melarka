@@ -186,6 +186,7 @@
   "admin.libraries.deleteAllCancel": "取消",
   "admin.libraries.deletedAll_other": "已把 {count} 個檔案移到資源回收筒",
   "admin.libraries.deleteAllFailed": "沒能移到資源回收筒",
+  "error.broken_count_changed": "損壞檔案的數量變了，請看一下清單再試",
   "error.broken_trash_incomplete": "有些損壞檔案沒能移到資源回收筒",
   "admin.libraries.resultAdded": "新增", "admin.libraries.resultUpdated": "更新",
   "admin.libraries.resultMoved": "移動", "admin.libraries.resultMissing": "缺失",

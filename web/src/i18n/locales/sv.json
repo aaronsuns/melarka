@@ -189,6 +189,7 @@
   "admin.libraries.deletedAll_one": "Flyttade {count} fil till papperskorgen",
   "admin.libraries.deletedAll_other": "Flyttade {count} filer till papperskorgen",
   "admin.libraries.deleteAllFailed": "Kunde inte flytta dem till papperskorgen",
+  "error.broken_count_changed": "Antalet trasiga filer har ändrats; titta på listan och försök igen",
   "error.broken_trash_incomplete": "Vissa trasiga filer kunde inte flyttas till papperskorgen",
   "admin.libraries.resultAdded": "Tillagda", "admin.libraries.resultUpdated": "Uppdaterade",
   "admin.libraries.resultMoved": "Flyttade", "admin.libraries.resultMissing": "Saknade",

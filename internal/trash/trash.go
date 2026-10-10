@@ -24,6 +24,8 @@ var (
 	ErrNotFound    = errors.New("not found")
 	ErrCrossDevice = errors.New("trash is on a different filesystem than the file; refusing to copy")
 	ErrConflict    = errors.New("a file already exists at the original path")
+	// ErrCountChanged: MoveBroken was told how many broken tracks to expect and found another number.
+	ErrCountChanged = errors.New("the number of broken files changed")
 )
 
 type Item struct {
@@ -130,11 +132,13 @@ func (s *Service) Move(ctx context.Context, trackID int64) error {
 // MoveBroken moves every track currently flagged broken into the trash, one
 // Move at a time (so each is restorable until it is purged), and reports how
 // many went and how many could not be moved. Only the tracks the admin
-// console lists count: broken, not trashed, not missing from disk. A file
-// that fails is logged and skipped; the rest still go. Running it again
-// moves nothing.
-func (s *Service) MoveBroken(ctx context.Context) (moved, failed int, err error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT id FROM tracks WHERE broken=1 AND status!='trashed' AND missing_since IS NULL ORDER BY id`)
+// console lists count (library.BrokenWhere). With expect >= 0 it moves
+// nothing unless exactly that many are broken now (ErrCountChanged): the
+// admin confirmed a number, and a scan in between must not add to it. A
+// file that fails is logged and skipped; the rest still go. Running it
+// again moves nothing.
+func (s *Service) MoveBroken(ctx context.Context, expect int) (moved, failed int, err error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT t.id FROM tracks t WHERE `+library.BrokenWhere+` ORDER BY t.id`)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -150,6 +154,9 @@ func (s *Service) MoveBroken(ctx context.Context) (moved, failed int, err error)
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return 0, 0, err
+	}
+	if expect >= 0 && len(ids) != expect {
+		return 0, 0, ErrCountChanged
 	}
 	for _, id := range ids {
 		if err := ctx.Err(); err != nil {

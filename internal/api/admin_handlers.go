@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,6 +54,7 @@ func (s *Server) tagRoutes(a chi.Router) {
 
 func (s *Server) adminRoutes(adm chi.Router) {
 	adm.Delete("/tracks/{id}", s.trashTrack)
+	adm.Get("/admin/broken-tracks", s.listBrokenTracks)
 	adm.Delete("/admin/broken-tracks", s.trashBrokenTracks)
 	adm.Put("/tracks/{id}/status", s.setTrackStatus)
 	adm.Patch("/tracks/{id}", s.patchTrack)
@@ -115,13 +117,48 @@ func (s *Server) trashTrack(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// brokenListMax caps the broken tracks listed; total is always the full count.
+const brokenListMax = 500
+
+// listBrokenTracks is the admin console's broken files: every one, the admin's
+// own dislikes included, so the list, its total and DELETE agree.
+// {"items": [...up to 500], "total": n}.
+func (s *Server) listBrokenTracks(w http.ResponseWriter, r *http.Request) {
+	p, err := s.Library.Tracks(r.Context(), auth.UserFrom(r.Context()).ID, library.TrackFilter{Broken: true, WithDisliked: true, Limit: brokenListMax})
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	total, err := s.Library.CountBroken(r.Context())
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, map[string]any{"items": p.Items, "total": total})
+}
+
 // trashBrokenTracks moves every damaged file the admin console lists into
 // the trash at once, as DELETE /tracks/{id} does one (restorable until it is
-// purged). {"trashed": n}; with nothing left it is {"trashed": 0}. When some
-// file could not be moved the rest still are, and the answer is a coded
-// error saying how many failed.
+// purged). {"trashed": n}; with nothing left it is {"trashed": 0}.
+// ?expect=N (the total the admin confirmed) moves nothing unless exactly N
+// are broken now: 409 broken_count_changed. When some file could not be
+// moved the rest still are, and the answer is a coded error saying how many
+// failed.
 func (s *Server) trashBrokenTracks(w http.ResponseWriter, r *http.Request) {
-	moved, failed, err := s.Trash.MoveBroken(r.Context())
+	expect := -1
+	if v := r.URL.Query().Get("expect"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			writeError(w, 400, "expect must be a count")
+			return
+		}
+		expect = n
+	}
+	moved, failed, err := s.Trash.MoveBroken(r.Context(), expect)
+	if errors.Is(err, trash.ErrCountChanged) {
+		writeCoded(w, 409, "broken_count_changed", "the number of broken files changed; look at the list again")
+		return
+	}
 	if err != nil {
 		s.fail(w, err)
 		return

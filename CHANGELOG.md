@@ -17,8 +17,10 @@ the iPhone app share one version number.
   the previous track, later a restart). The episode bar is ⏮ ▶ ⏭ ✕ the same way; the 15/30 s
   skips stay in the episode's Now Playing.
 - **Delete all broken files**: Admin → Library → Broken files has a "Delete all" button. After
-  a confirmation with the count, every broken file goes to the trash, restorable for 30 days
-  like a file deleted on its own (`DELETE /api/v1/admin/broken-tracks`, admin only).
+  a confirmation with the exact count, every broken file goes to the trash, restorable for 30
+  days like a file deleted on its own. The list now shows every broken file, also ones the admin
+  disliked. API (admin only): `GET /api/v1/admin/broken-tracks` (`items`, `total`) and
+  `DELETE /api/v1/admin/broken-tracks?expect=N`, which moves nothing (409) if the count changed.
 
 ### Fixed
 

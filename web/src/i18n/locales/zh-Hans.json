@@ -186,6 +186,7 @@
   "admin.libraries.deleteAllCancel": "取消",
   "admin.libraries.deletedAll_other": "已把 {count} 个文件移到回收站",
   "admin.libraries.deleteAllFailed": "没能移到回收站",
+  "error.broken_count_changed": "损坏文件的数量变了，请看一下列表再试",
   "error.broken_trash_incomplete": "有些损坏文件没能移到回收站",
   "admin.libraries.resultAdded": "新增", "admin.libraries.resultUpdated": "更新",
   "admin.libraries.resultMoved": "移动", "admin.libraries.resultMissing": "缺失",

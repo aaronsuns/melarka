@@ -261,7 +261,7 @@ test("重新扫描 triggers the scan and polls status every 2s until it finishes
         "GET /api/v1/admin/libraries": () => ({ body: [library(1, "主库")] }),
         "GET /api/v1/admin/scan/status": status,
         "POST /api/v1/admin/scan": trigger,
-        "GET /api/v1/tracks": () => ({ body: { items: [], next_cursor: "" } }),
+        "GET /api/v1/admin/broken-tracks": () => ({ body: { items: [], total: 0 } }),
       },
     });
     await vi.waitFor(() => expect(screen.getByText("主库")).toBeInTheDocument());
@@ -284,8 +284,8 @@ test("broken files section shows the path and a reason, or 无法读取 when the
     routes: {
       "GET /api/v1/admin/libraries": () => ({ body: [] }),
       "GET /api/v1/admin/scan/status": () => ({ body: [] }),
-      "GET /api/v1/tracks": () => ({
-        body: { items: [track(9, "坏歌1", { broken: true, broken_reason: "corrupt", path: "bad1.wma" }), track(10, "坏歌2", { broken: true, path: "bad2.wma" })], next_cursor: "" },
+      "GET /api/v1/admin/broken-tracks": () => ({
+        body: { items: [track(9, "坏歌1", { broken: true, broken_reason: "corrupt", path: "bad1.wma" }), track(10, "坏歌2", { broken: true, path: "bad2.wma" })], total: 2 },
       }),
     },
   });
@@ -295,50 +295,77 @@ test("broken files section shows the path and a reason, or 无法读取 when the
   expect(screen.getByText("无法读取")).toBeInTheDocument();
 });
 
-test("全部删除 asks with the count, then moves every broken file to the trash at once", async () => {
-  const del = vi.fn(() => ({ status: 200, body: { trashed: 2 } }));
-  let list = [track(9, "坏歌1", { broken: true, path: "bad1.wma" }), track(10, "坏歌2", { broken: true, path: "bad2.wma" })];
-  const { f } = renderWithApp(<LibrariesPage />, {
-    role: "admin",
-    path: "/admin/libraries",
-    routes: {
-      "GET /api/v1/admin/libraries": () => ({ body: [] }),
-      "GET /api/v1/admin/scan/status": () => ({ body: [] }),
-      "GET /api/v1/tracks": () => ({ body: { items: list, next_cursor: "" } }),
-      "DELETE /api/v1/admin/broken-tracks": del,
-    },
-  });
-  await screen.findByText("bad1.wma");
-  await userEvent.click(screen.getByRole("button", { name: "全部删除" }));
-  const dialog = screen.getByRole("alertdialog");
-  expect(dialog).toHaveTextContent("把 2 个损坏文件移到回收站？30 天内可以在回收站恢复。");
-  // 取消 sends nothing.
-  await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
-  expect(screen.queryByRole("alertdialog")).toBeNull();
-  expect(del).not.toHaveBeenCalled();
-  await userEvent.click(screen.getByRole("button", { name: "全部删除" }));
-  list = [];
-  await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "移到回收站" }));
-  expect(await screen.findByText("已把 2 个文件移到回收站")).toBeInTheDocument();
-  expect(del).toHaveBeenCalledTimes(1);
-  expect(screen.queryByText("bad1.wma")).toBeNull();
-  expect(screen.getByText("没有损坏文件")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "全部删除" })).toBeNull();
-  // The list asks for every broken file, not just the first page.
-  expect(String(f.mock.calls.find(([u]) => String(u).includes("/tracks"))![0])).toContain("limit=500");
-});
+const brokenList = (items: Track[], total = items.length) => ({ body: { items, total } });
 
-test("全部删除: when some files can't be moved, it says so and shows what is left", async () => {
-  let list = [track(9, "坏歌1", { broken: true, path: "bad1.wma" }), track(10, "坏歌2", { broken: true, path: "bad2.wma" })];
+test("全部删除 asks with the server's total, then moves every broken file to the trash, sending that total", async () => {
+  const del = vi.fn(() => ({ status: 200, body: { trashed: 502 } }));
+  let list = brokenList([track(9, "坏歌1", { broken: true, path: "bad1.wma" }), track(10, "坏歌2", { broken: true, path: "bad2.wma" })], 502);
   renderWithApp(<LibrariesPage />, {
     role: "admin",
     path: "/admin/libraries",
     routes: {
       "GET /api/v1/admin/libraries": () => ({ body: [] }),
       "GET /api/v1/admin/scan/status": () => ({ body: [] }),
-      "GET /api/v1/tracks": () => ({ body: { items: list, next_cursor: "" } }),
+      "GET /api/v1/admin/broken-tracks": () => list,
+      "DELETE /api/v1/admin/broken-tracks": del,
+    },
+  });
+  await screen.findByText("bad1.wma");
+  await userEvent.click(screen.getByRole("button", { name: "全部删除" }));
+  const dialog = screen.getByRole("alertdialog");
+  // The total, not the 2 rows listed.
+  expect(dialog).toHaveTextContent("把 502 个损坏文件移到回收站？30 天内可以在回收站恢复。");
+  // 取消 sends nothing.
+  await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(del).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "全部删除" }));
+  list = brokenList([]);
+  await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "移到回收站" }));
+  expect(await screen.findByText("已把 502 个文件移到回收站")).toBeInTheDocument();
+  expect(del).toHaveBeenCalledTimes(1);
+  expect((del.mock.calls[0] as unknown[])[1]).toContain("expect=502");
+  expect(screen.queryByText("bad1.wma")).toBeNull();
+  expect(screen.getByText("没有损坏文件")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "全部删除" })).toBeNull();
+});
+
+test("全部删除: when the count changed meanwhile nothing moves, it says so and asks again with the new total", async () => {
+  let list = brokenList([track(9, "坏歌1", { broken: true, path: "bad1.wma" })]);
+  renderWithApp(<LibrariesPage />, {
+    role: "admin",
+    path: "/admin/libraries",
+    routes: {
+      "GET /api/v1/admin/libraries": () => ({ body: [] }),
+      "GET /api/v1/admin/scan/status": () => ({ body: [] }),
+      "GET /api/v1/admin/broken-tracks": () => list,
       "DELETE /api/v1/admin/broken-tracks": () => {
-        list = list.slice(1);
+        list = brokenList([track(9, "坏歌1", { broken: true, path: "bad1.wma" }), track(11, "坏歌3", { broken: true, path: "bad3.wma" })]);
+        return { status: 409, body: { error: "the number of broken files changed; look at the list again", code: "broken_count_changed" } };
+      },
+    },
+  });
+  await screen.findByText("bad1.wma");
+  await userEvent.click(screen.getByRole("button", { name: "全部删除" }));
+  expect(screen.getByRole("alertdialog")).toHaveTextContent("把 1 个损坏文件");
+  await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "移到回收站" }));
+  expect(await screen.findByText("损坏文件的数量变了，请看一下列表再试")).toBeInTheDocument();
+  expect(await screen.findByText("bad3.wma")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "全部删除" }));
+  expect(screen.getByRole("alertdialog")).toHaveTextContent("把 2 个损坏文件");
+});
+
+test("全部删除: when some files can't be moved, it says so and shows what is left", async () => {
+  let list = brokenList([track(9, "坏歌1", { broken: true, path: "bad1.wma" }), track(10, "坏歌2", { broken: true, path: "bad2.wma" })]);
+  renderWithApp(<LibrariesPage />, {
+    role: "admin",
+    path: "/admin/libraries",
+    routes: {
+      "GET /api/v1/admin/libraries": () => ({ body: [] }),
+      "GET /api/v1/admin/scan/status": () => ({ body: [] }),
+      "GET /api/v1/admin/broken-tracks": () => list,
+      "DELETE /api/v1/admin/broken-tracks": () => {
+        list = brokenList(list.body.items.slice(1));
         return { status: 500, body: { error: "1 of 2 damaged files could not be moved to the trash", code: "broken_trash_incomplete" } };
       },
     },

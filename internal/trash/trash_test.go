@@ -311,7 +311,7 @@ func TestMoveBroken(t *testing.T) {
 	ins(4, "A/ok.mp3", 0, "")
 	ins(5, "A/gone.mp3", 1, "missing_since=1") // not on disk: not in the list either
 	ins(6, "A/old.mp3", 1, "status='pending'") // pending counts too
-	moved, failed, err := s.MoveBroken(ctx)
+	moved, failed, err := s.MoveBroken(ctx, -1)
 	if err != nil || moved != 3 || failed != 0 {
 		t.Fatalf("moved=%d failed=%d err=%v", moved, failed, err)
 	}
@@ -330,7 +330,7 @@ func TestMoveBroken(t *testing.T) {
 		t.Fatalf("trash %+v", items)
 	}
 	// Idempotent: nothing left to move.
-	if moved, failed, err := s.MoveBroken(ctx); err != nil || moved != 0 || failed != 0 {
+	if moved, failed, err := s.MoveBroken(ctx, -1); err != nil || moved != 0 || failed != 0 {
 		t.Fatalf("again moved=%d failed=%d err=%v", moved, failed, err)
 	}
 	// Restorable like any trashed track.
@@ -349,7 +349,7 @@ func TestMoveBrokenCountsFailuresAndMovesTheRest(t *testing.T) {
 	os.WriteFile(filepath.Join(root, "A", "b.mp3"), []byte("data"), 0o644)
 	s.DB.Exec(`INSERT INTO tracks(id,library_id,rel_path,size,mtime,fingerprint,status,added_at,broken) VALUES (2,?,'A/vanished.mp3',4,1,'v','kept',0,1)`, l.ID)
 	s.DB.Exec(`INSERT INTO tracks(id,library_id,rel_path,size,mtime,fingerprint,status,added_at,broken) VALUES (3,?,'A/b.mp3',4,1,'b','kept',0,1)`, l.ID)
-	moved, failed, err := s.MoveBroken(ctx)
+	moved, failed, err := s.MoveBroken(ctx, -1)
 	if err != nil || moved != 1 || failed != 1 {
 		t.Fatalf("moved=%d failed=%d err=%v", moved, failed, err)
 	}
@@ -357,5 +357,29 @@ func TestMoveBrokenCountsFailuresAndMovesTheRest(t *testing.T) {
 	s.DB.QueryRow(`SELECT status FROM tracks WHERE id=3`).Scan(&st)
 	if st != "trashed" {
 		t.Fatalf("status=%s", st)
+	}
+}
+
+// With an expected count, a different number of broken tracks moves nothing.
+func TestMoveBrokenExpect(t *testing.T) {
+	s, root, _, _ := setup(t)
+	ctx := context.Background()
+	l, _ := s.Library.EnsureLibrary(ctx, "main", root, false)
+	os.WriteFile(filepath.Join(root, "A", "b.mp3"), []byte("data"), 0o644)
+	os.WriteFile(filepath.Join(root, "A", "c.mp3"), []byte("data"), 0o644)
+	s.DB.Exec(`INSERT INTO tracks(id,library_id,rel_path,size,mtime,fingerprint,status,added_at,broken) VALUES (2,?,'A/b.mp3',4,1,'b','kept',0,1)`, l.ID)
+	s.DB.Exec(`INSERT INTO tracks(id,library_id,rel_path,size,mtime,fingerprint,status,added_at,broken) VALUES (3,?,'A/c.mp3',4,1,'c','kept',0,1)`, l.ID)
+	for _, n := range []int{1, 3} {
+		if moved, _, err := s.MoveBroken(ctx, n); err != ErrCountChanged || moved != 0 {
+			t.Fatalf("expect %d: moved=%d err=%v", n, moved, err)
+		}
+	}
+	var trashed int
+	s.DB.QueryRow(`SELECT COUNT(*) FROM tracks WHERE status='trashed'`).Scan(&trashed)
+	if trashed != 0 {
+		t.Fatalf("trashed %d on a refused call", trashed)
+	}
+	if moved, failed, err := s.MoveBroken(ctx, 2); err != nil || moved != 2 || failed != 0 {
+		t.Fatalf("expect 2: moved=%d failed=%d err=%v", moved, failed, err)
 	}
 }
