@@ -129,3 +129,13 @@ test("with reduced motion the area does not move, the swipe still works", () => 
     vi.unstubAllGlobals();
   }
 });
+
+test("a drag that ends off the area never eats the next real tap", () => {
+  const { tap } = setup();
+  const cover = screen.getByText("cover");
+  swipe(cover, -120); // no click follows (the finger ended elsewhere)
+  fireEvent.pointerDown(cover, { clientX: 10, clientY: 10, pointerId: 2, isPrimary: true, pointerType: "touch", button: 0 });
+  fireEvent.pointerUp(window, { clientX: 10, clientY: 10, pointerId: 2, isPrimary: true, pointerType: "touch", button: 0 });
+  fireEvent.click(cover);
+  expect(tap).toHaveBeenCalledTimes(1);
+});

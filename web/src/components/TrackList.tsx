@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { Track } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
@@ -38,6 +38,17 @@ export function TrackList({ tracks, showAlbum = true, onChange, onRemoved, extra
     setMenuFor(null);
     setConfirmDeleteId(null);
   };
+
+  // A tap anywhere but the open menu or a ⋯ closes it (⋯ toggles it itself).
+  useEffect(() => {
+    if (menuFor === null) return;
+    const away = (e: PointerEvent) => {
+      const target = e.target as Element | null;
+      if (!target?.closest?.(".menu, .track-more")) closeMenu();
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [menuFor]);
 
   const toggleMenu = (id: number) => {
     setMenuFor((prev) => (prev === id ? null : id));

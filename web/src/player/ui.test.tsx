@@ -281,3 +281,12 @@ test("the mini player's ⏮: within the first 3 s the previous track, later a re
   expect(await screen.findByText("歌1")).toBeInTheDocument();
   expect(p.current?.id).toBe(1);
 });
+
+test("Now Playing renders at the top of the page, outside the bottom bars (nothing in the page can paint over it)", async () => {
+  renderWithApp(<><Grab /><div className="shell-player"><MiniPlayer /></div></>);
+  act(() => p.playList([tr(1), tr(2)], 0));
+  await userEvent.click(await screen.findByText("歌1"));
+  const dialog = await screen.findByRole("dialog", { name: "正在播放" });
+  expect(dialog.parentElement).toBe(document.body);
+  expect(dialog.closest(".shell-player")).toBeNull();
+});

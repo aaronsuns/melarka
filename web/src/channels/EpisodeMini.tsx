@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Cover } from "../components/Cover";
 import { BackwardFillIcon, CloseIcon, ForwardFillIcon, PauseFillIcon, PlayFillIcon } from "../components/icons";
 import { useT } from "../i18n/i18n";
@@ -41,7 +42,8 @@ export function EpisodeMini() {
       <button className="icon mini-btn" aria-label={t("episodes.next")} disabled={ep.index >= ep.queue.length - 1} onClick={ep.next}><ForwardFillIcon size={22} /></button>
       <button className="icon mini-btn mini-close" aria-label={t("episodes.close")} onClick={ep.close}><CloseIcon size={18} /></button>
     </div>
-    {open && <EpisodeNowPlaying onClose={() => setOpen(false)} />}
+    {/* At the top of the page, as music's: never under the bottom bars' stacking context. */}
+    {open && createPortal(<EpisodeNowPlaying onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }

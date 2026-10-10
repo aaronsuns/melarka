@@ -151,3 +151,20 @@ test("⋯ → 添加到队列 queues the track after what was queued with 下一
   expect(p.current?.id).toBe(1);
   expect(screen.queryByRole("menu")).toBeNull();
 });
+
+test("the ⋯ menu closes on a tap outside it; ⋯ itself still toggles it", async () => {
+  renderList([tr(1), tr(2)], "member");
+  await userEvent.click(await screen.findByRole("button", { name: "更多：歌2" }));
+  expect(screen.getByRole("menu")).toBeInTheDocument();
+  await userEvent.click(document.body);
+  expect(screen.queryByRole("menu")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "更多：歌2" }));
+  expect(screen.getByRole("menu")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "更多：歌2" }));
+  expect(screen.queryByRole("menu")).toBeNull();
+  // Another row's ⋯ moves the menu there.
+  await userEvent.click(screen.getByRole("button", { name: "更多：歌2" }));
+  await userEvent.click(screen.getByRole("button", { name: "更多：歌1" }));
+  expect(screen.getAllByRole("menu")).toHaveLength(1);
+  expect(within(screen.getByText("歌1").closest("li")!).getByRole("menu")).toBeInTheDocument();
+});

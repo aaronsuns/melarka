@@ -73,6 +73,8 @@ export function useTrackSwipe(surface: string, actions: { next: () => void; prev
       dragging = false;
     };
     const down = (e: PointerEvent) => {
+      // A new press: the click that ended the last drag has come (or never will).
+      swallowUntil = 0;
       if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
       const target = e.target as Element | null;
       if (!target?.closest(surface) || target.closest(CONTROLS)) return;
@@ -90,8 +92,12 @@ export function useTrackSwipe(surface: string, actions: { next: () => void; prev
     const up = (e: PointerEvent) => {
       if (!start || e.pointerId !== start.id) return;
       const action = swipeAction(e.clientX - start.x, e.clientY - start.y);
-      // A drag that went sideways is never also a tap on the cover or the title.
-      if (dragging || action) swallowUntil = Date.now() + 400;
+      // A drag that went sideways is never also a tap on the cover or the title. Only
+      // one that ends on the area can be followed by a click there; ended
+      // elsewhere, nothing is swallowed, so the next real tap goes through.
+      const over = document.elementFromPoint?.(e.clientX, e.clientY);
+      const onSurface = over ? el.contains(over) && !!over.closest(surface) : true;
+      swallowUntil = (dragging || action) && onSurface ? Date.now() + 400 : 0;
       reset();
       if (action === "next") latest.current.next();
       else if (action === "prev") latest.current.prev();

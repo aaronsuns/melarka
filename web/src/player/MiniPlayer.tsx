@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Cover, coverUrl } from "../components/Cover";
 import { BackwardFillIcon, ForwardFillIcon, PauseFillIcon, PlayFillIcon } from "../components/icons";
 import { errorMessage } from "../i18n/errors";
@@ -63,7 +64,8 @@ export function MiniPlayer() {
         </button>
         <button className="icon mini-btn" aria-label={t("common.next")} onClick={p.next}><ForwardFillIcon size={22} /></button>
       </div>
-      {open && <NowPlaying lyrics={lyrics} reloadLyrics={reload} onClose={() => setOpen(false)} />}
+      {/* At the top of the page: inside the bottom bars (a stacking context) anything in the page could paint over it. */}
+      {open && createPortal(<NowPlaying lyrics={lyrics} reloadLyrics={reload} onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }
