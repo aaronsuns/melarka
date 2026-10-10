@@ -8,6 +8,12 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+### Added
+
+- **YouTube search: show more and open playlists**: "Show more" under the videos loads the next
+  ten (up to 50), and a playlist result opens in place to list its tracks, each with Preview and
+  Download.
+
 ## [0.2.0] - 2026-10-10
 
 ### Added

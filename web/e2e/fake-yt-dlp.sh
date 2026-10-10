@@ -177,6 +177,19 @@ last="${args[$((n - 1))]}"
 # A query ending in "chromium-360" (the 视频 e2e's second project) gets its
 # own ids, fakevideo11/12, so the two projects never see each other's
 # previews, history or kept episodes on the shared server.
+# "Show more" (Client.SearchMore): a query ending in zzzz-many always fills
+# its page — ytsearch10 (the first page), then 20, 30, 40 and 50, the cap —
+# with fakemany001…, so the page grows by exactly ten new videos each time.
+if [[ "$last" =~ ^ytsearch(10|20|30|40|50):.*zzzz-many$ ]]; then
+  count="${BASH_REMATCH[1]}"
+  printf '{"_type":"playlist","entries":['
+  for ((i = 1; i <= count; i++)); do
+    ((i > 1)) && printf ','
+    printf '{"id":"fakemany%03d","title":"多多歌曲 %d","channel":"多多频道","webpage_url":"https://www.youtube.com/watch?v=fakemany%03d","duration":%d}' "$i" "$i" "$i" $((60 + i))
+  done
+  printf ']}\n'
+  exit 0
+fi
 if [[ "$last" == ytsearch10:* ]]; then
   a=01 b=02
   [[ "$last" == *chromium-360 ]] && a=11 b=12

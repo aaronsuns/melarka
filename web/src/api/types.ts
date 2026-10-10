@@ -132,6 +132,15 @@ export interface YTPlaylist {
 export interface YTSearchResult {
   videos: YTVideo[];
   playlists: YTPlaylist[];
+  /** A larger page (n) may find further videos. */
+  more?: boolean;
+}
+
+/** A YouTube playlist's first n videos, for a search result expanded in place. */
+export interface YTPlaylistEntries {
+  videos: YTVideo[];
+  count: number; // YouTube's full length, 0 = unknown
+  more: boolean;
 }
 
 export interface ListRef {
