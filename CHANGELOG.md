@@ -13,6 +13,20 @@ the iPhone app share one version number.
 - **YouTube search: show more and open playlists**: "Show more" under the videos loads the next
   ten (up to 50), and a playlist result opens in place to list its tracks, each with Preview and
   Download.
+- **⏮ in the mini player**: the bottom bar is now ⏮ ▶ ⏭, as in Now Playing (in the first 3 s
+  the previous track, later a restart). The episode bar is ⏮ ▶ ⏭ ✕ the same way; the 15/30 s
+  skips stay in the episode's Now Playing.
+- **Delete all broken files**: Admin → Library → Broken files has a "Delete all" button. After
+  a confirmation with the exact count, every broken file goes to the trash, restorable for 30
+  days like a file deleted on its own. The list now shows every broken file, also ones the admin
+  disliked. API (admin only): `GET /api/v1/admin/broken-tracks` (`items`, `total`) and
+  `DELETE /api/v1/admin/broken-tracks?expect=N`, which moves nothing (409) if the count changed.
+
+### Fixed
+
+- "Continue listening" no longer appears after you pause music. It is offered only when a
+  channel episode is what played last; once music has played, the bar shows the paused music
+  and the episode is resumed from Channels. This holds after a reload and in the iPhone app.
 
 ## [0.2.0] - 2026-10-10
 

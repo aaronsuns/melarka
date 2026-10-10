@@ -8,7 +8,7 @@ import { clockPosition, stoppedClock, useNativeClock, type ClockBase } from "../
 import { PlayerCtx, PlayerProgressCtx, type Player, type PlayerProgress, type PlayerProviderProps } from "./PlayerProvider";
 import { nextRepeat, type PlayModes, type RepeatMode } from "./modes";
 import { current, emptyQueue, queueReducer, saveUpNext, storedUpNext, type QueueAction, type QueueState } from "./queue";
-import { claimSession, onSessionClaim } from "./sessionOwner";
+import { claimSession, musicSounded, onSessionClaim } from "./sessionOwner";
 
 // How long a passing notice stays up (as the web player).
 const NOTICE_MS = 4000;
@@ -153,7 +153,10 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, loudn
             setState(m);
             setClock({ positionMs: m.positionMs, durationMs: m.durationMs, playing: m.playing, rate: m.rate, at: Date.now() });
             // Native sounding takes the session: a web preview or video pauses.
-            if (m.playing && !was) claimSession("music", { force: true });
+            if (m.playing && !was) {
+              claimSession("music", { force: true });
+              musicSounded();
+            }
             return;
           }
           case "flushed": {

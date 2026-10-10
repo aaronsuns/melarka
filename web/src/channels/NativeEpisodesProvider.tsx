@@ -5,6 +5,7 @@ import { episodeItem, fromItem } from "../native/items";
 import { clockPosition, stoppedClock, useNativeClock, type ClockBase } from "../native/useNativeClock";
 import { moveEntry, removeEntry } from "../player/dragReorder";
 import { claimSession, onSessionClaim, ownsSession } from "../player/sessionOwner";
+import { useLastPlayed } from "../player/lastPlayed";
 import { buildQueue, clearStoredQueue, loadStoredQueue, saveStoredQueue, type EpisodeOrder } from "./episodeQueue";
 import { EPISODE_RATES, EpisodesCtx, EpisodesProgressCtx, resumeAt, type EpisodesPlayer, type EpisodesProviderProps } from "./EpisodesProvider";
 
@@ -308,9 +309,10 @@ export function NativeEpisodesProvider({ children, userId = 0 }: EpisodesProvide
   );
   const progress = useNativeClock(clockBase);
 
+  const lastPlayed = useLastPlayed(userId, playing);
   const value = useMemo<EpisodesPlayer>(
-    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close, setFade: noop, stopAfterCurrent: noop }),
-    [queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close],
+    () => ({ queue, index, current, playing, active, lastPlayed, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close, setFade: noop, stopAfterCurrent: noop }),
+    [queue, index, current, playing, active, lastPlayed, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close],
   );
   return (
     <EpisodesCtx.Provider value={value}>

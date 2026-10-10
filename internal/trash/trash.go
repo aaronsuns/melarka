@@ -24,6 +24,8 @@ var (
 	ErrNotFound    = errors.New("not found")
 	ErrCrossDevice = errors.New("trash is on a different filesystem than the file; refusing to copy")
 	ErrConflict    = errors.New("a file already exists at the original path")
+	// ErrCountChanged: MoveBroken was told how many broken tracks to expect and found another number.
+	ErrCountChanged = errors.New("the number of broken files changed")
 )
 
 type Item struct {
@@ -125,6 +127,52 @@ func (s *Service) Move(ctx context.Context, trackID int64) error {
 	}
 	_, err = s.DB.ExecContext(ctx, `DELETE FROM track_fts WHERE rowid=?`, trackID)
 	return err
+}
+
+// MoveBroken moves every track currently flagged broken into the trash, one
+// Move at a time (so each is restorable until it is purged), and reports how
+// many went and how many could not be moved. Only the tracks the admin
+// console lists count (library.BrokenWhere). With expect >= 0 it moves
+// nothing unless exactly that many are broken now (ErrCountChanged): the
+// admin confirmed a number, and a scan in between must not add to it. A
+// file that fails is logged and skipped; the rest still go. Running it
+// again moves nothing.
+func (s *Service) MoveBroken(ctx context.Context, expect int) (moved, failed int, err error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT t.id FROM tracks t WHERE `+library.BrokenWhere+` ORDER BY t.id`)
+	if err != nil {
+		return 0, 0, err
+	}
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return 0, 0, err
+		}
+		ids = append(ids, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, 0, err
+	}
+	if expect >= 0 && len(ids) != expect {
+		return 0, 0, ErrCountChanged
+	}
+	for _, id := range ids {
+		if err := ctx.Err(); err != nil {
+			return moved, failed, err
+		}
+		switch err := s.Move(ctx, id); {
+		case err == nil:
+			moved++
+		case errors.Is(err, ErrNotFound):
+			// trashed meanwhile: nothing to do
+		default:
+			failed++
+			s.Log.Warn("trash broken: could not move", "track", id, "err", err)
+		}
+	}
+	return moved, failed, nil
 }
 
 // Restore puts a trashed track's file back at its original path

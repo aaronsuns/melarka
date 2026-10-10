@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ func TestAdminRoutesForbiddenForMembers(t *testing.T) {
 		{"DELETE", fmt.Sprintf("/api/v1/tracks/%d/lyrics/candidates/1", id)},
 		{"GET", fmt.Sprintf("/api/v1/tracks/%d/lyrics/rejected", id)}, {"DELETE", fmt.Sprintf("/api/v1/tracks/%d/lyrics/rejected/1", id)},
 		{"GET", "/api/v1/trash"}, {"POST", "/api/v1/trash/1/restore"}, {"DELETE", "/api/v1/trash"},
+		{"GET", "/api/v1/admin/broken-tracks"}, {"DELETE", "/api/v1/admin/broken-tracks"},
 		{"GET", "/api/v1/users"}, {"POST", "/api/v1/users"}, {"DELETE", "/api/v1/users/1"}, {"PUT", "/api/v1/users/1/password"},
 		{"GET", "/api/v1/admin/libraries"}, {"POST", "/api/v1/admin/libraries"}, {"DELETE", "/api/v1/admin/libraries/1"},
 		{"POST", "/api/v1/admin/scan"}, {"GET", "/api/v1/admin/scan/status"}, {"GET", "/api/v1/admin/tagging/pending"}, {"PUT", "/api/v1/admin/tagging/batch"},
@@ -364,5 +366,138 @@ func TestUserManagement(t *testing.T) {
 	json.Unmarshal(b, &me)
 	if r, _ := do(t, ts, adm, "DELETE", fmt.Sprintf("/api/v1/users/%d", me.ID), nil); r.StatusCode != 400 {
 		t.Fatalf("self delete %d", r.StatusCode)
+	}
+}
+
+// 全部删除 on the admin console's damaged files: every broken track goes to
+// the trash (restorable, as one deleted by itself), the count comes back,
+// and a second call finds nothing left.
+func TestTrashBrokenTracks(t *testing.T) {
+	s, ts := newTestServer(t)
+	adm := loginAs(t, s, "dad", "admin")
+	kid := loginAs(t, s, "kid", "member")
+	root := t.TempDir()
+	lib, err := s.Library.EnsureLibrary(context.Background(), "main", root, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []int64
+	for _, rel := range []string{"bad1.mp3", "bad2.flac", "good.mp3"} {
+		if err := os.WriteFile(filepath.Join(root, rel), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, seedTrackIn(t, s, lib.ID, rel, rel, "A"))
+	}
+	s.Library.DB.Exec(`UPDATE tracks SET broken=1, broken_reason='Invalid data' WHERE id IN (?,?)`, ids[0], ids[1])
+
+	if r, _ := do(t, ts, kid, "DELETE", "/api/v1/admin/broken-tracks", nil); r.StatusCode != 403 {
+		t.Fatalf("member → %d, want 403", r.StatusCode)
+	}
+	// The admin disliking one doesn't hide it: the list is what DELETE moves.
+	if r, _ := do(t, ts, adm, "PUT", fmt.Sprintf("/api/v1/dislikes/%d", ids[1]), nil); r.StatusCode != 204 {
+		t.Fatalf("dislike %d", r.StatusCode)
+	}
+	if _, b := do(t, ts, adm, "GET", "/api/v1/tracks?broken=1", nil); strings.Contains(string(b), "bad2") {
+		t.Fatalf("precondition: the general list hides a dislike %s", b)
+	}
+	_, b := do(t, ts, adm, "GET", "/api/v1/admin/broken-tracks", nil)
+	var list struct {
+		Items []struct {
+			ID int64 `json:"id"`
+		} `json:"items"`
+		Total int `json:"total"`
+	}
+	json.Unmarshal(b, &list)
+	if list.Total != 2 || len(list.Items) != 2 {
+		t.Fatalf("broken list %s", b)
+	}
+	// A different count than the one confirmed moves nothing.
+	if r, b := do(t, ts, adm, "DELETE", "/api/v1/admin/broken-tracks?expect=1", nil); r.StatusCode != 409 || !strings.Contains(string(b), `"broken_count_changed"`) {
+		t.Fatalf("expect=1 → %d %s", r.StatusCode, b)
+	}
+	if r, _ := do(t, ts, adm, "DELETE", "/api/v1/admin/broken-tracks?expect=x", nil); r.StatusCode != 400 {
+		t.Fatalf("expect=x → %d", r.StatusCode)
+	}
+	if _, err := os.Stat(filepath.Join(root, "bad1.mp3")); err != nil {
+		t.Fatal("moved on a refused call")
+	}
+	r, b := do(t, ts, adm, "DELETE", "/api/v1/admin/broken-tracks?expect=2", nil)
+	if r.StatusCode != 200 || strings.TrimSpace(string(b)) != `{"trashed":2}` {
+		t.Fatalf("trash broken %d %s", r.StatusCode, b)
+	}
+	_, b = do(t, ts, adm, "GET", "/api/v1/trash", nil)
+	var items []struct {
+		TrackID int64 `json:"track_id"`
+		PurgeAt int64 `json:"purge_at"`
+	}
+	json.Unmarshal(b, &items)
+	if len(items) != 2 || items[0].PurgeAt == 0 {
+		t.Fatalf("trash %s", b)
+	}
+	if _, b := do(t, ts, adm, "GET", "/api/v1/tracks?broken=1", nil); strings.Contains(string(b), "bad") {
+		t.Fatalf("still listed as damaged %s", b)
+	}
+	if _, err := os.Stat(filepath.Join(root, "good.mp3")); err != nil {
+		t.Fatal("a sound file was moved")
+	}
+	// Idempotent.
+	if r, b := do(t, ts, adm, "DELETE", "/api/v1/admin/broken-tracks", nil); r.StatusCode != 200 || strings.TrimSpace(string(b)) != `{"trashed":0}` {
+		t.Fatalf("again %d %s", r.StatusCode, b)
+	}
+	// Restorable like a track deleted by itself.
+	if r, b := do(t, ts, adm, "POST", fmt.Sprintf("/api/v1/trash/%d/restore", ids[0]), nil); r.StatusCode != 204 {
+		t.Fatalf("restore %d %s", r.StatusCode, b)
+	}
+	if _, err := os.Stat(filepath.Join(root, "bad1.mp3")); err != nil {
+		t.Fatal("not restored")
+	}
+}
+
+// A damaged file that can't be moved (gone from disk since the scan) doesn't
+// stop the rest, and the answer says so with a stable code.
+func TestTrashBrokenTracksReportsFailures(t *testing.T) {
+	s, ts := newTestServer(t)
+	adm := loginAs(t, s, "dad", "admin")
+	root := t.TempDir()
+	lib, _ := s.Library.EnsureLibrary(context.Background(), "main", root, false)
+	os.WriteFile(filepath.Join(root, "bad.mp3"), []byte("x"), 0o644)
+	gone := seedTrackIn(t, s, lib.ID, "vanished.mp3", "v", "A")
+	bad := seedTrackIn(t, s, lib.ID, "bad.mp3", "b", "A")
+	s.Library.DB.Exec(`UPDATE tracks SET broken=1 WHERE id IN (?,?)`, gone, bad)
+	r, b := do(t, ts, adm, "DELETE", "/api/v1/admin/broken-tracks", nil)
+	var e struct{ Error, Code string }
+	json.Unmarshal(b, &e)
+	if r.StatusCode != 500 || e.Code != "broken_trash_incomplete" || !strings.Contains(e.Error, "1 of 2") {
+		t.Fatalf("partial %d %s", r.StatusCode, b)
+	}
+	var st string
+	s.Library.DB.QueryRow(`SELECT status FROM tracks WHERE id=?`, bad).Scan(&st)
+	if st != "trashed" {
+		t.Fatalf("the movable one: status=%s", st)
+	}
+}
+
+// The broken list stops at 500 rows, but its total is every broken track.
+func TestBrokenTracksTotalBeyondThePage(t *testing.T) {
+	s, ts := newTestServer(t)
+	adm := loginAs(t, s, "dad", "admin")
+	lib, _ := s.Library.EnsureLibrary(context.Background(), "main", t.TempDir(), false)
+	for i := 0; i < 502; i++ {
+		rel := fmt.Sprintf("b%03d.mp3", i)
+		if _, err := s.Library.DB.Exec(`INSERT INTO tracks(library_id,rel_path,size,mtime,fingerprint,status,added_at,broken) VALUES (?,?,1,1,?,'kept',1,1)`, lib.ID, rel, rel); err != nil {
+			t.Fatal(err)
+		}
+	}
+	seedTrackIn(t, s, lib.ID, "fine.mp3", "fine", "A")
+	_, b := do(t, ts, adm, "GET", "/api/v1/admin/broken-tracks", nil)
+	var list struct {
+		Items []json.RawMessage `json:"items"`
+		Total int               `json:"total"`
+	}
+	if err := json.Unmarshal(b, &list); err != nil {
+		t.Fatal(err)
+	}
+	if list.Total != 502 || len(list.Items) != 500 {
+		t.Fatalf("total=%d items=%d", list.Total, len(list.Items))
 	}
 }

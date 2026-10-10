@@ -68,6 +68,7 @@ type TrackFilter struct {
 	Tag, Status                  string
 	FavoritesOnly, DislikedOnly  bool
 	Broken                       bool   // only broken tracks (admin console "损坏文件")
+	WithDisliked                 bool   // keep the user's disliked tracks too (the admin's broken list shows every one)
 	Sort                         string // "added" (default) | "title" | "album" | "favorited" (newest favorite first)
 	Limit                        int
 	Cursor                       string
@@ -80,6 +81,10 @@ type SearchResult struct {
 }
 
 const visible = `t.status!='trashed' AND t.missing_since IS NULL`
+
+// BrokenWhere is the admin console's broken files (alias t): the set the
+// broken list counts and "delete all" moves to the trash, one definition.
+const BrokenWhere = visible + ` AND t.broken=1`
 
 // trackSelect needs the user id bound twice (favorite, disliked flags).
 const trackSelect = `SELECT t.id, COALESCE(NULLIF(o.title,''), t.tag_title), t.rel_path,
@@ -165,7 +170,7 @@ func (s *Store) Tracks(ctx context.Context, userID int64, f TrackFilter) (Page[T
 	}
 	if f.DislikedOnly {
 		add("EXISTS(SELECT 1 FROM dislikes d WHERE d.user_id=? AND d.track_id=t.id)", userID)
-	} else {
+	} else if !f.WithDisliked {
 		add("NOT EXISTS(SELECT 1 FROM dislikes d WHERE d.user_id=? AND d.track_id=t.id)", userID)
 	}
 	order := "t.added_at DESC, t.id DESC"
@@ -522,4 +527,11 @@ func (s *Store) StreamInfo(ctx context.Context, id int64) (StreamInfo, error) {
 	}
 	si.AbsPath = filepath.Join(root, filepath.FromSlash(rel))
 	return si, err
+}
+
+// CountBroken is how many tracks BrokenWhere matches.
+func (s *Store) CountBroken(ctx context.Context) (int, error) {
+	var n int
+	err := s.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM tracks t WHERE `+BrokenWhere).Scan(&n)
+	return n, err
 }

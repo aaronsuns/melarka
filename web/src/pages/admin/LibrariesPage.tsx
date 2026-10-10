@@ -32,7 +32,13 @@ export default function LibrariesPage() {
   const [polling, setPolling] = useState(false);
 
   const [broken, setBroken] = useState<Track[] | null>(null);
+  // Every broken file, also past the listed ones: what 全部删除 moves.
+  const [brokenTotal, setBrokenTotal] = useState(0);
   const [brokenError, setBrokenError] = useState("");
+  const [confirmBroken, setConfirmBroken] = useState(false);
+  const [brokenBusy, setBrokenBusy] = useState(false);
+  const [brokenMsg, setBrokenMsg] = useState("");
+  const [brokenActionError, setBrokenActionError] = useState("");
 
   const scanBusyRef = useRef(scanBusy);
   scanBusyRef.current = scanBusy;
@@ -65,9 +71,11 @@ export default function LibrariesPage() {
         /* status is best-effort; the libraries list is the load-bearing fetch */
       });
     api
-      .tracks({ broken: 1 })
+      .brokenTracks()
       .then((p) => {
-        if (!cancelled) setBroken(p.items);
+        if (cancelled) return;
+        setBroken(p.items);
+        setBrokenTotal(p.total);
       })
       .catch((e: unknown) => {
         if (!cancelled) setBrokenError(errorMessage(e, "common.loadFailed"));
@@ -122,6 +130,33 @@ export default function LibrariesPage() {
     }
   }
 
+  // 全部删除: every broken file to the trash (restorable for 30 days, as one
+  // deleted by itself). The server moves nothing unless the confirmed total
+  // still holds. Afterwards the list is fetched again: when some file could
+  // not be moved, or the count had changed, it is all still there.
+  async function trashAllBroken() {
+    if (brokenBusy) return;
+    setConfirmBroken(false);
+    setBrokenBusy(true);
+    setBrokenMsg("");
+    setBrokenActionError("");
+    try {
+      const n = await api.trashBroken(brokenTotal);
+      setBrokenMsg(t("admin.libraries.deletedAll", { count: n }));
+    } catch (e) {
+      setBrokenActionError(errorMessage(e, "admin.libraries.deleteAllFailed"));
+    }
+    try {
+      const p = await api.brokenTracks();
+      setBroken(p.items);
+      setBrokenTotal(p.total);
+    } catch (e) {
+      setBrokenError(errorMessage(e, "common.loadFailed"));
+    } finally {
+      setBrokenBusy(false);
+    }
+  }
+
   return (
     <>
       {loadError && <p className="error">{loadError}</p>}
@@ -152,6 +187,23 @@ export default function LibrariesPage() {
       </ul>
 
       <h2 className="section-title">{t("admin.libraries.brokenHeading")}</h2>
+      {!!broken?.length && (
+        <div className="actions">
+          {confirmBroken ? (
+            <div role="alertdialog" aria-labelledby="broken-confirm-text">
+              <p id="broken-confirm-text">{t("admin.libraries.deleteAllConfirmText", { count: brokenTotal })}</p>
+              <button className="danger" disabled={brokenBusy} onClick={() => void trashAllBroken()}>{t("admin.libraries.deleteAllConfirm")}</button>
+              <button className="secondary" disabled={brokenBusy} onClick={() => setConfirmBroken(false)}>{t("admin.libraries.deleteAllCancel")}</button>
+            </div>
+          ) : (
+            <button className="secondary" disabled={brokenBusy} onClick={() => { setConfirmBroken(true); setBrokenMsg(""); setBrokenActionError(""); }}>
+              {t("admin.libraries.deleteAll")}
+            </button>
+          )}
+        </div>
+      )}
+      {brokenMsg && <p className="muted">{brokenMsg}</p>}
+      {brokenActionError && <p className="error">{brokenActionError}</p>}
       {brokenError && <p className="error">{brokenError}</p>}
       {broken?.length === 0 && <p className="muted">{t("admin.libraries.noBroken")}</p>}
       <ul className="rows">

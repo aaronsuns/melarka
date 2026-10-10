@@ -8,8 +8,10 @@ import { onSessionClaim, ownsSession } from "./sessionOwner";
 
 /**
  * 继续收听: an episode queue that isn't playing (restored after a reload, or
- * set aside when music took over) — offered only while music owns the
- * session and is silent, never in music's place.
+ * set aside by a preview or a video) — offered only when the episode is what
+ * last played, while music owns the session and is silent, never in music's
+ * place. Once music has played since, the bar is music's even paused: a
+ * paused song must not look like the episode's pause (频道 still resumes it).
  */
 function EpisodeResume() {
   const t = useT();
@@ -18,7 +20,7 @@ function EpisodeResume() {
   // Not over a preview or a video either: only while the session is music's.
   const [musicOwns, setMusicOwns] = useState(() => ownsSession("music"));
   useEffect(() => onSessionClaim((o) => setMusicOwns(o === "music")), []);
-  if (ep.active || !ep.current || music.playing || !musicOwns) return null;
+  if (ep.active || !ep.current || ep.lastPlayed !== "episode" || music.playing || !musicOwns) return null;
   return (
     <div className="episode-resume" data-no-music-prime="">
       <button type="button" onClick={ep.toggle}>{t("episodes.resumeQueue", { title: ep.current.title })}</button>

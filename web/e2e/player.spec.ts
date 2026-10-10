@@ -20,6 +20,12 @@ test("login, pinyin search, play, favorite, queue survives reload", async ({ pag
   await verifyPlaybackStarted(page, info, () => row.click(), { trackId });
   await expect(page.locator(".mini")).toContainText("甜蜜蜜");
   await expect(page.locator(".mini").getByRole("button", { name: "暂停" })).toBeVisible();
+  // ⏮ ▶ ⏭ fit inside the viewport (360 px wide on chromium-360), the title keeps its room.
+  for (const name of ["上一首", "暂停", "下一首"]) {
+    const b = (await page.locator(".mini").getByRole("button", { name }).boundingBox())!;
+    expect(b.x + b.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  }
+  expect((await page.locator(".mini-info").boundingBox())!.width).toBeGreaterThan(120);
 
   await page.locator(".mini-info").click();
   const now = page.getByRole("dialog", { name: "正在播放" });

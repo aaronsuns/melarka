@@ -4,6 +4,7 @@ import type { Episode } from "../api/types";
 import { t } from "../i18n/i18n";
 import { moveEntry, removeEntry } from "../player/dragReorder";
 import { claimSession, onSessionClaim, ownsSession } from "../player/sessionOwner";
+import { useLastPlayed, type PlayedKind } from "../player/lastPlayed";
 import { buildQueue, clearStoredQueue, loadStoredQueue, saveStoredQueue, type EpisodeOrder } from "./episodeQueue";
 import { hasNative } from "../native/bridge";
 import { NativeEpisodesProvider } from "./NativeEpisodesProvider";
@@ -24,6 +25,8 @@ export interface EpisodesPlayer {
   current: Episode | null;
   playing: boolean;
   active: boolean;
+  /** What last really played, music or an episode (kept per user): 继续收听 only after an episode. */
+  lastPlayed: PlayedKind | null;
   rate: number;
   error: string | null;
   order: EpisodeOrder;
@@ -533,9 +536,10 @@ function clearLockScreen() {
     return () => audio.removeEventListener("timeupdate", apply);
   }, [audio]);
 
+  const lastPlayed = useLastPlayed(userId, playing);
   const value = useMemo<EpisodesPlayer>(
-    () => ({ queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close, setFade, stopAfterCurrent }),
-    [queue, index, current, playing, active, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close, setFade, stopAfterCurrent],
+    () => ({ queue, index, current, playing, active, lastPlayed, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close, setFade, stopAfterCurrent }),
+    [queue, index, current, playing, active, lastPlayed, rate, error, order, includePlayed, play, playList, jump, move, removeAt, setOrder, setIncludePlayed, toggle, pause, seek, skip, next, prev, setRate, close, setFade, stopAfterCurrent],
   );
   const progress = useMemo(() => ({ position, duration }), [position, duration]);
   return (
