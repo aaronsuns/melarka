@@ -134,6 +134,65 @@ jobs:
           path: web/test-results
           retention-days: 7
 
+  # TEMP: stress the WebKit lyrics flake (layers then lyrics:4, as on main). Removed before merge.
+  lyrics-stress:
+    needs: web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [as-is, no-blur]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.26'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - id: distro
+        run: . /etc/os-release && echo "id=$ID-$VERSION_ID-$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ffmpeg-debs
+          key: ffmpeg-debs-v1-${{ steps.distro.outputs.id }}-${{ runner.arch }}
+      - run: ../scripts/ci-install-ffmpeg.sh
+        env:
+          DEB_CACHE: ~/.cache/ffmpeg-debs
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit
+      - if: matrix.variant == 'no-blur'
+        run: |
+          sed -i -e 's/filter: blur(40px) brightness(.55) saturate(1.2);//' -e 's/filter: blur(60px) brightness(.5) saturate(1.5); transform: translateZ(0);//' src/styles.css
+          grep -n 'now-bg-' src/styles.css
+      - run: npm run build
+      - name: stress
+        run: |
+          fails=0
+          for i in $(seq 20); do
+            if ! npx playwright test e2e/layers.spec.ts e2e/lyrics.spec.ts:34 --project=iphone-webkit --output="stress-results/$i" > "stress-$i.log" 2>&1; then
+              fails=$((fails+1)); echo "::warning::run $i failed"; grep -avE 'level=(INFO|DEBUG)' "stress-$i.log" | grep -aA60 -E '^\s+[0-9]+\) |MEDIA-EVENTS' | head -150
+            fi
+          done
+          echo "variant=${{ matrix.variant }} failed $fails of 20"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: stress-${{ matrix.variant }}
+          path: |
+            web/stress-results
+            web/stress-*.log
+          retention-days: 7
+
   image:
     needs: [go, web]
     runs-on: ubuntu-latest

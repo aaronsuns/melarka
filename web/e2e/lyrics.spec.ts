@@ -1,6 +1,36 @@
 import { expect, test } from "./fixtures";
 import { login, trackIdByTitle, verifyPlaybackStarted } from "./playback";
 
+// TEMP diagnostics: the media element's events, attached to every lyrics test.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __ev: string[]; __a?: HTMLMediaElement };
+    w.__ev = [];
+    const t0 = performance.now();
+    const orig = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      if (!w.__a) {
+        w.__a = this;
+        for (const n of ["play", "playing", "pause", "waiting", "stalled", "seeking", "seeked", "loadstart", "loadedmetadata", "canplay", "canplaythrough", "emptied", "abort", "error", "suspend", "ratechange"]) {
+          this.addEventListener(n, () => w.__ev.push(`${Math.round(performance.now() - t0)} ${n} ct=${this.currentTime.toFixed(3)} rs=${this.readyState} ns=${this.networkState} p=${this.paused} m=${this.muted} src=${this.src.slice(-32)}`));
+        }
+        let last = -1;
+        setInterval(() => {
+          if (this.currentTime !== last) w.__ev.push(`${Math.round(performance.now() - t0)} tick ct=${this.currentTime.toFixed(3)} p=${this.paused} rs=${this.readyState}`);
+          last = this.currentTime;
+        }, 250);
+      }
+      w.__ev.push(`${Math.round(performance.now() - t0)} play() src=${this.src.slice(-32)} muted=${this.muted} paused=${this.paused}`);
+      return orig.call(this);
+    };
+  });
+});
+test.afterEach(async ({ page }, info) => {
+  const ev = await page.evaluate(() => (window as unknown as { __ev?: string[] }).__ev ?? []).catch((e) => [String(e)]);
+  await info.attach("media-events", { body: ev.join("\n"), contentType: "text/plain" });
+  if (info.status !== info.expectedStatus) console.log(`MEDIA-EVENTS ${info.title.slice(0, 30)} ${info.project.name}\n${ev.join("\n")}`);
+});
+
 test("Now Playing opens on the synced lyrics from the sidecar .lrc; they follow playback, a tapped line seeks, and the cover shows the current line", async ({ page }, info) => {
   await login(page);
   await page.getByRole("link", { name: "搜索" }).click();
