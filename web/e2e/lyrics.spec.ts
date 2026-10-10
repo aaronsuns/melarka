@@ -47,7 +47,9 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }, info) => {
   const ev = await page.evaluate(() => (window as unknown as { __ev?: string[] }).__ev ?? []).catch((e) => [String(e)]);
   await info.attach("media-events", { body: ev.join("\n"), contentType: "text/plain" });
-  if (info.status !== info.expectedStatus) console.log(`MEDIA-EVENTS ${info.title.slice(0, 30)} ${info.project.name}\n${ev.join("\n")}`);
+  const reloaded = ev.filter((e) => / set src=.*tracks\/2\/stream/.test(e)).length > 1;
+  if (reloaded) console.log("STUCK-RELOAD seen");
+  if (reloaded || info.status !== info.expectedStatus) console.log(`MEDIA-EVENTS ${info.title.slice(0, 30)} ${info.project.name}\n${ev.join("\n")}`);
 });
 
 test("Now Playing opens on the synced lyrics from the sidecar .lrc; they follow playback, a tapped line seeks, and the cover shows the current line", async ({ page }, info) => {
@@ -66,31 +68,6 @@ test("Now Playing opens on the synced lyrics from the sidecar .lrc; they follow 
   await expect(now.getByRole("button", { name: "歌词", exact: true })).toHaveCount(0);
   for (const line of ["甜蜜蜜第一句", "甜蜜蜜第二句", "甜蜜蜜第三句"]) {
     await expect(now.getByRole("button", { name: line })).toBeVisible();
-  }
-  // TEMP: is the element stuck? Then which nudge gets it going?
-  const ctNow = () => page.evaluate(() => (window as unknown as { __a: HTMLMediaElement }).__a.currentTime);
-  const advances = async (ms: number) => {
-    const a = await ctNow();
-    for (let t = 0; t < ms; t += 250) {
-      await page.waitForTimeout(250);
-      if ((await ctNow()) > a + 0.05) return true;
-    }
-    return false;
-  };
-  if (!(await advances(4000))) {
-    const st = await page.evaluate(() => { const a = (window as unknown as { __a: HTMLMediaElement }).__a; const b = a.buffered; return `STUCK ct=${a.currentTime} rs=${a.readyState} ns=${a.networkState} paused=${a.paused} buffered=${[...Array(b.length)].map((_, i) => `${b.start(i).toFixed(2)}-${b.end(i).toFixed(2)}`).join(",")} dur=${a.duration}`; });
-    console.log(`NUDGE ${st}`);
-    await page.evaluate(() => { const a = (window as unknown as { __a: HTMLMediaElement }).__a; a.currentTime = a.currentTime; });
-    if (await advances(3000)) console.log("NUDGE seek-in-place recovered");
-    else {
-      await page.evaluate(() => { const a = (window as unknown as { __a: HTMLMediaElement }).__a; a.pause(); void a.play(); });
-      if (await advances(3000)) console.log("NUDGE pause-play recovered");
-      else {
-        await page.evaluate(() => { const a = (window as unknown as { __a: HTMLMediaElement }).__a; const s = a.src; a.src = s; void a.play(); });
-        console.log(`NUDGE reload ${(await advances(4000)) ? "recovered" : "did not recover"}`);
-      }
-    }
-    console.log(`NUDGE-EVENTS\n${(await page.evaluate(() => (window as unknown as { __ev: string[] }).__ev)).join("\n")}`);
   }
   await expect(now.locator('.lyrics-synced [aria-current="true"]')).toHaveCount(1, { timeout: 6_000 });
   await page.screenshot({ path: info.outputPath("lyrics.png"), fullPage: true });

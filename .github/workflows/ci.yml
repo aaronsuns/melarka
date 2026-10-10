@@ -174,15 +174,15 @@ jobs:
       - name: stress
         run: |
           fails=0
-          specs="e2e/layers.spec.ts e2e/lyrics.spec.ts:53"
-          case "${{ matrix.variant }}" in alone-*) specs="e2e/lyrics.spec.ts:53";; esac
+          specs="e2e/layers.spec.ts e2e/lyrics.spec.ts:55"
+          case "${{ matrix.variant }}" in alone-*) specs="e2e/lyrics.spec.ts:55";; esac
           for i in $(seq 40); do
             if ! npx playwright test $specs --project=iphone-webkit --output="stress-results/$i" > "stress-$i.log" 2>&1; then
               fails=$((fails+1)); echo "::warning::run $i failed"; grep -avE 'level=(INFO|DEBUG)' "stress-$i.log" | grep -aA60 -E '^\s+[0-9]+\) |MEDIA-EVENTS' | head -150
             fi
-            grep -aA80 "NUDGE" "stress-$i.log" | grep -av "level=" | head -90 | sed "s/^/run $i: /" || true
+            grep -aA80 "STUCK-RELOAD" "stress-$i.log" | grep -av "level=" | head -90 | sed "s/^/run $i: /" || true
           done
-          echo "variant=${{ matrix.variant }} failed $fails of 40"; grep -ah "NUDGE" stress-*.log || true
+          echo "variant=${{ matrix.variant }} failed $fails of 40"; grep -ah "STUCK-RELOAD" stress-*.log | wc -l || true
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
