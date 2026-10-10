@@ -115,6 +115,14 @@ const NETWORK_RETRY_DELAYS_MS = [2000, 5000, 10_000];
 // Visible page: a network track stalled this long gives way to a cached one
 // (hidden, that happens at once — a locked iPhone suspends a silent page).
 const STALL_MS = 6000;
+// Playing, with the audio at the playhead already downloaded, yet the clock
+// does not move: the media pipeline itself is stuck (WebKit's GStreamer
+// backend does this about once in a hundred fresh loads: "playing", then
+// nothing, with the whole file buffered). After this long the track is
+// reloaded where it stands — at most STUCK_RELOADS times per load.
+const STUCK_MS = 2500;
+const STUCK_CHECK_MS = 500;
+const STUCK_RELOADS = 2;
 // How many upcoming tracks are downloaded ahead and prepared on the server.
 const LOOKAHEAD = 3;
 // While hidden, a user action shields its track from automatic switching
@@ -136,6 +144,18 @@ const BUFFERING_GRACE_MS = 10_000;
 // A buffering that never reports its end (no canplaythrough, no error) stops
 // blocking the offline cache after this long.
 const BUFFERING_MAX_MS = 120_000;
+
+// The element holds the audio from `t` on (at least a second of it, or up to
+// the end): a pipeline that does not move then is not waiting for the network.
+function bufferedAt(audio: HTMLMediaElement, t: number): boolean {
+  const b = audio.buffered;
+  if (!b) return false;
+  const end = Number.isFinite(audio.duration) ? audio.duration : Infinity;
+  for (let i = 0; i < b.length; i++) {
+    if (b.start(i) <= t && b.end(i) >= Math.min(t + 1, end - 0.05)) return true;
+  }
+  return false;
+}
 
 // The first index at or after `from` whose track can play right now (offline,
 // only cached ones can), or -1.
@@ -378,6 +398,8 @@ function WebPlayerProvider({
   // Since its load, the loaded track has played (a "playing" event).
   const startedSinceLoad = useRef(false);
   const stallTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Reloads of the loaded track for a stuck clock (see STUCK_MS), since its load.
+  const stuckReloads = useRef(0);
   // The user acted (picked, sought, pressed play/next/previous — the lock
   // screen and the car included) and the track hasn't played since: no
   // automatic switch away from it until it does.
@@ -483,6 +505,7 @@ function WebPlayerProvider({
       if (picked === true) markAct(startAt);
       else if (picked === false) userActedAt.current = null;
       startedSinceLoad.current = false;
+      stuckReloads.current = 0;
       setSounding(false);
       loadedId.current = track.id;
       loadedIndex.current = index;
@@ -891,6 +914,32 @@ function WebPlayerProvider({
       window.removeEventListener("online", onOnline);
     };
   }, [audio, finishListen, clearNetRetry, clearStall, retryNetwork, setNeedsTap, setBuffering, choose, changeOpts, go, isLocal, acting, playOrAskTap, dropSubstitutes]);
+  // A stuck clock (see STUCK_MS): reload the same track at the same place.
+  // Only with the audio at the playhead in hand — running dry on the network
+  // is the stall handlers' business, not this.
+  useEffect(() => {
+    if (!playing) return;
+    let last = audio.currentTime;
+    let since = Date.now();
+    const timer = setInterval(() => {
+      const t = audio.currentTime;
+      if (t !== last || audio.paused || audio.seeking || audio.src.startsWith("data:") || !bufferedAt(audio, t)) {
+        last = t;
+        since = Date.now();
+        return;
+      }
+      if (Date.now() - since < STUCK_MS) return;
+      since = Date.now();
+      const track = current(queueRef.current);
+      if (!track || loadedId.current !== track.id || stuckReloads.current >= STUCK_RELOADS) return;
+      stuckReloads.current += 1;
+      pendingSeek.current = t;
+      if (listen.current) listen.current.lastTime = t;
+      audio.src = srcFor(track);
+      playOrAskTap(track.id);
+    }, STUCK_CHECK_MS);
+    return () => clearInterval(timer);
+  }, [playing, audio, srcFor, playOrAskTap]);
   // A seek (from anywhere) cancels a pending stall switch.
   useEffect(() => {
     audio.addEventListener("seeking", clearStall);

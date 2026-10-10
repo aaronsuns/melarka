@@ -128,6 +128,69 @@ describe("at the end of a track", () => {
   });
 });
 
+describe("a stuck clock", () => {
+  // "playing", the audio at the playhead downloaded, and currentTime frozen:
+  // the media pipeline is stuck (WebKit's GStreamer backend), not the network.
+  const stuck = (audio: FakeAudio, at = 0.0003) => {
+    audio.currentTime = at;
+    audio.bufferedRanges = [[0, 180]];
+  };
+
+  test("is reloaded where it stands after a few seconds, and plays on from there", () => {
+    vi.useFakeTimers();
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2)], 0));
+    act(() => audio.fire("playing"));
+    stuck(audio, 1.5);
+    const plays = audio.play.mock.calls.length;
+    act(() => vi.advanceTimersByTime(2000));
+    expect(audio.play.mock.calls.length).toBe(plays); // not yet
+    act(() => vi.advanceTimersByTime(1500));
+    expect(audio.play.mock.calls.length).toBe(plays + 1);
+    expect(audio.src).toContain("/tracks/1/stream");
+    expect(audio.currentTime).toBe(0); // a fresh load ...
+    act(() => audio.fire("loadedmetadata"));
+    expect(audio.currentTime).toBe(1.5); // ... back at the same place
+    expect(player().current?.id).toBe(1);
+  });
+
+  test("is reloaded at most twice per load", () => {
+    vi.useFakeTimers();
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2)], 0));
+    act(() => audio.fire("playing"));
+    const plays = audio.play.mock.calls.length;
+    for (let i = 0; i < 4; i++) {
+      stuck(audio);
+      act(() => vi.advanceTimersByTime(3000));
+    }
+    expect(audio.play.mock.calls.length).toBe(plays + 2);
+  });
+
+  test("a moving clock, a pause, a seek, or a playhead with nothing downloaded is left alone", () => {
+    vi.useFakeTimers();
+    const { audio, player } = setup();
+    act(() => player().playList([tr(1), tr(2)], 0));
+    act(() => audio.fire("playing"));
+    const plays = audio.play.mock.calls.length;
+    stuck(audio, 1);
+    for (let i = 0; i < 12; i++) {
+      audio.currentTime += 0.5;
+      act(() => vi.advanceTimersByTime(500));
+    }
+    audio.bufferedRanges = [[0, 3]]; // the network ran dry: the stall handlers' business
+    audio.currentTime = 7;
+    act(() => vi.advanceTimersByTime(5000));
+    audio.bufferedRanges = [[0, 180]];
+    audio.seeking = true;
+    act(() => vi.advanceTimersByTime(5000));
+    audio.seeking = false;
+    act(() => player().pause());
+    act(() => vi.advanceTimersByTime(5000));
+    expect(audio.play.mock.calls.length).toBe(plays);
+  });
+});
+
 describe("stalls", () => {
   // A playing network track that runs dry: no data ahead, still loading.
   const starve = (audio: FakeAudio) => {
