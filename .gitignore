@@ -22,3 +22,4 @@ ios/build/
 ios/DerivedData/
 ios/*.ipa
 xcuserdata/
+*.tsbuildinfo

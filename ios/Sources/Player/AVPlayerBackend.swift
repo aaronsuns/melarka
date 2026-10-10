@@ -223,9 +223,10 @@ final class LarkPlayerItem: AVPlayerItem {
     }
 
     /// The item's loudness gain as an audio mix on its audio track (none at 1: the item plays untouched).
-    /// The track has to load first, so a stream may play its first moments at full level; a preloaded item
-    /// has its mix long before it starts. Only the newest gain asked for is applied.
-    /// While it loads the item waits (`mixPending`), and the current item starts once it is on, as after a seek.
+    /// The track has to load first. While it loads the item waits (`mixPending`) and the current item starts
+    /// once the mix is on, as after a seek, so a stream never starts at full level. The one remaining gap is a
+    /// gapless advance into a preloaded item whose mix has not loaded yet (a queue edit in a track's last
+    /// second): it plays unadjusted for at most a moment. Only the newest gain asked for is applied.
     /// An asset whose tracks cannot load gets no mix and is let through, so it fails through its status.
     private func applyGain(_ item: LarkPlayerItem, _ gain: Float) {
         let g = min(1, max(0, gain))
