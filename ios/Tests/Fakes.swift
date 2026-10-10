@@ -10,6 +10,12 @@ import MediaPlayer
     weak var delegate: MediaBackendDelegate?
     var loads: [(MediaSource, Int, Bool)] = []
     var preloads: [MediaSource?] = []
+    /// The loudness gain of each load and preload, in the same order as `loads` and `preloads`.
+    var gains: [Float] = []
+    var preloadGains: [Float] = []
+    /// `setGain` calls (the current item's gain changed in place) and `setVolume` calls (the master volume).
+    var currentGains: [Float] = []
+    var volumes: [Float] = []
     var calls: [String] = []
     var positionMs = 0
     var durationMs: Int?
@@ -17,11 +23,14 @@ import MediaPlayer
     var rate: Double = 1
     private(set) var generation = 0
 
-    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, generation: Int) {
+    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, gain: Float, generation: Int) {
         loads.append((s, startMs, autoplay)); positionMs = startMs; isPlaying = false; self.rate = rate
+        gains.append(gain)
         self.generation = generation
     }
-    func preload(_ s: MediaSource?) { preloads.append(s) }
+    func preload(_ s: MediaSource?, gain: Float) { preloads.append(s); preloadGains.append(gain) }
+    func setGain(_ g: Float) { currentGains.append(g) }
+    func setVolume(_ v: Float) { volumes.append(v) }
     func play() { calls.append("play"); isPlaying = true }
     func pause() { calls.append("pause"); isPlaying = false }
     func seek(ms: Int) { calls.append("seek:\(ms)"); positionMs = ms }

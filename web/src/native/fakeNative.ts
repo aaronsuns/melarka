@@ -31,8 +31,8 @@ export function installFakeNative(): FakeNative {
   };
 }
 
-// The current app's state: it carries the modes (pass `shuffle: undefined`
-// for an app from before them).
+// The current app's state: it carries the modes and the sleep timer (pass
+// `shuffle: undefined` or `sleepRemainingMs: undefined` for an app from before them).
 export function stateEvent(p: Partial<NativeState> & { kind: ItemKind }): NativeState {
-  return { type: "state", itemId: null, index: 0, playing: false, positionMs: 0, durationMs: 0, buffering: false, error: null, rate: 1, shuffle: false, repeat: "off", ...p };
+  return { type: "state", itemId: null, index: 0, playing: false, positionMs: 0, durationMs: 0, buffering: false, error: null, rate: 1, shuffle: false, repeat: "off", sleepRemainingMs: null, ...p };
 }

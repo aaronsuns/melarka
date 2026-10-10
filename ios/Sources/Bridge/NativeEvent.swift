@@ -14,9 +14,12 @@ struct StateEvent: Encodable, Equatable {
     /// The music queue's modes; an episode's state always says false and "off".
     var shuffle = false
     var repeatMode: RepeatMode = .off
+    /// The sleep timer's time left (minutes: to the pause; end of track: what is left of the item playing);
+    /// nil with no timer. The same on both kinds' states: the timer is the engine's, not one queue's.
+    var sleepRemainingMs: Int? = nil
 
     private enum CodingKeys: String, CodingKey {
-        case type, kind, itemId, index, playing, positionMs, durationMs, buffering, error, rate, shuffle
+        case type, kind, itemId, index, playing, positionMs, durationMs, buffering, error, rate, shuffle, sleepRemainingMs
         case repeatMode = "repeat"
     }
 
@@ -34,12 +37,14 @@ struct StateEvent: Encodable, Equatable {
         try c.encode(rate.isFinite ? rate : 1, forKey: .rate)
         try c.encode(shuffle, forKey: .shuffle)
         try c.encode(repeatMode, forKey: .repeatMode)
+        try c.encode(sleepRemainingMs, forKey: .sleepRemainingMs)   // explicit null: a web tells this app from an older one by the key
     }
 }
 
 /// An event native dispatches to the page as `window` `lark-native` CustomEvent; `detail` is the encoded event:
-/// - `{type:"state", kind, itemId, index, playing, positionMs, durationMs, buffering, error, rate, shuffle, repeat}`
-///   (`repeat`: "off" | "all" | "one"; a web without modes ignores both, a web with them shows the buttons)
+/// - `{type:"state", kind, itemId, index, playing, positionMs, durationMs, buffering, error, rate, shuffle, repeat,
+///   sleepRemainingMs}` (`repeat`: "off" | "all" | "one"; a web without modes ignores both, a web with them shows
+///   the buttons; `sleepRemainingMs`: a number or null, never absent, so the web knows the app runs the timer)
 /// - `{type:"queue", kind, items, index, source}`
 /// - `{type:"flushed", id}`, `{type:"authRequired"}`, `{type:"notice", text}`
 enum NativeEvent: Encodable, Equatable {

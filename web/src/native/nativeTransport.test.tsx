@@ -64,7 +64,7 @@ it("says hello with the open preference and sends the prefs once on mount, then 
   localStorage.setItem("lark.quality", "lossless");
   const { rerender } = renderPlayer();
   expect(n.sent("hello")).toEqual([{ type: "hello", onOpen: "shuffle_favorites" }]);
-  expect(n.sent("setPrefs")).toEqual([{ type: "setPrefs", quality: "lossless", carLyrics: true }]);
+  expect(n.sent("setPrefs")).toEqual([{ type: "setPrefs", quality: "lossless", carLyrics: true, loudness: true }]);
   rerender(
     <PlayerProvider userId={1} onOpen="shuffle_favorites" carLyrics={false}>
       <EpisodesProvider userId={1}><Probe /></EpisodesProvider>
@@ -72,11 +72,33 @@ it("says hello with the open preference and sends the prefs once on mount, then 
   );
   act(() => p.setQuality("saver"));
   expect(n.sent("setPrefs").slice(1)).toEqual([
-    { type: "setPrefs", quality: "lossless", carLyrics: false },
-    { type: "setPrefs", quality: "saver", carLyrics: false },
+    { type: "setPrefs", quality: "lossless", carLyrics: false, loudness: true },
+    { type: "setPrefs", quality: "saver", carLyrics: false, loudness: true },
   ]);
   expect(localStorage.getItem("lark.quality")).toBe("saver");
   expect(n.sent("hello")).toHaveLength(1);
+});
+
+it("sends the loudness switch with the prefs, so native applies each track's gain", () => {
+  const { rerender } = render(
+    <PlayerProvider userId={1} onOpen="resume" loudness={false}>
+      <EpisodesProvider userId={1}><Probe /></EpisodesProvider>
+    </PlayerProvider>,
+  );
+  expect(n.sent("setPrefs")).toEqual([{ type: "setPrefs", quality: "high", carLyrics: true, loudness: false }]);
+  rerender(
+    <PlayerProvider userId={1} onOpen="resume" loudness={true}>
+      <EpisodesProvider userId={1}><Probe /></EpisodesProvider>
+    </PlayerProvider>,
+  );
+  expect(n.sent("setPrefs").slice(1)).toEqual([{ type: "setPrefs", quality: "high", carLyrics: true, loudness: true }]);
+});
+
+it("the saved loudness preference reaches native from the app", async () => {
+  renderWithApp(<Probe />, {
+    routes: { "GET /api/v1/me/preferences": () => ({ body: { language: null, on_open: "resume", normalize_loudness: false } }) },
+  });
+  await waitFor(() => expect(n.sent("setPrefs").at(-1)).toMatchObject({ loudness: false }));
 });
 
 it("renders Now Playing from native state and queue events", async () => {

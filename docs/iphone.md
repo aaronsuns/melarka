@@ -9,7 +9,8 @@ native engine. That gives it what a web page on iOS can't do reliably:
 - an offline cache of your favorites, synced on Wi-Fi, with a size limit you choose;
 - Shortcuts actions, **Shuffle Favorites** and **Resume** (随机播放收藏 and 继续播放 on a Chinese phone), so
   music can start by itself when the phone connects to the car's Bluetooth;
-- the current lyric line on the lock screen and car display.
+- the current lyric line on the lock screen and car display;
+- volume normalization and a sleep timer (with its fade) that keep working with the screen locked.
 
 It needs iOS 17 or later and a Melarka server reachable over **HTTPS**. The app accepts plain
 `http://` only for `localhost` and `*.local` addresses, for development.
@@ -102,15 +103,16 @@ pages in the background.
 
 **Volume normalization** (Settings) has no audible effect in Safari on an iPhone: iOS Safari
 ignores a web page's volume control (`HTMLMediaElement.volume`), so every song plays at its own
-level there. It works in desktop browsers. Melarka
+level there. It works in desktop browsers and in the iPhone app, which applies each song's level
+itself (gapless changes included). Melarka
 deliberately does not route playback through Web Audio to work around this: iOS suspends that when
 the phone is locked, which would stop the music.
 
 **The sleep timer** (Now Playing → ⋯) in a browser tab is a JavaScript timer, which a browser may
 delay while the page is in the background, so it can pause a little late. Its 10-second fade is
 not heard in Safari on an iPhone (the same volume limit as above): there it simply pauses. In the
-iPhone app the timer is hidden for now; the app's own engine will run it natively, so that it keeps
-time with the phone locked.
+iPhone app the app's own engine runs the timer, fade included, so it keeps time with the phone
+locked; an older app that can't shows no timer.
 
 ## Troubleshooting
 

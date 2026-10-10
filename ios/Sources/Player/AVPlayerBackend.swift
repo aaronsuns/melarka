@@ -14,6 +14,8 @@ final class LarkPlayerItem: AVPlayerItem {
     /// Counts the seeks handed to AVFoundation: only the newest one's completion may clear `pendingSeekMs`.
     var seekCount = 0
     var statusObservation: NSKeyValueObservation?
+    /// The loudness gain asked for last (`AVPlayerBackend.applyGain`): 1 is no audio mix at all.
+    var gain: Float = 1
 
     init(source: MediaSource, asset: AVAsset) {
         self.source = source
@@ -35,6 +37,9 @@ final class LarkPlayerItem: AVPlayerItem {
 ///   something else, or nothing, the preloaded item is removed before it can play on by itself.
 /// - Streams send the token as an `Authorization` header (`AVURLAssetHTTPHeaderFieldsKey`), never in the URL;
 ///   nothing here logs a source.
+/// - Loudness: each item carries its own gain as an `AVAudioMix` on its audio track, so a preloaded item
+///   starts at its own level with nothing to do at the change. `player.volume` is the master volume, which
+///   only the sleep timer's fade moves; a rebuilt player gets it back.
 @MainActor final class AVPlayerBackend: MediaBackend {
     weak var delegate: MediaBackendDelegate?
     /// Replaced by `rebuild()` after a media services reset.
@@ -48,6 +53,8 @@ final class LarkPlayerItem: AVPlayerItem {
     private let observers = ObserverBag(.default)
     /// Preloaded items taken over by a `load` (tests).
     private(set) var adoptedPreloads = 0
+    /// The master volume (`setVolume`), carried over to a rebuilt player.
+    private var volume: Float = 1
 
     init() {
         setUpPlayer()
@@ -86,18 +93,21 @@ final class LarkPlayerItem: AVPlayerItem {
         statusObservation = nil
         timeObserver = nil
         player = AVQueuePlayer()
+        player.volume = volume
         setUpPlayer()
     }
 
-    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, generation: Int) {
+    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, gain: Float, generation: Int) {
         wantsPlay = autoplay
         setRate(rate)
         if let p = preloaded, p.source == s, p.generation == nil, !p.failed, p.status != .failed, player.items().contains(p) {
+            Self.applyGain(p, gain)           // preloaded with this gain already: unchanged, so nothing is touched
             adopt(p, startMs: startMs, autoplay: autoplay, generation: generation)
             return
         }
         discardAll()
         let item = Self.makeItem(s)
+        Self.applyGain(item, gain)
         item.generation = generation
         own(item)
         player.insert(item, after: nil)
@@ -115,13 +125,14 @@ final class LarkPlayerItem: AVPlayerItem {
         }
     }
 
-    func preload(_ s: MediaSource?) {
+    func preload(_ s: MediaSource?, gain: Float) {
         if let p = preloaded {
             if player.currentItem !== p { player.remove(p); release(p) }
             preloaded = nil
         }
         guard let s, let cur = player.currentItem as? LarkPlayerItem, cur.generation != nil, cur.owner === self else { return }
         let p = Self.makeItem(s)
+        Self.applyGain(p, gain)
         own(p)
         guard player.canInsert(p, after: cur) else { return release(p) }
         player.insert(p, after: cur)
@@ -142,6 +153,16 @@ final class LarkPlayerItem: AVPlayerItem {
     func seek(ms: Int) {
         guard let item = current else { return }
         seek(item, ms: max(0, ms))
+    }
+
+    func setGain(_ g: Float) {
+        guard let item = current else { return }
+        Self.applyGain(item, g)
+    }
+
+    func setVolume(_ v: Float) {
+        volume = min(1, max(0, v))
+        player.volume = volume
     }
 
     func setRate(_ r: Double) {
@@ -186,6 +207,24 @@ final class LarkPlayerItem: AVPlayerItem {
         let item = LarkPlayerItem(source: s, asset: asset)
         item.audioTimePitchAlgorithm = .timeDomain      // speech at 1.5x keeps its pitch
         return item
+    }
+
+    /// The item's loudness gain as an audio mix on its audio track (none at 1: the item plays untouched).
+    /// The track has to load first, so a stream may play its first moments at full level; a preloaded item
+    /// has its mix long before it starts. Only the newest gain asked for is applied.
+    static func applyGain(_ item: LarkPlayerItem, _ gain: Float) {
+        let g = min(1, max(0, gain))
+        guard g != item.gain || (g < 1 && item.audioMix == nil) else { return }
+        item.gain = g
+        guard g < 1 else { item.audioMix = nil; return }
+        Task { @MainActor [weak item] in
+            guard let item, let track = try? await item.asset.loadTracks(withMediaType: .audio).first, item.gain == g else { return }
+            let p = AVMutableAudioMixInputParameters(track: track)
+            p.setVolume(g, at: .zero)
+            let mix = AVMutableAudioMix()
+            mix.inputParameters = [p]
+            item.audioMix = mix
+        }
     }
 
     /// The current item, if it is ours and loaded by the engine (not a preloaded one it has not taken over).

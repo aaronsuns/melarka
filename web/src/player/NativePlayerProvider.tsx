@@ -67,7 +67,7 @@ function withQueued(prev: QueueState, next: QueueState): QueueState {
  * actions into bridge messages. No <audio>, no EventBuffer, no Media Session,
  * no PUT /queue, no offline cache.
  */
-export function NativePlayerProvider({ children, onOpen, carLyrics = true, userId }: PlayerProviderProps) {
+export function NativePlayerProvider({ children, onOpen, carLyrics = true, loudness = true, userId }: PlayerProviderProps) {
   const [queue, setQueueState] = useState<QueueState>(emptyQueue);
   const queueRef = useRef(queue);
   const [state, setState] = useState<NativeState | null>(null);
@@ -179,9 +179,10 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
     const tm = setTimeout(() => setReady(true), READY_AFTER_MS);
     return () => clearTimeout(tm);
   }, []);
+  // Native applies each track's loudness gain itself (the preloaded next one too, for gapless changes).
   useEffect(() => {
-    nativePost({ type: "setPrefs", quality, carLyrics });
-  }, [quality, carLyrics]);
+    nativePost({ type: "setPrefs", quality, carLyrics, loudness });
+  }, [quality, carLyrics, loudness]);
   // Native's favorites cache follows every toggle.
   useEffect(() => onFavoriteSet((trackId, on) => nativePost({ type: "favoriteChanged", trackId, on })), []);
   // A preview or a video taking the session pauses native (an episode is
@@ -340,7 +341,7 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, userI
       queue, current: cur, playing, quality, error, notice, showNotice, needsTap: false,
       playList, enqueueNext, addToQueue, move, removeAt, toggle, play, pause, next, prev, seek, jump, remove, updateTrack, setQuality, prime, flushEvents, shuffleAll, shuffleFavorites, ready,
       modes, modesAvailable, setShuffle, cycleRepeat,
-      // The native engine runs its own sleep timer; the web one is hidden here.
+      // The native engine runs the sleep timer (SleepTimerProvider posts sleepTimer); nothing to do here.
       setFade: noop, stopAfterCurrent: noop,
     }),
     [

@@ -224,6 +224,15 @@ import WebKit
         XCTAssertEqual(again.engine?.prefs, NativePrefs(quality: "saver", carLyrics: false))
     }
 
+    /// The loudness switch too, so a cold start from the car plays at the level the user chose.
+    func testLoudnessPrefSurvivesARelaunch() throws {
+        let s = makeServices()
+        s.handle(.setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: false)))
+        XCTAssertEqual(makeServices().engine?.prefs, NativePrefs(quality: "high", carLyrics: true, loudness: false))
+        s.handle(.setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: true)))
+        XCTAssertEqual(makeServices().engine?.prefs.loudness, true)
+    }
+
     func testVersionTextHasVersionAndBuild() {
         let info = Bundle.main.infoDictionary ?? [:]
         let v = info["CFBundleShortVersionString"] as? String ?? "?"

@@ -443,3 +443,73 @@ extension PlayerEngineTests {
         XCTAssertFalse(cache.prefetched.contains { $0.contains(1) })   // on the phone now: not asked again
     }
 }
+
+// MARK: - Loudness gain
+
+/// A music item whose `meta` carries the server's `gain_db`.
+func gainTrack(_ id: Int, gainDB: Double?) -> Item {
+    var meta: [String: JSONValue] = ["id": .int(id)]
+    meta["gain_db"] = gainDB.map(JSONValue.double) ?? .null
+    return Item(kind: .track, id: String(id), title: "T\(id)", artist: "A", album: "B", durationMs: 200_000, meta: .object(meta))
+}
+
+extension PlayerEngineTests {
+    func testTrackLoadsWithItsGain() {
+        engine.handle(.setQueue(SetQueue(kind: .track, items: [gainTrack(1, gainDB: -6), gainTrack(2, gainDB: nil)], index: 0,
+                                         positionMs: 0, play: true, source: .list)))
+        XCTAssertEqual(try XCTUnwrap(backend.gains.last), 0.501, accuracy: 0.001)
+        XCTAssertEqual(backend.preloadGains.last, 1, "the preloaded next item carries its own gain (unmeasured: 1)")
+        backend.start(); backend.finish()
+        XCTAssertEqual(backend.gains.last, 1)
+    }
+
+    func testThePreloadedItemCarriesItsOwnGain() {
+        engine.handle(.setQueue(SetQueue(kind: .track, items: [gainTrack(1, gainDB: nil), gainTrack(2, gainDB: -12)], index: 0,
+                                         positionMs: 0, play: true, source: .list)))
+        XCTAssertEqual(backend.gains.last, 1)
+        XCTAssertEqual(try XCTUnwrap(backend.preloadGains.last), 0.251, accuracy: 0.001)
+    }
+
+    func testLoudnessOffLoadsAtUnity() {
+        engine.handle(.setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: false)))
+        engine.handle(.setQueue(SetQueue(kind: .track, items: [gainTrack(1, gainDB: -6), gainTrack(2, gainDB: -6)], index: 0,
+                                         positionMs: 0, play: true, source: .list)))
+        XCTAssertEqual(backend.gains.last, 1)
+        XCTAssertEqual(backend.preloadGains.last, 1)
+    }
+
+    /// Switching it while a track plays changes that track's level at once, and the preloaded next one's.
+    func testLoudnessSwitchAppliesToThePlayingTrack() {
+        engine.handle(.setQueue(SetQueue(kind: .track, items: [gainTrack(1, gainDB: -6), gainTrack(2, gainDB: -6)], index: 0,
+                                         positionMs: 0, play: true, source: .list)))
+        backend.start()
+        let loads = backend.loads.count
+        engine.handle(.setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: false)))
+        XCTAssertEqual(backend.loads.count, loads, "not reloaded")
+        XCTAssertEqual(backend.currentGains.last, 1)
+        XCTAssertEqual(backend.preloadGains.last, 1)
+        engine.handle(.setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: true)))
+        XCTAssertEqual(try XCTUnwrap(backend.currentGains.last), 0.501, accuracy: 0.001)
+        // The same prefs again change nothing.
+        let calls = backend.currentGains.count
+        engine.handle(.setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: true)))
+        XCTAssertEqual(backend.currentGains.count, calls)
+    }
+
+    func testEpisodesLoadAtUnity() {
+        var ep = episode("a")
+        ep = Item(kind: .episode, id: ep.id, title: ep.title, artist: ep.artist, album: ep.album, durationMs: ep.durationMs,
+                  meta: ep.meta.setting("gain_db", .int(-6)))
+        engine.handle(.setQueue(SetQueue(kind: .episode, items: [ep], index: 0, positionMs: 0, play: true, source: .list)))
+        XCTAssertEqual(backend.gains.last, 1)
+    }
+
+    func testNetworkRetryKeepsTheGain() {
+        engine.handle(.setQueue(SetQueue(kind: .track, items: [gainTrack(1, gainDB: -6)], index: 0, positionMs: 0, play: true, source: .list)))
+        backend.start(); backend.play(to: 5_000)
+        backend.fail(network: true)
+        scheduler.advance(2)
+        XCTAssertEqual(backend.loads.count, 2)
+        XCTAssertEqual(try XCTUnwrap(backend.gains.last), 0.501, accuracy: 0.001)
+    }
+}
