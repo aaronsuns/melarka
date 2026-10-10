@@ -106,14 +106,10 @@ import CryptoKit
     var engine: PlayerEngine? {
         if let engineStorage { return engineStorage }
         guard let api = api(session: session) else { return nil }
-        let nowPlaying = systemIntegration ? NowPlayingController(sink: MPNowPlayingInfoCenter.default(), artwork: { [weak api] item in
-            // nil: no cover (remembered); a thrown error (offline, a 5xx) is asked again later.
+        let nowPlaying = systemIntegration ? NowPlayingController(sink: MPNowPlayingInfoCenter.default(), artwork: { [weak api, weak self] item in
             guard let api else { return nil }
-            do {
-                return UIImage(data: try await api.artwork(item))
-            } catch LarkError.http(status: 404, _) {
-                return nil
-            }
+            return try await Self.nowPlayingArtwork(for: item, cached: { self?.cachedArtwork(trackID: $0) },
+                                                    fetch: { try await api.artwork($0) })
         }) : nil
         let e = PlayerEngine(backend: backend, api: api, cache: cache, store: queueStore,
                              events: PlayEventQueue(api: api, store: queueStore), network: network, nowPlaying: nowPlaying)
@@ -536,6 +532,22 @@ import CryptoKit
     /// Back to the 无法连接服务器 screen (重试, 设置); playback goes on.
     func closeOfflinePlayer() { offlinePlayer = nil }
 
-    /// A cached track's cover on the phone, for the offline player (nil: none cached, it shows a generated tile).
+    /// A cached track's cover on the phone, for the offline player and Now Playing (nil: none cached).
     func cachedArtwork(trackID: Int) -> URL? { cacheStore?.artworkURL(trackID: trackID) }
+
+    /// Now Playing's cover (the lock screen, the car): a track's cached cover first, so it shows offline with no
+    /// request; else the server's; if the server can't be reached, the cache again (it may have been cached
+    /// meanwhile). nil: no cover (remembered); a thrown error (offline, a 5xx) is asked again later.
+    static func nowPlayingArtwork(for item: Item, cached: @MainActor (Int) -> URL?, fetch: (Item) async throws -> Data) async throws -> UIImage? {
+        func fromCache() -> UIImage? { item.trackID.flatMap(cached).flatMap { UIImage(contentsOfFile: $0.path) } }
+        if let image = fromCache() { return image }
+        do {
+            return UIImage(data: try await fetch(item))
+        } catch LarkError.http(status: 404, _) {
+            return nil
+        } catch {
+            if let image = fromCache() { return image }
+            throw error
+        }
+    }
 }

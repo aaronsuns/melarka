@@ -1,5 +1,6 @@
 import XCTest
 import SwiftUI
+import MediaPlayer
 @testable import Lark
 
 /// A cached favorite with its own title and artist (the list is in title order).
@@ -417,5 +418,128 @@ final class CacheCoverTests: CacheTestCase {
         api.favoritesAnswer = [trackModel(1)]
         await FavoritesSync(api: api, cache: cache, network: network).run()
         XCTAssertTrue(api.artworkCalls.isEmpty)
+    }
+}
+
+/// A track with no cover is asked again after `CacheStore.noCoverTTL`, so a cover added on the server later shows up.
+final class CacheNoCoverExpiryTests: CacheTestCase {
+    func testTheNoCoverMarkerExpires() async throws {
+        api.artworkErrors["1"] = LarkError.http(status: 404, code: nil)
+        try put(1, bytes: 10, fav: true, at: t0)
+        await cache.cacheCover(trackID: 1)
+        XCTAssertEqual(api.artworkCalls, ["1"])
+        clock = t0 + CacheStore.noCoverTTL - 60
+        XCTAssertEqual(cache.missingCovers([1]), [])
+        await cache.cacheCover(trackID: 1)
+        XCTAssertEqual(api.artworkCalls, ["1"])                  // still remembered
+        clock = t0 + CacheStore.noCoverTTL + 60
+        XCTAssertEqual(cache.missingCovers([1]), [1])
+        api.artworkErrors = [:]; api.artworkAnswers["1"] = Data([0xFF, 0xD8, 0xFF, 0xE0, 1])
+        await cache.cacheCover(trackID: 1)
+        XCTAssertEqual(api.artworkCalls, ["1", "1"])
+        XCTAssertNotNil(cache.artworkURL(trackID: 1))
+    }
+
+    func testAKeptCoverNeverExpires() async throws {
+        api.artworkAnswers["1"] = Data([0xFF, 0xD8, 0xFF, 0xE0, 1])
+        try put(1, bytes: 10, fav: true, at: t0)
+        await cache.cacheCover(trackID: 1)
+        clock = t0 + CacheStore.noCoverTTL * 10
+        XCTAssertEqual(cache.missingCovers([1]), [])
+        await cache.cacheCover(trackID: 1)
+        XCTAssertEqual(api.artworkCalls, ["1"])
+    }
+}
+
+/// The lock screen's and the car's cover: the cached one first (offline it is the only one), then the server,
+/// then the cache again if the server can't be reached.
+@MainActor final class NowPlayingCachedArtworkTests: XCTestCase {
+    var dir: URL!
+    var cover: URL!
+    var fetches: [String] = []
+    var lookups: [Int] = []
+
+    override func setUp() async throws {
+        dir = FileManager.default.temporaryDirectory.appendingPathComponent("np-cover-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        cover = dir.appendingPathComponent("7")
+        try XCTUnwrap(Self.png()).write(to: cover)
+        fetches = []; lookups = []
+    }
+
+    override func tearDown() async throws { try? FileManager.default.removeItem(at: dir) }
+
+    static func png() -> Data? {
+        UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).pngData { ctx in
+            UIColor.red.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
+        }
+    }
+
+    func artwork(_ item: Item, cached: [Int: URL], fetch: Result<Data, Error>) async throws -> UIImage? {
+        try await AppServices.nowPlayingArtwork(for: item, cached: { [unowned self] id in
+            self.lookups.append(id)
+            return cached[id]
+        }, fetch: { [unowned self] item in
+            self.fetches.append(item.id)
+            return try fetch.get()
+        })
+    }
+
+    func testACachedCoverNeedsNoNetwork() async throws {
+        let img = try await artwork(nowPlayingTrack(7, title: "a", artist: "b"), cached: [7: cover],
+                                    fetch: .failure(URLError(.notConnectedToInternet)))
+        XCTAssertNotNil(img)
+        XCTAssertEqual(fetches, [])
+    }
+
+    func testWithNoCachedCoverTheServerIsAsked() async throws {
+        let img = try await artwork(nowPlayingTrack(7, title: "a", artist: "b"), cached: [:], fetch: .success(try XCTUnwrap(Self.png())))
+        XCTAssertNotNil(img)
+        XCTAssertEqual(fetches, ["7"])
+    }
+
+    func testANetworkErrorFallsBackToTheCacheThenThrows() async throws {
+        var calls = 0
+        let img = try await AppServices.nowPlayingArtwork(for: nowPlayingTrack(7, title: "a", artist: "b"), cached: { [cover] _ in
+            calls += 1
+            return calls == 1 ? nil : cover                     // cached while the request was out
+        }, fetch: { _ in throw URLError(.notConnectedToInternet) })
+        XCTAssertNotNil(img)
+        do {
+            _ = try await artwork(nowPlayingTrack(8, title: "a", artist: "b"), cached: [:], fetch: .failure(URLError(.timedOut)))
+            XCTFail("an offline miss is an error, so it is asked again later")
+        } catch {
+            XCTAssertEqual((error as? URLError)?.code, .timedOut)
+        }
+    }
+
+    func testNoCoverOnTheServerIsNil() async throws {
+        let img = try await artwork(nowPlayingTrack(7, title: "a", artist: "b"), cached: [:],
+                                    fetch: .failure(LarkError.http(status: 404, code: nil)))
+        XCTAssertNil(img)
+    }
+
+    func testAnEpisodeNeverReadsTheTrackCache() async throws {
+        _ = try await artwork(episode("abcdefghijk"), cached: [7: cover], fetch: .success(try XCTUnwrap(Self.png())))
+        XCTAssertEqual(lookups, [])
+        XCTAssertEqual(fetches, ["abcdefghijk"])
+    }
+
+    /// Offline, Now Playing shows the cached cover, and the writes that follow (ticks, lyric lines) ask nothing more.
+    func testOfflineNowPlayingShowsTheCachedCoverWithNoRetryStorm() async throws {
+        let sink = FakeSink()
+        let np = NowPlayingController(sink: sink, artwork: { [unowned self] item in
+            try await self.artwork(item, cached: [7: self.cover], fetch: .failure(URLError(.notConnectedToInternet)))
+        })
+        let item = nowPlayingTrack(7, title: "晴天", artist: "周杰伦")
+        np.show(item: item, positionMs: 0, durationMs: nil, rate: 1, playing: true, lyricLine: nil)
+        try await waitUntil { sink.nowPlayingInfo?[MPMediaItemPropertyArtwork] is MPMediaItemArtwork }
+        for i in 1...20 {
+            np.show(item: item, positionMs: i * 500, durationMs: nil, rate: 1, playing: true, lyricLine: "\(i)")
+        }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertTrue(sink.nowPlayingInfo?[MPMediaItemPropertyArtwork] is MPMediaItemArtwork)
+        XCTAssertEqual(lookups, [7])
+        XCTAssertEqual(fetches, [])
     }
 }

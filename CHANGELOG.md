@@ -25,7 +25,7 @@ the iPhone app share one version number.
   Favorites" opens a native player with the cover, a progress slider, previous, play/pause and
   next, shuffle and repeat, the queue and the cached favorites. "Retry Connection" goes back to
   the web app once the server answers, and the music plays on. Covers are now cached with the
-  songs.
+  songs, so the lock screen and the car show them offline too.
 
 ### Fixed
 
