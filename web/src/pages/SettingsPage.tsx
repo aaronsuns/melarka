@@ -97,6 +97,7 @@ export default function SettingsPage() {
         <label className="field-check-row">
           <input
             type="checkbox"
+            className="switch"
             aria-describedby={carHint}
             checked={prefs.car_lyrics !== false}
             onChange={(e) => void save({ ...prefs, car_lyrics: e.target.checked }).catch(() => {})}
@@ -109,6 +110,7 @@ export default function SettingsPage() {
         <label className="field-check-row">
           <input
             type="checkbox"
+            className="switch"
             aria-describedby={loudnessHint}
             checked={prefs.normalize_loudness !== false}
             onChange={(e) => void save({ ...prefs, normalize_loudness: e.target.checked }).catch(() => {})}

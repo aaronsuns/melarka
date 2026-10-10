@@ -8,12 +8,14 @@ import { LyricsPicker } from "../components/LyricsPicker";
 import { duration, qualityLabel } from "../format";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
-import { RepeatIcon, RepeatOneIcon, ShuffleIcon } from "../components/icons";
+import { BackwardFillIcon, ChevronDownIcon, ForwardFillIcon, HeartIcon, ListIcon, MicIcon, PauseFillIcon, PencilIcon, PhotoIcon, PlayFillIcon, RepeatIcon, RepeatOneIcon, ShuffleIcon, TagIcon, ThumbDownIcon, TrashIcon } from "../components/icons";
 import type { Lyrics } from "../api/types";
 import { hasLyrics, LyricStrip, LyricsView, syncedLines } from "./Lyrics";
 import { usePlayer, usePlayerProgress } from "./PlayerProvider";
+import { NowBackground, rangeFill } from "./NowBackground";
 import { QueueSheet } from "./QueueSheet";
 import { SleepTimerMenu } from "./SleepTimerMenu";
+import { useTrackSwipe } from "./swipe";
 
 const DELETE_ARM_MS = 5000;
 
@@ -72,6 +74,8 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
   const sliderRef = useRef<HTMLInputElement>(null);
   const scrubEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const track = p.current;
+  // A sideways swipe on the cover or the title: left = next, right = previous.
+  const swipeRef = useTrackSwipe(".now-art, .now-meta", { next: p.next, prev: p.prev });
 
   function disarmDelete() {
     setConfirmDelete(false);
@@ -190,15 +194,16 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
   }
 
   return (
-    <div className="now" role="dialog" aria-label={t("now.ariaLabel")}>
+    <div className="now" role="dialog" aria-label={t("now.ariaLabel")} ref={swipeRef}>
+      <NowBackground seed={track.album || track.title} src={coverUrl("track", track.id)} />
       <div className="now-top">
-        <button className="icon" aria-label={t("now.close")} onClick={onClose}>⌄</button>
+        <button className="icon" aria-label={t("now.close")} onClick={onClose}><ChevronDownIcon /></button>
         <span className="badge">{qualityLabel(track)} · {p.quality === "lossless" ? t("now.lossless") : p.quality === "high" ? t("now.high") : t("now.saver")}</span>
         <span className="now-top-end">
           {showLyrics && !showQueue && (
-            <button className="icon" aria-label={t("now.cover")} onClick={showCover}>▣</button>
+            <button className="icon" aria-label={t("now.cover")} onClick={showCover}><PhotoIcon /></button>
           )}
-          <button className="icon" aria-label={t("now.queue")} aria-pressed={showQueue} onClick={() => setShowQueue((s) => !s)}>☰</button>
+          <button className="icon" aria-label={t("now.queue")} aria-pressed={showQueue} onClick={() => setShowQueue((s) => !s)}><ListIcon /></button>
           <SleepTimerMenu />
         </span>
       </div>
@@ -207,7 +212,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
       ) : showLyrics ? (
         <LyricsView key={track.id} lyrics={lyrics} trackId={track.id} onEmptied={() => setForcedLyricsId(track.id)} />
       ) : (
-        <button className="now-art" aria-label={t("now.lyrics")} onClick={() => openLyrics(track.id)}>
+        <button className="now-art" data-swipe-surface="" aria-label={t("now.lyrics")} onClick={() => openLyrics(track.id)}>
           <Cover seed={track.album || track.title} label={track.title} size={320} src={coverUrl("track", track.id, 1000)} />
         </button>
       )}
@@ -225,6 +230,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
         max={Math.max(1, Math.round(progress.duration))}
         step={1}
         value={Math.round(pos)}
+        style={rangeFill(pos, progress.duration)}
         onInput={(e) => setScrub(Number((e.target as HTMLInputElement).value))}
         onPointerUp={endScrub}
         onTouchEnd={endScrub}
@@ -237,9 +243,11 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
             <ShuffleIcon size={22} />
           </button>
         )}
-        <button className="icon big" aria-label={t("common.previous")} onClick={p.prev}>⏮</button>
-        <button className="icon huge" aria-label={p.playing ? t("common.pause") : t("common.play")} onClick={p.toggle}>{p.playing ? "⏸" : "▶"}</button>
-        <button className="icon big" aria-label={t("common.next")} onClick={p.next}>⏭</button>
+        <button className="icon transport" aria-label={t("common.previous")} onClick={p.prev}><BackwardFillIcon size={36} /></button>
+        <button className="icon transport play" aria-label={p.playing ? t("common.pause") : t("common.play")} onClick={p.toggle}>
+          {p.playing ? <PauseFillIcon size={52} /> : <PlayFillIcon size={52} />}
+        </button>
+        <button className="icon transport" aria-label={t("common.next")} onClick={p.next}><ForwardFillIcon size={36} /></button>
         {p.modesAvailable && (
           <button
             className="icon mode"
@@ -254,27 +262,27 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
       </div>
       <div className="now-actions">
         <button
-          className="icon"
+          className={fav ? "icon on" : "icon"}
           aria-label={fav ? t("common.unfavorite") : t("common.favorite")}
           onClick={() => run(track.id, async () => { await api.setFavorite(track.id, !fav); setFavoriteOverride({ id: track.id, value: !fav }); })}
         >
-          {fav ? "♥" : "♡"}
+          <HeartIcon filled={fav} />
         </button>
-        <button className="icon" aria-label={t("common.notForMe")} onClick={() => run(track.id, async () => { await api.setDislike(track.id, true); p.remove(track.id); })}>👎</button>
+        <button className="icon" aria-label={t("common.notForMe")} onClick={() => run(track.id, async () => { await api.setDislike(track.id, true); p.remove(track.id); })}><ThumbDownIcon /></button>
         {user?.role === "admin" && (
-          <button className="icon" aria-label={t("now.editInfo")} onClick={() => setEditing(true)}>✎</button>
+          <button className="icon" aria-label={t("now.editInfo")} onClick={() => setEditing(true)}><PencilIcon /></button>
         )}
         {user?.role === "admin" && (
-          <button className="icon" aria-label={t("track.editTags")} onClick={() => setEditingTags(true)}>🏷</button>
+          <button className="icon" aria-label={t("track.editTags")} onClick={() => setEditingTags(true)}><TagIcon /></button>
         )}
         {user?.role === "admin" && (
-          <button className="icon" aria-label={t("lyrics.change")} onClick={() => setPickingLyrics(true)}>🎤</button>
+          <button className="icon" aria-label={t("lyrics.change")} onClick={() => setPickingLyrics(true)}><MicIcon /></button>
         )}
         {user?.role === "admin" &&
           (confirmDelete ? (
             <button className="secondary danger" onClick={() => run(track.id, async () => { await api.trashTrack(track.id); p.remove(track.id); disarmDelete(); })}>{t("now.confirmDelete")}</button>
           ) : (
-            <button className="icon" aria-label={t("now.deleteSong")} onClick={armDelete}>🗑</button>
+            <button className="icon" aria-label={t("now.deleteSong")} onClick={armDelete}><TrashIcon /></button>
           ))}
       </div>
       {editingTags && <EditTags track={track} onClose={() => setEditingTags(false)} />}

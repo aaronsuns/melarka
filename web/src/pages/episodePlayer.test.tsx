@@ -202,3 +202,11 @@ test("a channel page plays all (newest first, unplayed only) or shuffled", async
   fireEvent.click(screen.getByRole("button", { name: "随机播放" }));
   expect(screen.getByRole("button", { name: "随机播放" }).closest("[data-no-music-prime]")).not.toBeNull();
 });
+
+test("the episode Now Playing renders at the top of the page, outside the bottom bars", async () => {
+  renderWithApp(<><ChannelsPage /><div className="shell-player"><EpisodeMini /></div></>, { path: "/channels", routes: { ...latest([ep(1), ep(2), ep(3)]), ...progress } });
+  fireEvent.click(within((await screen.findByText("第2集")).closest("li")!).getByRole("button", { name: "听" }));
+  const now = await openNowPlaying();
+  expect(now.parentElement).toBe(document.body);
+  expect(now.closest(".shell-player")).toBeNull();
+});

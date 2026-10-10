@@ -269,7 +269,9 @@ test("the mini player's ⏮: within the first 3 s the previous track, later a re
   expect(await screen.findByText("歌2")).toBeInTheDocument();
   const mini = document.querySelector(".mini") as HTMLElement;
   // ⏮ ▶ ⏭, in that order.
-  expect(within(mini).getAllByRole("button").slice(1).map((b) => b.textContent)).toEqual(["⏮", "⏸", "⏭"]);
+  expect(within(mini).getAllByRole("button").slice(1).map((b) => b.getAttribute("aria-label"))).toEqual(["上一首", "暂停", "下一首"]);
+  // Glyphs, not text: SVG icons that render the same in every font.
+  for (const b of within(mini).getAllByRole("button").slice(1)) expect(b.querySelector("svg")).not.toBeNull();
   audio.currentTime = 12;
   await userEvent.click(within(mini).getByRole("button", { name: "上一首" }));
   expect(audio.currentTime).toBe(0);
@@ -278,4 +280,13 @@ test("the mini player's ⏮: within the first 3 s the previous track, later a re
   await userEvent.click(within(mini).getByRole("button", { name: "上一首" }));
   expect(await screen.findByText("歌1")).toBeInTheDocument();
   expect(p.current?.id).toBe(1);
+});
+
+test("Now Playing renders at the top of the page, outside the bottom bars (nothing in the page can paint over it)", async () => {
+  renderWithApp(<><Grab /><div className="shell-player"><MiniPlayer /></div></>);
+  act(() => p.playList([tr(1), tr(2)], 0));
+  await userEvent.click(await screen.findByText("歌1"));
+  const dialog = await screen.findByRole("dialog", { name: "正在播放" });
+  expect(dialog.parentElement).toBe(document.body);
+  expect(dialog.closest(".shell-player")).toBeNull();
 });

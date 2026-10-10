@@ -97,6 +97,91 @@ test("README screenshots", async ({ browser }, info) => {
   }
 });
 
+// Design-review captures (not committed): Now Playing for a song and an episode, the mini players
+// and the main pages, on a phone and on a desktop window. Generate with:
+//   cd web && npm run build && LARK_SCREENSHOTS=1 LARK_REVIEW_DIR=/some/dir npx playwright test screenshots --project=iphone-webkit
+test("design review screenshots", async ({ browser }, info) => {
+  const dir = process.env.LARK_REVIEW_DIR;
+  test.skip(process.env.LARK_SCREENSHOTS !== "1" || !dir || info.project.name !== "iphone-webkit", "set LARK_SCREENSHOTS=1 and LARK_REVIEW_DIR, iphone-webkit only");
+  test.setTimeout(300_000);
+  const shot = async (page: Page, name: string) => page.screenshot({ path: path.join(dir!, `${name}.png`) });
+  const sizes = [
+    { name: "phone", opts: { ...devices["iPhone 13"], viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, deviceScaleFactor: 2 } },
+    { name: "desktop", opts: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 } },
+  ];
+  let ready = false;
+  for (const { name, opts } of sizes) {
+    const ctx = await newContext(browser, opts);
+    const page = await ctx.newPage();
+    try {
+      await login(page);
+      if (!ready) {
+        await setUp(page);
+        ready = true;
+      }
+      await setLanguage(page, "zh-Hans");
+      // A song: Now Playing on the cover, then on the lyrics.
+      await nowPlayingWithLyrics(page, "清晨的正弦波");
+      const now = page.getByRole("dialog");
+      await shot(page, `${name}-now-playing-lyrics`);
+      const cover = now.getByRole("button", { name: "封面" });
+      if (await cover.isVisible()) await cover.click();
+      await coversLoaded(page);
+      await shot(page, `${name}-now-playing`);
+      await now.getByRole("button", { name: "队列" }).click();
+      await page.waitForTimeout(500);
+      await shot(page, `${name}-now-playing-queue`);
+      await now.getByRole("button", { name: "队列" }).click();
+      await now.getByRole("button", { name: "编辑信息" }).click();
+      await page.waitForTimeout(500);
+      await shot(page, `${name}-now-playing-edit`);
+      await page.mouse.click(5, 5); // the sheet's backdrop closes it
+      await now.getByRole("button", { name: "收起" }).click();
+      await page.getByRole("link", { name: "首页" }).click();
+      await coversLoaded(page);
+      await shot(page, `${name}-home-mini`);
+      await page.getByRole("link", { name: "音乐库" }).click();
+      await page.getByRole("tab", { name: "收藏" }).click();
+      await expect(page.locator(".track").nth(3)).toBeVisible({ timeout: 15_000 });
+      await coversLoaded(page);
+      await shot(page, `${name}-library`);
+      await page.getByRole("link", { name: "搜索" }).click();
+      // Retried: the search page can still be restoring its last state when the box is first filled.
+      await expect(async () => {
+        await page.getByRole("searchbox").fill("C");
+        await expect(page.locator(".track").first()).toBeVisible({ timeout: 5_000 });
+      }).toPass({ timeout: 30_000 });
+      await page.getByRole("searchbox").blur();
+      await coversLoaded(page);
+      await shot(page, `${name}-search`);
+      await page.getByRole("link", { name: "我的" }).click();
+      await page.waitForTimeout(800);
+      await shot(page, `${name}-settings`);
+      // An episode: 频道, ▶ 听, its mini player and Now Playing.
+      await page.getByRole("link", { name: "频道", exact: true }).click();
+      const listen = page.locator(".episode-row").getByRole("button", { name: "听" }).first();
+      await expect(async () => {
+        await page.reload();
+        await expect(listen).toBeVisible({ timeout: 3_000 });
+      }).toPass({ timeout: 90_000 });
+      await coversLoaded(page);
+      await shot(page, `${name}-channels`);
+      await listen.click();
+      await expect(page.locator(".episode-mini")).toBeVisible({ timeout: 20_000 });
+      await page.waitForTimeout(1500);
+      await shot(page, `${name}-channels-episode-mini`);
+      await page.locator(".episode-mini .mini-info").click();
+      await coversLoaded(page);
+      await shot(page, `${name}-episode-now-playing`);
+      await page.getByRole("dialog").getByRole("button", { name: "收起" }).click();
+      await page.locator(".episode-mini").getByRole("button", { name: "关闭节目播放器" }).click();
+    } finally {
+      await setLanguage(page, null).catch(() => {});
+      await ctx.close();
+    }
+  }
+});
+
 /** A context that never leaves the machine: YouTube thumbnails come from demo.py, anything else external is refused. */
 async function newContext(browser: Browser, opts: Parameters<Browser["newContext"]>[0]): Promise<BrowserContext> {
   // serviceWorkers: "block", or the app's service worker fetches images past these routes.
@@ -164,7 +249,7 @@ async function coversLoaded(page: Page) {
 
 async function nowPlayingWithLyrics(page: Page, title: string) {
   await page.getByRole("link", { name: "搜索" }).click();
-  const row = page.getByRole("button", { name: new RegExp(`^${title} `) }).first();
+  const row = page.locator("main").getByRole("button", { name: new RegExp(`^${title} `) }).first(); // not the mini player
   await expect(async () => {
     await page.getByRole("searchbox").fill(title);
     await expect(row).toBeVisible({ timeout: 5_000 });
