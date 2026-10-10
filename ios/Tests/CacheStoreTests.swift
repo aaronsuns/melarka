@@ -324,7 +324,8 @@ final class CacheStoreTests: CacheTestCase {
         StubURLProtocol.handler = { _ in (.ok(["Content-Type": "audio/mp4"]), Data(repeating: 9, count: 321)) }
         cache.prefetch([track(12)])
         try await waitUntil { self.cache.localURL(trackID: 12) != nil }
-        let r = try XCTUnwrap(StubURLProtocol.requests.last)
+        // The download's request (the track's cover follows it, as its own request).
+        let r = try XCTUnwrap(StubURLProtocol.requests.first { $0.url?.path.hasSuffix("/stream") == true })
         XCTAssertEqual(r.url?.path, "/api/v1/tracks/12/stream")
         XCTAssertEqual(r.queryItems, [URLQueryItem(name: "quality", value: "high")])
         XCTAssertEqual(r.value(forHTTPHeaderField: "Authorization"), "Bearer T1")

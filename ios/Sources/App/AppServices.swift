@@ -106,14 +106,10 @@ import CryptoKit
     var engine: PlayerEngine? {
         if let engineStorage { return engineStorage }
         guard let api = api(session: session) else { return nil }
-        let nowPlaying = systemIntegration ? NowPlayingController(sink: MPNowPlayingInfoCenter.default(), artwork: { [weak api] item in
-            // nil: no cover (remembered); a thrown error (offline, a 5xx) is asked again later.
+        let nowPlaying = systemIntegration ? NowPlayingController(sink: MPNowPlayingInfoCenter.default(), artwork: { [weak api, weak self] item in
             guard let api else { return nil }
-            do {
-                return UIImage(data: try await api.artwork(item))
-            } catch LarkError.http(status: 404, _) {
-                return nil
-            }
+            return try await Self.nowPlayingArtwork(for: item, cached: { self?.cachedArtwork(trackID: $0) },
+                                                    fetch: { try await api.artwork($0) })
         }) : nil
         let e = PlayerEngine(backend: backend, api: api, cache: cache, store: queueStore,
                              events: PlayEventQueue(api: api, store: queueStore), network: network, nowPlaying: nowPlaying)
@@ -157,6 +153,7 @@ import CryptoKit
 
     /// An event for the page: through the bridge (dropped while the page is frozen; re-sent on activation).
     func send(_ event: NativeEvent) {
+        offlinePlayer?.receive(event)
         if let eventSink { eventSink(event) } else { bridge?.send(event) }
     }
 
@@ -214,6 +211,7 @@ import CryptoKit
     /// server's), the queues and the token of its user, the web view. The cache folder of another server is
     /// removed by `updateCache()` once the next server is set.
     private func leaveServer() {
+        offlinePlayer = nil
         if let engineStorage { engineStorage.reset() } else { queueStore.wipe() }
         queueStore.user = nil
         auth.clear()
@@ -486,13 +484,19 @@ import CryptoKit
     func pageDidFail(_ error: Error) {
         guard PageLoad.isFailure(error) else { return }
         pageFailed = true
+        offlinePlayer?.retryFailed()
     }
 
-    func pageDidLoad() { pageFailed = false }
+    /// The page is back: the offline player closes and the web UI shows what the engine is playing.
+    func pageDidLoad() {
+        pageFailed = false
+        offlinePlayer = nil
+    }
 
     func retryPage() {
         guard let serverURL else { return }
         pageFailed = false
+        offlinePlayer?.retryStarted()
         if let loadPage { loadPage(serverURL) } else { webView?.load(URLRequest(url: serverURL)) }
     }
 
@@ -502,7 +506,48 @@ import CryptoKit
     /// Cached favorites exist: the error screen offers to play them.
     var hasOfflineFavorites: Bool { !cache.cachedFavorites().isEmpty }
 
+    /// 播放离线收藏: opens the offline player and, unless something is already playing, shuffles the cached favorites.
     func playOfflineFavorites() async {
+        openOfflinePlayer()
         _ = try? await IntentRun.shuffleFavorites(intentPlayer)
+    }
+
+    // MARK: - The offline player
+
+    /// The native offline player over the failed page (`RootView`); nil when it is closed. It stays open through
+    /// failed retries and closes when the page loads (`pageDidLoad`); the engine plays on either way.
+    @Published private(set) var offlinePlayer: OfflinePlayerModel?
+
+    /// Opens the offline player on the engine (no network: the cache index and the engine's own events).
+    func openOfflinePlayer() {
+        guard offlinePlayer == nil, let engine else { return }
+        let cache = self.cache
+        let model = OfflinePlayerModel(player: engine, favorites: { cache.cachedFavorites() },
+                                       retry: { [weak self] in self?.retryPage() },
+                                       artwork: { [weak self] id in self?.cachedArtwork(trackID: id) })
+        offlinePlayer = model
+        engine.emitAll()           // seeds it with the queue and state (the page, if any, gets them again: harmless)
+    }
+
+    /// Back to the 无法连接服务器 screen (重试, 设置); playback goes on.
+    func closeOfflinePlayer() { offlinePlayer = nil }
+
+    /// A cached track's cover on the phone, for the offline player and Now Playing (nil: none cached).
+    func cachedArtwork(trackID: Int) -> URL? { cacheStore?.artworkURL(trackID: trackID) }
+
+    /// Now Playing's cover (the lock screen, the car): a track's cached cover first, so it shows offline with no
+    /// request; else the server's; if the server can't be reached, the cache again (it may have been cached
+    /// meanwhile). nil: no cover (remembered); a thrown error (offline, a 5xx) is asked again later.
+    static func nowPlayingArtwork(for item: Item, cached: @MainActor (Int) -> URL?, fetch: (Item) async throws -> Data) async throws -> UIImage? {
+        func fromCache() -> UIImage? { item.trackID.flatMap(cached).flatMap { UIImage(contentsOfFile: $0.path) } }
+        if let image = fromCache() { return image }
+        do {
+            return UIImage(data: try await fetch(item))
+        } catch LarkError.http(status: 404, _) {
+            return nil
+        } catch {
+            if let image = fromCache() { return image }
+            throw error
+        }
     }
 }

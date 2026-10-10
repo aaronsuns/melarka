@@ -97,6 +97,21 @@ actor AsyncSemaphore {
     private var indexURL: URL { root.appendingPathComponent("index.json") }
     private var filesDir: URL { root.appendingPathComponent("files", isDirectory: true) }
     private var stagingDir: URL { root.appendingPathComponent("staging", isDirectory: true) }
+    /// `covers/<id>`: a cached track's cover (the offline player's artwork); an empty file marks a track with none.
+    private var coversDir: URL { root.appendingPathComponent("covers", isDirectory: true) }
+    private func coverURL(_ id: Int) -> URL { coversDir.appendingPathComponent(String(id)) }
+    /// A cover bigger than this is not kept (the server's are 300 px).
+    static let maxCoverBytes = 2 << 20
+    /// How long "no cover" is believed: after this a sync asks again, so a cover added on the server shows up.
+    static let noCoverTTL: TimeInterval = 7 * 24 * 3600
+
+    /// The cover is on disk, or the server said it has none within `noCoverTTL` (the marker's date is ours: `now`).
+    private func coverKnown(_ id: Int) -> Bool {
+        guard let a = try? fm.attributesOfItem(atPath: coverURL(id).path) else { return false }
+        if ((a[.size] as? NSNumber)?.int64Value ?? 0) > 0 { return true }
+        guard let at = a[.modificationDate] as? Date else { return false }
+        return now().timeIntervalSince(at) < Self.noCoverTTL
+    }
 
     init(root: URL, api: LarkAPIProtocol, network: NetworkStatus, capBytes: Int64 = CacheStore.defaultCap,
          now: @escaping () -> Date = Date.init, indexDelay: TimeInterval = CacheStore.indexWriteDelay) {
@@ -113,6 +128,7 @@ actor AsyncSemaphore {
         guard fm.fileExists(atPath: url.path) else {
             Self.log.info("cached file of track \(id) is gone; dropped")
             entries[id] = nil
+            removeCover(id)
             markDirty()
             return nil
         }
@@ -132,7 +148,7 @@ actor AsyncSemaphore {
             if fm.fileExists(atPath: root.appendingPathComponent(e.file).path) { out.append((e.track, e.meta)) } else { gone.append(id) }
         }
         if !gone.isEmpty {
-            gone.forEach { entries[$0] = nil }
+            gone.forEach { entries[$0] = nil; removeCover($0) }
             markDirty()
         }
         return out
@@ -210,7 +226,7 @@ actor AsyncSemaphore {
         dropDownloads()
         entries = [:]
         pendingWrite?.cancel(); pendingWrite = nil; dirty = false
-        for u in [filesDir, stagingDir, indexURL] { try? fm.removeItem(at: u) }
+        for u in [filesDir, stagingDir, coversDir, indexURL] { try? fm.removeItem(at: u) }
     }
 
     /// Sign-out or another user: this cache stays on disk for its user's next sign-in, and does nothing more.
@@ -287,6 +303,7 @@ actor AsyncSemaphore {
         for (id, e) in order {
             guard used > capBytes else { break }
             try? fm.removeItem(at: root.appendingPathComponent(e.file))
+            removeCover(id)
             entries[id] = nil
             used -= e.bytes
         }
@@ -331,8 +348,53 @@ actor AsyncSemaphore {
         } catch {
             if Self.isOutOfSpace(error) { outOfSpace = true }
             Self.log.error("download of track \(track.id) failed: \(String(describing: error), privacy: .public)")
+            return
+        }
+        await cacheCover(trackID: track.id)
+    }
+
+    // MARK: Covers
+
+    /// A cached track's cover on disk; nil when the track is not cached, its cover was not fetched yet, or it has none.
+    func artworkURL(trackID id: Int) -> URL? {
+        guard entries[id] != nil else { return nil }
+        let url = coverURL(id)
+        guard let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? NSNumber, size.int64Value > 0 else { return nil }
+        return url
+    }
+
+    /// Fetches a cached track's cover once (after its download; the favorites sync for tracks cached before covers
+    /// were kept). Best effort: a network error leaves it for the next time; a track with no cover (404) gets an
+    /// empty marker, so it is not asked again for `noCoverTTL`. Covers are small and do not count against the cap.
+    func cacheCover(trackID id: Int) async {
+        guard !closed, let e = entries[id], !coverKnown(id) else { return }
+        let ep = epoch
+        var data: Data
+        do {
+            data = try await api.artwork(Item(track: e.track, json: e.meta))
+        } catch LarkError.http(status: 404, _) {
+            data = Data()
+        } catch {
+            return
+        }
+        guard epoch == ep, !closed, entries[id] != nil else { return }
+        if data.count > Self.maxCoverBytes { data = Data() }
+        do {
+            try fm.createDirectory(at: coversDir, withIntermediateDirectories: true)
+            excludeFromBackup(coversDir)
+            try data.write(to: coverURL(id), options: .atomic)
+            if data.isEmpty { try fm.setAttributes([.modificationDate: now()], ofItemAtPath: coverURL(id).path) }
+        } catch {
+            if Self.isOutOfSpace(error) { outOfSpace = true }
         }
     }
+
+    /// Cached tracks among `ids` whose cover was never fetched, or whose "no cover" has expired.
+    func missingCovers(_ ids: [Int]) -> [Int] {
+        ids.filter { entries[$0] != nil && !coverKnown($0) }
+    }
+
+    private func removeCover(_ id: Int) { try? fm.removeItem(at: coverURL(id)) }
 
     /// A track's size before it is fetched: its duration at AAC 256k, at least a minute's worth.
     static func estimatedBytes(_ t: Track) -> Int64 {
@@ -363,9 +425,13 @@ actor AsyncSemaphore {
 
     /// Files no index entry accounts for (the index was purged or unreadable) would count against nothing.
     private func removeOrphans() {
-        guard let names = try? fm.contentsOfDirectory(atPath: filesDir.path) else { return }
-        let known = Set(entries.values.map(\.file))
-        for n in names where !known.contains("files/\(n)") { try? fm.removeItem(at: filesDir.appendingPathComponent(n)) }
+        if let names = try? fm.contentsOfDirectory(atPath: filesDir.path) {
+            let known = Set(entries.values.map(\.file))
+            for n in names where !known.contains("files/\(n)") { try? fm.removeItem(at: filesDir.appendingPathComponent(n)) }
+        }
+        if let names = try? fm.contentsOfDirectory(atPath: coversDir.path) {
+            for n in names where Int(n).map({ entries[$0] == nil }) ?? true { try? fm.removeItem(at: coversDir.appendingPathComponent(n)) }
+        }
     }
 
     /// Something changed: the index is written once `indexDelay` has passed (or at the next `flush`).
