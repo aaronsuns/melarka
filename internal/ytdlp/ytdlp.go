@@ -295,6 +295,33 @@ func (c *Client) SearchTop(ctx context.Context, q string, n int) ([]Video, error
 	return parseVideos(out)
 }
 
+// MaxSearchResults bounds SearchMore: "show more" never asks YouTube for
+// more than this many videos for one query.
+const MaxSearchResults = 50
+
+// SearchMore runs a ytsearch<n> flat-playlist lookup for q (n clamped to
+// 1..MaxSearchResults); more reports that YouTube filled the whole page and
+// n is still under the cap, so a larger n may find further videos. Each
+// call fetches the first n from the top (ytsearch has no offset), so callers
+// grow n and drop the videos they already have.
+func (c *Client) SearchMore(ctx context.Context, q string, n int) (videos []Video, more bool, err error) {
+	clean, err := CleanQuery(q)
+	if err != nil {
+		return nil, false, err
+	}
+	n = max(1, min(n, MaxSearchResults))
+	args := append(c.baseArgs(), "--flat-playlist", "-J", "--no-warnings", "ytsearch"+strconv.Itoa(n)+":"+clean)
+	out, err := c.Runner.Output(ctx, args)
+	if err != nil {
+		return nil, false, err
+	}
+	top, videos, err := parseTop(out)
+	if err != nil {
+		return nil, false, err
+	}
+	return videos, n < MaxSearchResults && len(top.Entries) >= n, nil
+}
+
 // Mix lists up to max entries of YouTube's Mix for videoID
 // (watch?v=<id>&list=RD<id>), expanded as a playlist. Thumbnails are always
 // YouTube's hqdefault (flat entries carry signed, expiring variants).

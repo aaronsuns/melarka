@@ -36,6 +36,7 @@ import type {
   VideoRecs,
   VocabEntry,
   YTPlaylist,
+  YTPlaylistEntries,
   YTSearchResult,
   YTVideo,
 } from "./types";
@@ -212,7 +213,8 @@ export const api = {
   clearVideoHistory: () => req<void>("DELETE", "/me/video-history"),
   videoRecommendations: () => req<VideoRecs>("GET", "/me/video-recommendations"),
 
-  youtubeSearch: (q: string) => req<YTSearchResult>("GET", `/youtube/search${qs({ q })}`),
+  youtubeSearch: (q: string, n?: number) => req<YTSearchResult>("GET", `/youtube/search${qs({ q, n })}`),
+  youtubePlaylistEntries: (list: string, n?: number) => req<YTPlaylistEntries>("GET", `/youtube/playlist/entries${qs({ list, n })}`),
   youtubePlaylist: (list: string) => req<YTPlaylist>("GET", `/youtube/playlist${qs({ list })}`),
   enqueue: (input: { url: string } | { video: YTVideo }) => req<Enqueued>("POST", "/downloads", input),
   createDownload: async (input: { url: string } | { video: YTVideo }) => (await req<Enqueued>("POST", "/downloads", input)).jobs,

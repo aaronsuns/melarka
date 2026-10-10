@@ -3,6 +3,7 @@ package ytdlp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -426,5 +427,47 @@ func TestExecRunner_BinResolvedEachCall(t *testing.T) {
 	}
 	if strings.TrimSpace(string(out1)) != "one" || strings.TrimSpace(string(out2)) != "two" {
 		t.Errorf("out1=%q out2=%q, want one/two (Bin() should be called fresh each time)", out1, out2)
+	}
+}
+
+func TestClientSearchMore(t *testing.T) {
+	entries := func(n int) []byte {
+		var b strings.Builder
+		b.WriteString(`{"_type":"playlist","entries":[`)
+		for i := range n {
+			if i > 0 {
+				b.WriteString(",")
+			}
+			fmt.Fprintf(&b, `{"id":"m%010d","title":"T%d","channel":"C","duration":60}`, i, i)
+		}
+		b.WriteString("]}")
+		return []byte(b.String())
+	}
+	for _, c := range []struct {
+		n, got   int
+		wantArg  string
+		wantMore bool
+	}{
+		{n: 20, got: 20, wantArg: "ytsearch20:q", wantMore: true},  // a full page: there may be more
+		{n: 20, got: 13, wantArg: "ytsearch20:q", wantMore: false}, // YouTube ran out
+		{n: 50, got: 50, wantArg: "ytsearch50:q", wantMore: false}, // the cap: never more
+		{n: 500, got: 50, wantArg: "ytsearch50:q", wantMore: false},
+		{n: 0, got: 1, wantArg: "ytsearch1:q", wantMore: true},
+	} {
+		fr := &fakeRunner{output: entries(c.got)}
+		videos, more, err := (&Client{Runner: fr}).SearchMore(context.Background(), " q ", c.n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"--js-runtimes", "node", "--flat-playlist", "-J", "--no-warnings", c.wantArg}
+		if !reflect.DeepEqual(fr.gotArgs, want) {
+			t.Errorf("n=%d: argv = %v, want %v", c.n, fr.gotArgs, want)
+		}
+		if len(videos) != c.got || more != c.wantMore {
+			t.Errorf("n=%d got=%d: %d videos, more=%v; want more=%v", c.n, c.got, len(videos), more, c.wantMore)
+		}
+	}
+	if _, _, err := (&Client{Runner: &fakeRunner{}}).SearchMore(context.Background(), "", 20); !errors.Is(err, ErrBadQuery) {
+		t.Errorf("empty query: %v", err)
 	}
 }

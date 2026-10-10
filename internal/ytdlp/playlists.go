@@ -22,6 +22,8 @@ type SearchResult struct {
 	Videos    []Video    `json:"videos"`
 	Playlists []Playlist `json:"playlists"`
 	Channels  []Channel  `json:"channels,omitempty"`
+	// More: a larger page (GET /youtube/search?n=…) may find further videos.
+	More bool `json:"more,omitempty"`
 }
 
 // List is a resolved playlist: its metadata and up to max videos. Count is

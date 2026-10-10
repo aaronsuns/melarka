@@ -19,6 +19,7 @@ import (
 func (s *Server) downloadRoutes(a chi.Router) {
 	a.Get("/youtube/search", s.youtubeSearch)
 	a.Get("/youtube/playlist", s.youtubePlaylist)
+	a.Get("/youtube/playlist/entries", s.youtubePlaylistEntries)
 	a.Post("/downloads", s.createDownload)
 	a.Get("/downloads", s.listDownloads)
 	a.Get("/downloads/tracks", s.downloadTracks)
@@ -36,7 +37,28 @@ const (
 	searchQueryTokens = 2
 	playlistTokens    = 1
 	searchTimeout     = 30 * time.Second
+	// searchPage is the first /youtube/search page and the step "show more"
+	// grows it by (up to ytdlp.MaxSearchResults); entriesPage and entriesCap
+	// do the same for a playlist's entries (the cap is the download cap).
+	searchPage  = 10
+	entriesPage = 50
+	entriesCap  = 200
 )
+
+// pageSize reads the optional n parameter: absent is step, otherwise a
+// positive integer rounded up to a whole number of steps (so each page is
+// one cache entry) and clamped to limit. ok is false for anything else.
+func pageSize(r *http.Request, step, limit int) (n int, ok bool) {
+	raw := r.URL.Query().Get("n")
+	if raw == "" {
+		return step, true
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1 {
+		return 0, false
+	}
+	return min((n+step-1)/step*step, limit), true
+}
 
 // searchCacheEntry is one cached YouTube search result.
 type searchCacheEntry struct {
@@ -87,7 +109,29 @@ func (s *Server) youtubeSearch(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "bad query")
 		return
 	}
+	n, ok := pageSize(r, searchPage, ytdlp.MaxSearchResults)
+	if !ok {
+		writeCoded(w, 400, "bad_request", "bad page size")
+		return
+	}
 	key := strings.ToLower(clean)
+	if n > searchPage {
+		// "Show more": a larger ytsearch for the videos alone (one process,
+		// one token; the client keeps the first page's playlists and drops
+		// the videos it already has). The key starts with a space, which a
+		// trimmed query never does.
+		s.serveSearch(w, r, " more:"+strconv.Itoa(n)+":"+key, clean, 1, func(ctx context.Context) (ytdlp.SearchResult, bool, error) {
+			videos, more, err := s.YT.SearchMore(ctx, clean, n)
+			if err != nil {
+				return ytdlp.SearchResult{}, false, err
+			}
+			if videos == nil {
+				videos = []ytdlp.Video{}
+			}
+			return ytdlp.SearchResult{Videos: videos, Playlists: []ytdlp.Playlist{}, More: more}, true, nil
+		}, func(res ytdlp.SearchResult) any { return res })
+		return
+	}
 	s.serveSearch(w, r, key, clean, searchQueryTokens, func(ctx context.Context) (ytdlp.SearchResult, bool, error) {
 		// Videos and playlists are searched at the same time: one limiter
 		// slot, two yt-dlp processes. A playlist failure is only logged.
@@ -98,7 +142,7 @@ func (s *Server) youtubeSearch(w http.ResponseWriter, r *http.Request) {
 			defer close(done)
 			pls, plErr = s.YT.SearchPlaylists(ctx, clean)
 		}()
-		videos, err := s.YT.Search(ctx, clean)
+		videos, more, err := s.YT.SearchMore(ctx, clean, searchPage)
 		<-done
 		if err != nil {
 			return ytdlp.SearchResult{}, false, err
@@ -115,7 +159,7 @@ func (s *Server) youtubeSearch(w http.ResponseWriter, r *http.Request) {
 		}
 		// A failed playlist search is not cached: one yt-dlp blip must not
 		// hide playlists for this query for the whole TTL.
-		return ytdlp.SearchResult{Videos: videos, Playlists: pls}, plErr == nil, nil
+		return ytdlp.SearchResult{Videos: videos, Playlists: pls, More: more}, plErr == nil, nil
 	}, func(res ytdlp.SearchResult) any { return res })
 }
 
@@ -138,6 +182,45 @@ func (s *Server) youtubePlaylist(w http.ResponseWriter, r *http.Request) {
 			return ytdlp.Playlist{}
 		}
 		return res.Playlists[0]
+	})
+}
+
+// youtubePlaylistEntries lists a playlist's first n videos (title, channel,
+// duration) for a search result expanded in place; n grows by entriesPage
+// up to entriesCap. Same cache and limiter as the other lookups.
+func (s *Server) youtubePlaylistEntries(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("list")
+	if id == "" || ytdlp.ListIDFromURL(ytdlp.PlaylistURL(id)) != id || ytdlp.IsMixID(id) {
+		writeCoded(w, 400, "bad_request", "bad playlist id")
+		return
+	}
+	n, ok := pageSize(r, entriesPage, entriesCap)
+	if !ok {
+		writeCoded(w, 400, "bad_request", "bad page size")
+		return
+	}
+	key := " entries:" + strconv.Itoa(n) + ":" + id
+	s.serveSearch(w, r, key, id, playlistTokens, func(ctx context.Context) (ytdlp.SearchResult, bool, error) {
+		l, err := s.YT.ResolveList(ctx, ytdlp.PlaylistURL(id), n)
+		if err != nil {
+			return ytdlp.SearchResult{}, false, err
+		}
+		videos := make([]ytdlp.Video, 0, len(l.Videos))
+		for _, v := range l.Videos {
+			if !v.Live {
+				videos = append(videos, v)
+			}
+		}
+		// YouTube's own length says whether there is more; without it, a
+		// full page might have.
+		more := n < entriesCap && (l.Count > n || (l.Count == 0 && len(l.Videos) >= n))
+		return ytdlp.SearchResult{Videos: videos, Playlists: []ytdlp.Playlist{{ID: id, Count: l.Count}}, More: more}, true, nil
+	}, func(res ytdlp.SearchResult) any {
+		count := 0
+		if len(res.Playlists) > 0 {
+			count = res.Playlists[0].Count
+		}
+		return map[string]any{"videos": res.Videos, "count": count, "more": res.More}
 	})
 }
 

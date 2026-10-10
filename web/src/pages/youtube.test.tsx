@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
 import { AuthProvider } from "../auth/AuthProvider";
+import { PreviewProvider } from "../channels/PreviewProvider";
 import { DownloadsProvider } from "../downloads/DownloadsProvider";
 import { PlayerProvider } from "../player/PlayerProvider";
 import { YouTubeResults } from "../components/YouTubeResults";
@@ -187,7 +188,9 @@ test("a slow search for an old query does not overwrite the new query's results"
       <AuthProvider>
         <PlayerProvider audio={new FakeAudio() as unknown as HTMLAudioElement} userId={1}>
           <DownloadsProvider>
-          <Harness />
+            <PreviewProvider audio={new FakeAudio() as unknown as HTMLAudioElement}>
+              <Harness />
+            </PreviewProvider>
           </DownloadsProvider>
         </PlayerProvider>
       </AuthProvider>
@@ -356,7 +359,9 @@ test("tapping 下载 again while the request is in flight sends only one POST", 
       <AuthProvider>
         <PlayerProvider audio={new FakeAudio() as unknown as HTMLAudioElement} userId={1}>
           <DownloadsProvider>
-          <YouTubeResults query="re" auto />
+            <PreviewProvider audio={new FakeAudio() as unknown as HTMLAudioElement}>
+              <YouTubeResults query="re" auto />
+            </PreviewProvider>
           </DownloadsProvider>
         </PlayerProvider>
       </AuthProvider>
