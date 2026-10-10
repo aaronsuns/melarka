@@ -8,7 +8,7 @@ settings:
   base:
     SWIFT_VERSION: "5.0"            # Swift 6 compiler, Swift 5 language mode (AVFoundation delegates)
     SWIFT_STRICT_CONCURRENCY: targeted
-    MARKETING_VERSION: "0.2.0"      # bump by hand per release; the build number is git's commit count
+    MARKETING_VERSION: "0.2.1"      # bump by hand per release; the build number is git's commit count
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: ""            # dev device builds pass DEVELOPMENT_TEAM=<id> on the command line
     CODE_SIGN_STYLE: Automatic
