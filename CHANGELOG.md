@@ -8,6 +8,8 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-10
+
 ### Added
 
 - **YouTube search: show more and open playlists**: "Show more" under the videos loads the next
@@ -131,7 +133,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/aaronsuns/melarka/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/aaronsuns/melarka/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/aaronsuns/melarka/releases/tag/v0.1.1
 [0.1.0]: https://github.com/aaronsuns/melarka/releases/tag/v0.1.0
