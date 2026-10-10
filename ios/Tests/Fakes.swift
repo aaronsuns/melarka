@@ -127,7 +127,15 @@ import MediaPlayer
         guard let d = lyricsAnswers[trackID] else { throw LarkError.badResponse }
         return d
     }
-    func artwork(_ item: Item) async throws -> Data { Data() }
+    /// Covers by item id (none: empty data); an error in `artworkErrors` is thrown instead.
+    var artworkAnswers: [String: Data] = [:]
+    var artworkErrors: [String: Error] = [:]
+    var artworkCalls: [String] = []
+    func artwork(_ item: Item) async throws -> Data {
+        artworkCalls.append(item.id)
+        if let e = artworkErrors[item.id] { throw e }
+        return artworkAnswers[item.id] ?? Data()
+    }
     // Downloads: each writes `downloadBytes[id] ?? 100` bytes to `<dir>/<id>.m4a`, as LarkAPI does.
     var downloadCalls: [Int] = []
     var downloadQualities: [String] = []

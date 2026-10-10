@@ -13,7 +13,11 @@ struct RootView: View {
                              onLoadFailed: { services.pageDidFail($0) },
                              onLoaded: { services.pageDidLoad() })
                         .id(server)
-                    if services.pageFailed { PageErrorView(services: services, server: server) }
+                    if let player = services.offlinePlayer {
+                        OfflinePlayerView(model: player, server: server, onClose: { services.closeOfflinePlayer() })
+                    } else if services.pageFailed {
+                        PageErrorView(services: services, server: server)
+                    }
                 }
             } else {
                 ServerURLView { url in Task { await services.setServerURL(url) } }
@@ -26,7 +30,7 @@ struct RootView: View {
 }
 
 /// The page could not load (offline, the server down): a native screen instead of a blank web view. It retries
-/// by itself when the network comes back (`AppServices.networkChanged`).
+/// by itself when the network comes back (`AppServices.networkChanged`). 播放离线收藏 opens the offline player.
 struct PageErrorView: View {
     @ObservedObject var services: AppServices
     let server: URL

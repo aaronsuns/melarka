@@ -45,6 +45,11 @@ import os
         } onCancel: {
             for t in own { t.cancel() }
         }
+        // Covers of favorites cached before covers were kept (a download fetches its own), one at a time.
+        for id in cache.missingCovers(favorites.map(\.0.id)) {
+            guard onWiFi, !Task.isCancelled, !cache.outOfSpace else { break }
+            await cache.cacheCover(trackID: id)
+        }
     }
 
     /// Asked when a download gets its slot: still on Wi-Fi, no out-of-space error yet, and room for it beside

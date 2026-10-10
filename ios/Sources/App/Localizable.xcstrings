@@ -1,6 +1,29 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ of %@" : {
+      "comment" : "Offline player: position of duration (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ of %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@，共 %2$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@，共 %2$@"
+          }
+        }
+      }
+    },
     "About" : {
       "comment" : "Settings: section header",
       "localizations" : {
@@ -369,6 +392,29 @@
         }
       }
     },
+    "Close" : {
+      "comment" : "Offline player: back to the error screen",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
+          }
+        }
+      }
+    },
     "Connect" : {
       "comment" : "First launch: button",
       "localizations" : {
@@ -388,6 +434,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "连接"
+          }
+        }
+      }
+    },
+    "Connecting…" : {
+      "comment" : "Offline player: the retry is running",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在连接…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在连接…"
           }
         }
       }
@@ -576,6 +645,52 @@
         }
       }
     },
+    "Next" : {
+      "comment" : "Offline player: next song (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一首"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一首"
+          }
+        }
+      }
+    },
+    "No favorites are cached on this iPhone yet." : {
+      "comment" : "Offline player: empty favorites list",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No favorites are cached on this iPhone yet."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 iPhone 上还没有已缓存的收藏。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 iPhone 上还没有已缓存的收藏。"
+          }
+        }
+      }
+    },
     "No favorites yet: shuffling all songs" : {
       "comment" : "Player notice",
       "localizations" : {
@@ -668,6 +783,52 @@
         }
       }
     },
+    "Nothing playing" : {
+      "comment" : "Offline player: no current song",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing playing"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未在播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未在播放"
+          }
+        }
+      }
+    },
+    "Now Playing" : {
+      "comment" : "Offline player: the row of the current song (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now Playing"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在播放"
+          }
+        }
+      }
+    },
     "OK" : {
       "comment" : "Web page alert and confirm button",
       "localizations" : {
@@ -691,6 +852,29 @@
         }
       }
     },
+    "Off" : {
+      "comment" : "Toggle state (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关"
+          }
+        }
+      }
+    },
     "Offline Cache" : {
       "comment" : "Settings: section header",
       "localizations" : {
@@ -710,6 +894,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "离线缓存"
+          }
+        }
+      }
+    },
+    "Offline Favorites" : {
+      "comment" : "Offline player: section of cached favorites",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline Favorites"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线收藏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线收藏"
+          }
+        }
+      }
+    },
+    "Offline Mode" : {
+      "comment" : "Offline player: title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline Mode"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线模式"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线模式"
           }
         }
       }
@@ -806,6 +1036,29 @@
         }
       }
     },
+    "On" : {
+      "comment" : "Toggle state (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开"
+          }
+        }
+      }
+    },
     "Open Melarka and set the server first" : {
       "comment" : "Shortcuts: no server yet",
       "localizations" : {
@@ -825,6 +1078,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请先打开 Melarka 并设置服务器"
+          }
+        }
+      }
+    },
+    "Pause" : {
+      "comment" : "Offline player: pause (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂停"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂停"
+          }
+        }
+      }
+    },
+    "Play" : {
+      "comment" : "Offline player: play (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放"
           }
         }
       }
@@ -852,6 +1151,29 @@
         }
       }
     },
+    "Playback position" : {
+      "comment" : "Offline player: progress slider (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playback position"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放进度"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放进度"
+          }
+        }
+      }
+    },
     "Playback stops and you are signed out; then you enter the server address again." : {
       "comment" : "Settings: confirmation message",
       "localizations" : {
@@ -871,6 +1193,121 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "会停止播放并退出登录，然后重新输入服务器地址。"
+          }
+        }
+      }
+    },
+    "Plays this song" : {
+      "comment" : "Offline player: row hint (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plays this song"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放这首歌"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放这首歌"
+          }
+        }
+      }
+    },
+    "Previous" : {
+      "comment" : "Offline player: previous song (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上一首"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上一首"
+          }
+        }
+      }
+    },
+    "Repeat All" : {
+      "comment" : "Offline player: repeat button, all (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat All"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列表循环"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列表循环"
+          }
+        }
+      }
+    },
+    "Repeat One" : {
+      "comment" : "Offline player: repeat button, one (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat One"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单曲循环"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单曲循环"
+          }
+        }
+      }
+    },
+    "Repeat: Off" : {
+      "comment" : "Offline player: repeat button, off (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat: Off"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "循环：关"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "循环：关"
           }
         }
       }
@@ -944,6 +1381,29 @@
         }
       }
     },
+    "Retry Connection" : {
+      "comment" : "Offline player: load the web page again",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry Connection"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试连接"
+          }
+        }
+      }
+    },
     "Server" : {
       "comment" : "Settings: section header",
       "localizations" : {
@@ -1009,6 +1469,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置"
+          }
+        }
+      }
+    },
+    "Shuffle" : {
+      "comment" : "Offline player: shuffle button (accessibility)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shuffle"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随机播放"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随机播放"
           }
         }
       }
@@ -1105,6 +1588,29 @@
         }
       }
     },
+    "Still can't connect to the server" : {
+      "comment" : "Offline player: the retry failed",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still can't connect to the server"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍无法连接服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍无法连接服务器"
+          }
+        }
+      }
+    },
     "Sync Favorites Now" : {
       "comment" : "Settings: button",
       "localizations" : {
@@ -1151,6 +1657,29 @@
         }
       }
     },
+    "Tap a song to play it." : {
+      "comment" : "Offline player: hint with no current song",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap a song to play it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轻点一首歌即可播放。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轻点一首歌即可播放。"
+          }
+        }
+      }
+    },
     "Test: Shuffle Favorites" : {
       "comment" : "Settings: runs what the Shortcuts automation runs",
       "localizations" : {
@@ -1170,6 +1699,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "测试：随机播放收藏"
+          }
+        }
+      }
+    },
+    "Up Next" : {
+      "comment" : "Offline player: section of the queue",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Up Next"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放队列"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放队列"
           }
         }
       }

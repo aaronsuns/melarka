@@ -21,6 +21,11 @@ the iPhone app share one version number.
   days like a file deleted on its own. The list now shows every broken file, also ones the admin
   disliked. API (admin only): `GET /api/v1/admin/broken-tracks` (`items`, `total`) and
   `DELETE /api/v1/admin/broken-tracks?expect=N`, which moves nothing (409) if the count changed.
+- **Offline player in the iPhone app**: when the server can't be reached, "Play Offline
+  Favorites" opens a native player with the cover, a progress slider, previous, play/pause and
+  next, shuffle and repeat, the queue and the cached favorites. "Retry Connection" goes back to
+  the web app once the server answers, and the music plays on. Covers are now cached with the
+  songs.
 
 ### Fixed
 
