@@ -106,11 +106,12 @@ import WebKit
 
     func testChangeServerSignsOutStopsPlaybackAndForgetsTheServer() async throws {
         let s = makeServices()
+        try await loadHTML(s.web(for: Self.server), "<html></html>", base: Self.server)   // a live store, as in the app
         let cookies = s.web(for: Self.server).configuration.websiteDataStore.httpCookieStore
         let props: [HTTPCookiePropertyKey: Any] = [.name: "lark_token", .value: "T1", .domain: "settings.lark.test", .path: "/",
                                                    HTTPCookiePropertyKey("HttpOnly"): "TRUE"]
-        await cookies.setCookie(try XCTUnwrap(HTTPCookie(properties: props)))
-        await cookies.setCookie(try XCTUnwrap(HTTPCookie(properties: [.name: "pref", .value: "x", .domain: "settings.lark.test", .path: "/"])))
+        try await cookies.setCookieAndWait(try XCTUnwrap(HTTPCookie(properties: props)))
+        try await cookies.setCookieAndWait(try XCTUnwrap(HTTPCookie(properties: [.name: "pref", .value: "x", .domain: "settings.lark.test", .path: "/"])))
         let engine = try XCTUnwrap(s.engine)
         engine.handle(.setQueue(q([1, 2], index: 0, pos: 0, play: true)))
         XCTAssertTrue(engine.playing)
@@ -127,8 +128,11 @@ import WebKit
         XCTAssertFalse(s.showSettings)
         XCTAssertNil(s.engine)                                         // no server, no engine
         XCTAssertNil(s.intentPlayer)
-        let left = await cookies.allCookies().filter { $0.domain == "settings.lark.test" }
-        XCTAssertTrue(left.isEmpty, "\(left.map(\.name))")             // cookies and token gone
+        var left: [HTTPCookie] = []                                    // cookies and token gone
+        try await waitUntil(timeout: 30, state: { "left: \(left.map(\.name))" }) {
+            left = try await cookies.cookies().filter { $0.domain == "settings.lark.test" }
+            return left.isEmpty
+        }
         XCTAssertTrue(engine.music.items.isEmpty)                      // the old server's queue is wiped
     }
 
@@ -150,13 +154,10 @@ import WebKit
 
     /// The old origin's web state (local storage here) goes with the server.
     func testChangeServerRemovesTheOldServersWebsiteData() async throws {
+        try await ColdStart.webKit()
         let s = makeServices()
         let web = s.web(for: Self.server)
-        let loaded = expectation(description: "loaded")
-        let nav = OneShotNavDelegate { loaded.fulfill() }
-        web.navigationDelegate = nav
-        web.loadHTMLString("<html><body>x</body></html>", baseURL: Self.server)   // no request: the origin only
-        await fulfillment(of: [loaded], timeout: 10)
+        try await loadHTML(web, "<html><body>x</body></html>", base: Self.server)   // no request: the origin only
         _ = try await web.evaluateJavaScript("localStorage.setItem('k', 'v'); 1")
         let types: Set<String> = [WKWebsiteDataTypeLocalStorage]
         func records() async -> [String] {

@@ -208,6 +208,10 @@ jobs:
           sys.stderr.write("simulator: %s, iOS %s\n" % (best[1]["name"], ".".join(map(str, best[0]))))
           print(best[1]["udid"])
           ')
+          # Booted and finished booting before the tests start: left to xcodebuild, the first tests run while
+          # the simulator is still starting its services.
+          xcrun simctl boot "$udid" 2>/dev/null || true
+          xcrun simctl bootstatus "$udid" -b
           xcodebuild test -project "$IOS_PROJECT" -scheme "$IOS_SCHEME" -destination "id=$udid" \
             -derivedDataPath build/dd -resultBundlePath build/tests.xcresult -quiet
       - name: Why the unit tests failed

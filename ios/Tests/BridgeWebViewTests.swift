@@ -3,14 +3,16 @@ import WebKit
 @testable import Lark
 
 final class BridgeWebViewTests: XCTestCase {
+    override func setUp() async throws {
+        try await ColdStart.webKit()
+    }
+
     @MainActor func testUserScriptAndRoundTrip() async throws {
         var got: [WebMessage] = []
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { got.append($0) }
         let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
-        let loaded = expectation(description: "loaded"); let nav = OneShotNavDelegate { loaded.fulfill() }; web.navigationDelegate = nav
-        web.loadHTMLString("<html><body>t</body></html>", baseURL: URL(string: "https://lark.test/")!)
-        await fulfillment(of: [loaded], timeout: 10)
+        try await loadHTML(web, "<html><body>t</body></html>", base: URL(string: "https://lark.test/")!)
         let v = try await web.evaluateJavaScript("typeof window.larkNative.post + ':' + window.larkNative.version") as? String
         XCTAssertEqual(v, "function:1")
         _ = try await web.evaluateJavaScript("window.larkNative.post({type:'play', kind:'track'}); 0")
@@ -19,14 +21,10 @@ final class BridgeWebViewTests: XCTestCase {
         _ = try await web.evaluateJavaScript("window.__seen=null; addEventListener('lark-native', e => window.__seen = e.detail.type); 0")
         bridge.send(.authRequired)
         try await waitUntil { (try? await web.evaluateJavaScript("window.__seen") as? String) == "authRequired" }
-        withExtendedLifetime(nav) {}
     }
 
-    @MainActor private func load(_ web: WKWebView, _ html: String, base: String) async {
-        let loaded = expectation(description: "loaded \(base)"); let nav = OneShotNavDelegate { loaded.fulfill() }; web.navigationDelegate = nav
-        web.loadHTMLString(html, baseURL: URL(string: base)!)
-        await fulfillment(of: [loaded], timeout: 10)
-        withExtendedLifetime(nav) {}
+    @MainActor private func load(_ web: WKWebView, _ html: String, base: String, file: StaticString = #filePath, line: UInt = #line) async throws {
+        try await loadHTML(web, html, base: URL(string: base)!, file: file, line: line)
     }
 
     @MainActor func testMessagesFromOtherOriginsAreDropped() async throws {
@@ -34,11 +32,11 @@ final class BridgeWebViewTests: XCTestCase {
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { got.append($0) }
         let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
-        await load(web, "<html><body>t</body></html>", base: "https://evil.test/")
+        try await load(web, "<html><body>t</body></html>", base: "https://evil.test/")
         _ = try await web.evaluateJavaScript("window.larkNative.post({type:'openSettings'}); 0")
         // Control: a post from the server origin, sent after the evil one over the same channel.
         // Once it has arrived, the evil post would have arrived before it.
-        await load(web, "<html><body>t</body></html>", base: "https://lark.test/")
+        try await load(web, "<html><body>t</body></html>", base: "https://lark.test/")
         _ = try await web.evaluateJavaScript("window.larkNative.post({type:'play', kind:'track'}); 0")
         try await waitUntil { !got.isEmpty }
         XCTAssertEqual(got, [.play(.track)])
@@ -51,7 +49,7 @@ final class BridgeWebViewTests: XCTestCase {
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { got.append($0) }
         let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
-        await load(web, """
+        try await load(web, """
             <html><body><iframe srcdoc="<script>webkit.messageHandlers.lark.postMessage({type:'openSettings'}); parent.__ran = 1</script>"></iframe></body></html>
             """, base: "https://lark.test/")
         try await waitUntil { (try? await web.evaluateJavaScript("window.__ran === 1") as? Bool) == true }
@@ -64,29 +62,23 @@ final class BridgeWebViewTests: XCTestCase {
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { _ in }
         let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
-        let loaded = expectation(description: "loaded"); let nav = OneShotNavDelegate { loaded.fulfill() }; web.navigationDelegate = nav
-        web.loadHTMLString("<html><body>t</body></html>", baseURL: URL(string: "https://lark.test/")!)
-        await fulfillment(of: [loaded], timeout: 10)
+        try await loadHTML(web, "<html><body>t</body></html>", base: URL(string: "https://lark.test/")!)
         let v = try await web.evaluateJavaScript(
             "try { window.larkNative = 1 } catch (e) {}; try { window.larkNative.post = null } catch (e) {}; typeof window.larkNative.post") as? String
         XCTAssertEqual(v, "function")
-        withExtendedLifetime(nav) {}
     }
 
     @MainActor func testSendIsANoOpWhileInactive() async throws {
         let bridge = BridgeController(serverURL: URL(string: "https://lark.test/")!) { _ in }
         let web = try onScreenWebView(bridge.makeConfiguration())
         bridge.attach(web)
-        let loaded = expectation(description: "loaded"); let nav = OneShotNavDelegate { loaded.fulfill() }; web.navigationDelegate = nav
-        web.loadHTMLString("<html><body>t</body></html>", baseURL: URL(string: "https://lark.test/")!)
-        await fulfillment(of: [loaded], timeout: 10)
+        try await loadHTML(web, "<html><body>t</body></html>", base: URL(string: "https://lark.test/")!)
         _ = try await web.evaluateJavaScript("window.__n=0; addEventListener('lark-native', () => window.__n++); 0")
         bridge.isActive = false
         bridge.send(.authRequired)
         bridge.isActive = true
         bridge.send(.flushed(id: "x"))
         try await waitUntil { (try? await web.evaluateJavaScript("window.__n") as? Int) == 1 }
-        withExtendedLifetime(nav) {}
     }
 
     func testOriginMatching() {

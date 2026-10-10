@@ -32,9 +32,27 @@ func makeSilentFile(seconds: Double) throws -> URL {
     return url
 }
 
+extension AVPlayerBackend {
+    /// What a timed-out wait reports: the callbacks so far and the player's state.
+    func debugState(_ d: RecordingDelegate) -> String {
+        let item = player.currentItem as? LarkPlayerItem
+        let items = player.items().map { i -> String in
+            let l = i as? LarkPlayerItem
+            return "g=\(l?.generation.map(String.init) ?? "nil") status=\(i.status.rawValue) t=\(String(format: "%.2f", i.currentTime().seconds))"
+        }
+        return "events=\(d.events) ticks=\(d.ticks.map { "\($0.generation):\($0.ms)" }) adopted=\(adoptedPreloads) "
+            + "rate=\(player.rate) tcs=\(player.timeControlStatus.rawValue) waiting=\(player.reasonForWaitingToPlay?.rawValue ?? "-") "
+            + "pending=\(item?.pendingSeekMs.map(String.init) ?? "nil") seeks=\(item?.seekCount ?? -1) items=\(items)"
+    }
+}
+
 @MainActor final class AVPlayerBackendTests: XCTestCase {
     var files: [URL] = []
     var backend: AVPlayerBackend!
+
+    override func setUp() async throws {
+        try await ColdStart.audio()
+    }
 
     override func tearDown() async throws {
         backend?.stop(); backend = nil
@@ -103,7 +121,7 @@ func makeSilentFile(seconds: Double) throws -> URL {
         b.load(.file(a), startMs: 0, autoplay: true, rate: 1, gain: 1, generation: 1)
         let mark = d.events.count, tickMark = d.ticks.count
         b.load(.file(c), startMs: 0, autoplay: true, rate: 1, gain: 1, generation: 2)
-        try await waitUntil(timeout: 10) { d.has("finished:2") }
+        try await waitUntil(timeout: 10, state: { b.debugState(d) }) { d.has("finished:2") }
         try await Task.sleep(nanoseconds: 300_000_000)
         XCTAssertFalse(d.events[mark...].contains { $0.hasSuffix(":1") }, "\(d.events)")
         XCTAssertTrue(d.ticks[tickMark...].allSatisfy { $0.generation == 2 })
@@ -148,12 +166,12 @@ func makeSilentFile(seconds: Double) throws -> URL {
         }
         b.load(.file(a), startMs: 0, autoplay: true, rate: 1, gain: 1, generation: 1)
         b.preload(.file(c), gain: 1)
-        try await waitUntil(timeout: 10) { d.ticks.contains { $0.generation == 2 } }
+        try await waitUntil(timeout: 10, state: { b.debugState(d) }) { d.ticks.contains { $0.generation == 2 } }
         XCTAssertEqual(b.adoptedPreloads, 1)
         XCTAssertEqual(rateAfterLoad, 0)
         XCTAssertGreaterThanOrEqual(d.ticks.first { $0.generation == 2 }!.ms, 1400)
         XCTAssertFalse(d.events.contains { $0.hasPrefix("paused:") }, "\(d.events)")
-        try await waitUntil(timeout: 10) { d.has("finished:2") }
+        try await waitUntil(timeout: 10, state: { b.debugState(d) }) { d.has("finished:2") }
     }
 
     /// The same seek asked for twice (an item's ready status arriving after an adopt already started its seek):
