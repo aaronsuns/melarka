@@ -8,6 +8,41 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-10
+
+### Added
+
+- **Shuffle and repeat** (all, one) in Now Playing, the iPhone app, the lock screen and the car.
+  With repeat off the queue still never stops: radio and favorites refills carry on as before.
+  The choice is kept per device.
+- **Sleep timer**: 15, 30, 45 or 60 minutes, or the end of the current track, with a 10-second
+  fade (Now Playing → ⋯). The iPhone app runs it natively, so it works while the phone is
+  locked.
+- **Volume normalization**: the server measures each track's loudness in the background, and
+  players turn loud tracks down to about -14 LUFS (never up). On by default; a switch in
+  Settings.
+- **Queue editing**: "Add to queue", drag to reorder, swipe or ✕ to remove, for music and
+  channel episodes.
+
+### Changed
+
+- **Server**: after the upgrade the server measures the loudness of the whole library once, one
+  song at a time with ffmpeg at low priority, pausing while it prepares streams; new songs are
+  measured within minutes. The `loudness.*` settings in `config.yaml` turn it off or space it
+  out (see the configuration guide).
+
+### Fixed
+
+- The lyrics view no longer shows a horizontal scrollbar, or a vertical one on desktop.
+- Test reliability: the end-to-end tests no longer reach the Internet (local covers and a guard
+  that fails any outside request), flaky timing-dependent tests are deterministic, and CI pulls
+  its base images from a mirror instead of a rate-limited registry.
+
+### Notes
+
+- In Safari on iPhone (without the app) the browser ignores volume changes, so normalization and
+  the fade are inaudible there; the timer still pauses.
+
 ## [0.1.1] - 2026-10-09
 
 ### Changed
@@ -53,6 +88,7 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/aaronsuns/melarka/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/aaronsuns/melarka/releases/tag/v0.1.1
 [0.1.0]: https://github.com/aaronsuns/melarka/releases/tag/v0.1.0

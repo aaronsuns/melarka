@@ -1,6 +1,5 @@
-import type { Locator } from "@playwright/test";
-import { expect, test, type Page } from "./fixtures";
-import { login, trackIdByTitle } from "./playback";
+import { expect, test, type Locator, type Page } from "./fixtures";
+import { login, trackIdByTitle, verifyPlaybackStarted } from "./playback";
 
 // The queue sheet in a real engine (WebKit as on an iPhone, and Chromium):
 // the handle drags a row with pointer events, a left swipe removes one, ✕
@@ -82,4 +81,47 @@ test("queue sheet: drag to reorder, swipe to remove, add to queue", async ({ pag
     await expect.poll(() => titles(list)).toEqual([a, c]);
   }
   await page.screenshot({ path: info.outputPath("queue.png") });
+});
+
+// A drag over two rows while the current track plays: the order changes, and
+// the current track goes on playing (an edit never reloads it). The queue
+// holds one track twice to have four rows from three local tracks.
+test("queue sheet: drag two rows up while playing", async ({ page }, info) => {
+  await login(page);
+  const [cur, x, y] = ["甜蜜蜜", "月亮代表我的心", "Faded"]; // the current one is 3 minutes long
+  const ids: number[] = [];
+  for (const title of [cur, x, y, x]) {
+    await expect.poll(() => trackIdByTitle(page, title), { timeout: 15_000 }).toBeDefined();
+    ids.push((await trackIdByTitle(page, title))!);
+  }
+  await page.goto("about:blank");
+  expect((await page.request.put("/api/v1/queue", { data: { track_ids: ids, current_index: 0, position_ms: 0 } })).status()).toBe(200);
+  await page.goto("/");
+  await expect(page.locator(".mini")).toContainText(cur);
+  await verifyPlaybackStarted(page, info, () => page.locator(".mini").getByRole("button", { name: "播放" }).click(), { trackId: ids[0] });
+
+  const list = await openQueue(page);
+  // The first four rows (a refill may append more after them).
+  const firstFour = async () => (await list.locator(".queue-row .queue-title").allTextContents()).slice(0, 4);
+  await expect.poll(firstFour).toEqual([cur, x, y, x]);
+
+  // Row 3's handle, up two row heights in small steps.
+  const handle = list.locator(".queue-row").nth(3).getByRole("button", { name: `移动 ${x}` });
+  const box = (await handle.boundingBox())!;
+  const rowH = (await list.locator(".queue-row").first().boundingBox())!.height;
+  const hx = box.x + box.width / 2;
+  const hy = box.y + box.height / 2;
+  await page.mouse.move(hx, hy);
+  await page.mouse.down();
+  await page.mouse.move(hx, hy - rowH, { steps: 5 });
+  await page.mouse.move(hx, hy - 2 * rowH, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(firstFour).toEqual([cur, x, x, y]);
+
+  // Still the same track, still playing, and its position kept moving on.
+  await expect(list.locator(".queue-row").first().locator(".queue-main")).toHaveAttribute("aria-current", "true");
+  await expect(page.locator(".mini")).toContainText(cur);
+  const pct = async () => parseFloat(/width:\s*([\d.]+)%/.exec((await page.locator(".mini-progress").getAttribute("style")) ?? "")?.[1] ?? "0");
+  const before = await pct();
+  await expect.poll(pct, { timeout: 10_000 }).toBeGreaterThan(before);
 });

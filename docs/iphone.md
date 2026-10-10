@@ -4,7 +4,7 @@ The iPhone app shows the same web app you use in a browser, full screen, but pla
 native engine. That gives it what a web page on iOS can't do reliably:
 
 - background playback that keeps going with the screen locked, with lock-screen, headphone and
-  car controls;
+  car controls, shuffle and repeat included;
 - gapless transitions and a few tracks downloaded ahead;
 - an offline cache of your favorites, synced on Wi-Fi, with a size limit you choose;
 - Shortcuts actions, **Shuffle Favorites** and **Resume** (随机播放收藏 and 继续播放 on a Chinese phone), so
