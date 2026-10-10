@@ -23,6 +23,25 @@ test.beforeEach(async ({ page }) => {
       w.__ev.push(`${Math.round(performance.now() - t0)} play() src=${this.src.slice(-32)} muted=${this.muted} paused=${this.paused}`);
       return orig.call(this);
     };
+    const now = () => Math.round(performance.now() - t0);
+    const P = HTMLMediaElement.prototype;
+    for (const m of ["pause", "load"] as const) {
+      const o = P[m];
+      (P as unknown as Record<string, unknown>)[m] = function (this: HTMLMediaElement) {
+        w.__ev.push(`${now()} ${m}() ct=${this.currentTime.toFixed(3)} rs=${this.readyState}`);
+        return (o as () => void).call(this);
+      };
+    }
+    for (const prop of ["currentTime", "volume", "muted", "src"]) {
+      const d = Object.getOwnPropertyDescriptor(P, prop)!;
+      Object.defineProperty(P, prop, {
+        ...d,
+        set(this: HTMLMediaElement, v: unknown) {
+          w.__ev.push(`${now()} set ${prop}=${String(v).slice(-32)}`);
+          d.set!.call(this, v);
+        },
+      });
+    }
   });
 });
 test.afterEach(async ({ page }, info) => {
@@ -47,6 +66,31 @@ test("Now Playing opens on the synced lyrics from the sidecar .lrc; they follow 
   await expect(now.getByRole("button", { name: "歌词", exact: true })).toHaveCount(0);
   for (const line of ["甜蜜蜜第一句", "甜蜜蜜第二句", "甜蜜蜜第三句"]) {
     await expect(now.getByRole("button", { name: line })).toBeVisible();
+  }
+  // TEMP: is the element stuck? Then which nudge gets it going?
+  const ctNow = () => page.evaluate(() => (window as unknown as { __a: HTMLMediaElement }).__a.currentTime);
+  const advances = async (ms: number) => {
+    const a = await ctNow();
+    for (let t = 0; t < ms; t += 250) {
+      await page.waitForTimeout(250);
+      if ((await ctNow()) > a + 0.05) return true;
+    }
+    return false;
+  };
+  if (!(await advances(4000))) {
+    const st = await page.evaluate(() => { const a = (window as unknown as { __a: HTMLMediaElement }).__a; const b = a.buffered; return `STUCK ct=${a.currentTime} rs=${a.readyState} ns=${a.networkState} paused=${a.paused} buffered=${[...Array(b.length)].map((_, i) => `${b.start(i).toFixed(2)}-${b.end(i).toFixed(2)}`).join(",")} dur=${a.duration}`; });
+    console.log(`NUDGE ${st}`);
+    await page.evaluate(() => { const a = (window as unknown as { __a: HTMLMediaElement }).__a; a.currentTime = a.currentTime; });
+    if (await advances(3000)) console.log("NUDGE seek-in-place recovered");
+    else {
+      await page.evaluate(() => { const a = (window as unknown as { __a: HTMLMediaElement }).__a; a.pause(); void a.play(); });
+      if (await advances(3000)) console.log("NUDGE pause-play recovered");
+      else {
+        await page.evaluate(() => { const a = (window as unknown as { __a: HTMLMediaElement }).__a; const s = a.src; a.src = s; void a.play(); });
+        console.log(`NUDGE reload ${(await advances(4000)) ? "recovered" : "did not recover"}`);
+      }
+    }
+    console.log(`NUDGE-EVENTS\n${(await page.evaluate(() => (window as unknown as { __ev: string[] }).__ev)).join("\n")}`);
   }
   await expect(now.locator('.lyrics-synced [aria-current="true"]')).toHaveCount(1, { timeout: 6_000 });
   await page.screenshot({ path: info.outputPath("lyrics.png"), fullPage: true });
