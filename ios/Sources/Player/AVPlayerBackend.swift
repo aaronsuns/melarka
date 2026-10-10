@@ -14,6 +14,10 @@ final class LarkPlayerItem: AVPlayerItem {
     /// Counts the seeks handed to AVFoundation: only the newest one's completion may clear `pendingSeekMs`.
     var seekCount = 0
     var statusObservation: NSKeyValueObservation?
+    /// The loudness gain asked for last (`AVPlayerBackend.applyGain`): 1 is no audio mix at all.
+    var gain: Float = 1
+    /// Its gain is below 1 and the mix is not on it yet: it must not sound (it would at full level).
+    var mixPending = false
 
     init(source: MediaSource, asset: AVAsset) {
         self.source = source
@@ -35,6 +39,11 @@ final class LarkPlayerItem: AVPlayerItem {
 ///   something else, or nothing, the preloaded item is removed before it can play on by itself.
 /// - Streams send the token as an `Authorization` header (`AVURLAssetHTTPHeaderFieldsKey`), never in the URL;
 ///   nothing here logs a source.
+/// - Loudness: each item carries its own gain as an `AVAudioMix` on its audio track, so a preloaded item
+///   starts at its own level with nothing to do at the change. An attenuated item never plays before its mix
+///   is on (the mix needs the audio track loaded, which playback needs anyway); until then it is loading, for
+///   at most `mixWaitS`: a track load that hangs lets the item play unmixed, and the mix goes on if it lands. `player.volume` is the master volume, which
+///   only the sleep timer's fade moves; a rebuilt player gets it back.
 @MainActor final class AVPlayerBackend: MediaBackend {
     weak var delegate: MediaBackendDelegate?
     /// Replaced by `rebuild()` after a media services reset.
@@ -48,8 +57,18 @@ final class LarkPlayerItem: AVPlayerItem {
     private let observers = ObserverBag(.default)
     /// Preloaded items taken over by a `load` (tests).
     private(set) var adoptedPreloads = 0
+    /// The master volume (`setVolume`), carried over to a rebuilt player.
+    private var volume: Float = 1
+    /// The longest an attenuated item waits for its mix before it plays unmixed.
+    static let mixWaitS: Double = 2
+    private let scheduler: Scheduler
+    private let loadAudioTrack: @MainActor (AVAsset) async -> AVAssetTrack?
 
-    init() {
+    /// `scheduler` bounds the wait for a mix; `loadAudioTrack` finds the track the mix goes on (tests replace both).
+    init(scheduler: Scheduler? = nil,
+         loadAudioTrack: @escaping @MainActor (AVAsset) async -> AVAssetTrack? = { try? await $0.loadTracks(withMediaType: .audio).first }) {
+        self.scheduler = scheduler ?? MainScheduler()
+        self.loadAudioTrack = loadAudioTrack
         setUpPlayer()
         observers.add(NotificationCenter.default.addObserver(forName: AVPlayerItem.didPlayToEndTimeNotification, object: nil, queue: nil) { [weak self] n in
             guard let item = n.object as? LarkPlayerItem else { return }
@@ -86,42 +105,47 @@ final class LarkPlayerItem: AVPlayerItem {
         statusObservation = nil
         timeObserver = nil
         player = AVQueuePlayer()
+        player.volume = volume
         setUpPlayer()
     }
 
-    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, generation: Int) {
+    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, gain: Float, generation: Int) {
         wantsPlay = autoplay
         setRate(rate)
         if let p = preloaded, p.source == s, p.generation == nil, !p.failed, p.status != .failed, player.items().contains(p) {
+            applyGain(p, gain)           // preloaded with this gain already: unchanged, so nothing is touched
             adopt(p, startMs: startMs, autoplay: autoplay, generation: generation)
             return
         }
         discardAll()
         let item = Self.makeItem(s)
+        applyGain(item, gain)
         item.generation = generation
         own(item)
         player.insert(item, after: nil)
         if startMs > 0 { seek(item, ms: startMs) }
         if !autoplay {
             player.pause()
-        } else if item.pendingSeekMs == nil {
+        } else if canStart(item) {
             player.play()
         } else {
-            // Plays once the start position is reached; until then it is loading.
+            // Plays once the start position is reached and its mix is on; until then it is loading.
+            player.pause()
             later { [weak self] in
-                guard let self, self.isCurrent(item), self.wantsPlay, item.pendingSeekMs != nil else { return }
+                guard let self, self.isCurrent(item), self.wantsPlay, !self.canStart(item) else { return }
                 self.delegate?.backendBuffering(true, generation: generation)
             }
         }
     }
 
-    func preload(_ s: MediaSource?) {
+    func preload(_ s: MediaSource?, gain: Float) {
         if let p = preloaded {
             if player.currentItem !== p { player.remove(p); release(p) }
             preloaded = nil
         }
         guard let s, let cur = player.currentItem as? LarkPlayerItem, cur.generation != nil, cur.owner === self else { return }
         let p = Self.makeItem(s)
+        applyGain(p, gain)
         own(p)
         guard player.canInsert(p, after: cur) else { return release(p) }
         player.insert(p, after: cur)
@@ -131,7 +155,7 @@ final class LarkPlayerItem: AVPlayerItem {
     func play() {
         wantsPlay = true
         guard let item = current else { return }
-        if item.pendingSeekMs == nil { player.play() }     // else the seek's completion starts it
+        if canStart(item) { player.play() }     // else the seek's or the mix's completion starts it
     }
 
     func pause() {
@@ -142,6 +166,16 @@ final class LarkPlayerItem: AVPlayerItem {
     func seek(ms: Int) {
         guard let item = current else { return }
         seek(item, ms: max(0, ms))
+    }
+
+    func setGain(_ g: Float, next: Float) {
+        if let item = current { applyGain(item, g) }
+        if let p = preloaded, p.generation == nil { applyGain(p, next) }
+    }
+
+    func setVolume(_ v: Float) {
+        volume = min(1, max(0, v))
+        player.volume = volume
     }
 
     func setRate(_ r: Double) {
@@ -188,6 +222,54 @@ final class LarkPlayerItem: AVPlayerItem {
         return item
     }
 
+    /// The item's loudness gain as an audio mix on its audio track (none at 1: the item plays untouched).
+    /// The track has to load first, so a stream may play its first moments at full level; a preloaded item
+    /// has its mix long before it starts. Only the newest gain asked for is applied.
+    /// While it loads the item waits (`mixPending`), and the current item starts once it is on, as after a seek.
+    /// An asset whose tracks cannot load gets no mix and is let through, so it fails through its status.
+    private func applyGain(_ item: LarkPlayerItem, _ gain: Float) {
+        let g = min(1, max(0, gain))
+        guard g != item.gain || (g < 1 && item.audioMix == nil && !item.mixPending) else { return }
+        item.gain = g
+        guard g < 1 else {
+            item.audioMix = nil; item.mixPending = false
+            startIfWaiting(item)
+            return
+        }
+        item.mixPending = true
+        // Never held for good: a track load that hangs plays the item unmixed after the wait.
+        let wait = scheduler.after(Self.mixWaitS) { [weak self, weak item] in
+            guard let self, let item, item.gain == g, item.mixPending else { return }
+            item.mixPending = false
+            self.startIfWaiting(item)
+        }
+        let load = loadAudioTrack
+        Task { @MainActor [weak self, weak item] in
+            guard let asset = item?.asset else { return wait.cancel() }
+            let track = await load(asset)
+            wait.cancel()
+            guard let item, item.gain == g else { return }     // a newer gain decides
+            if let track {
+                let p = AVMutableAudioMixInputParameters(track: track)
+                p.setVolume(g, at: .zero)
+                let mix = AVMutableAudioMix()
+                mix.inputParameters = [p]
+                item.audioMix = mix
+            }
+            item.mixPending = false
+            self?.startIfWaiting(item)
+        }
+    }
+
+    /// Nothing holds the item back: no seek in flight, no mix still loading.
+    private func canStart(_ item: LarkPlayerItem) -> Bool { item.pendingSeekMs == nil && !item.mixPending }
+
+    /// The current item was held back (a seek or its mix) while the engine wants it playing: it plays now.
+    private func startIfWaiting(_ item: LarkPlayerItem) {
+        guard isCurrent(item), item.generation != nil, wantsPlay, canStart(item), player.rate == 0 else { return }
+        player.play()
+    }
+
     /// The current item, if it is ours and loaded by the engine (not a preloaded one it has not taken over).
     private var current: LarkPlayerItem? {
         guard let item = player.currentItem as? LarkPlayerItem, item.owner === self, item.generation != nil else { return nil }
@@ -232,7 +314,8 @@ final class LarkPlayerItem: AVPlayerItem {
             player.pause()
             seek(p, ms: startMs)
         }
-        if !autoplay { player.pause() } else if p.pendingSeekMs == nil { player.play() }
+        if !autoplay || !canStart(p) { player.pause() }      // a mix still loading: silent until it is on
+        if autoplay && canStart(p) { player.play() }
         // Already playing: no status change will come, so the start is reported from here (after this call returns).
         later { [weak self] in
             guard let self, self.isCurrent(p), p.generation == generation else { return }
@@ -256,7 +339,7 @@ final class LarkPlayerItem: AVPlayerItem {
                 // completion would otherwise start playback from the old position before the second lands.
                 guard item.seekCount == n, item.pendingSeekMs == ms else { return }
                 item.pendingSeekMs = nil
-                guard let self, self.isCurrent(item), self.wantsPlay, self.player.rate == 0 else { return }
+                guard let self, self.isCurrent(item), self.wantsPlay, !item.mixPending, self.player.rate == 0 else { return }
                 self.player.play()
             }
         }
@@ -290,7 +373,7 @@ final class LarkPlayerItem: AVPlayerItem {
             later { [weak self] in
                 guard let self, self.isCurrent(item), self.player.timeControlStatus == .paused else { return }
                 self.lastStatus = (.paused, g)
-                guard self.wantsPlay, !item.ended, !item.failed, item.pendingSeekMs == nil, !self.atEnd(item) else { return }
+                guard self.wantsPlay, !item.ended, !item.failed, self.canStart(item), !self.atEnd(item) else { return }
                 self.wantsPlay = false
                 self.delegate?.backendPaused(generation: g)
             }

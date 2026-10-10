@@ -9,6 +9,13 @@
 // and native's `state` carries `shuffle` and `repeat` (an episode's state:
 // false and "off"). An app older than that sends neither: the web then hides
 // the buttons.
+//
+// The sleep timer runs in native (so it keeps time with the phone locked):
+// the web posts `sleepTimer {minutes}`, `{endOfTrack: true}` or
+// `{cancel: true}`, and every `state` (both kinds) carries `sleepRemainingMs`,
+// a number or null. An app without the timer sends no such key: the web then
+// hides the timer. `setPrefs.loudness` turns the per-track loudness gain on or
+// off (an older app ignores it).
 import type { Episode, OnOpen, Quality, Track } from "../api/types";
 import type { RepeatMode } from "../player/modes";
 import type { QueueState } from "../player/queue";
@@ -38,13 +45,16 @@ export type ToNative =
   | { type: "seek" | "skip"; kind: ItemKind; ms: number }
   | { type: "setRate"; rate: number }
   | { type: "stop"; kind: ItemKind }
-  | { type: "setPrefs"; quality: Quality; carLyrics: boolean }
+  | { type: "setPrefs"; quality: Quality; carLyrics: boolean; loudness: boolean }
   | { type: "auth"; signedIn: boolean; userId?: number }
   | { type: "pauseForWeb" }
   | { type: "favoriteChanged"; trackId: number; on: boolean }
   | { type: "flushEvents"; id: string }
   | { type: "openSettings" }
-  | { type: "setModes"; shuffle: boolean; repeat: RepeatMode };
+  | { type: "setModes"; shuffle: boolean; repeat: RepeatMode }
+  | { type: "sleepTimer"; minutes: number }
+  | { type: "sleepTimer"; endOfTrack: true }
+  | { type: "sleepTimer"; cancel: true };
 
 export interface NativeState {
   type: "state";
@@ -59,6 +69,8 @@ export interface NativeState {
   rate: number;
   shuffle?: boolean; // absent from an app older than this web: modes unavailable
   repeat?: RepeatMode;
+  // The sleep timer's time left in ms (null: none); absent from an app without it.
+  sleepRemainingMs?: number | null;
 }
 
 export type FromNative =

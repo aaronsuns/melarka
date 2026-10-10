@@ -3,7 +3,12 @@ import Foundation
 // Shapes of the Melarka server's /api/v1 JSON (internal/library, internal/personal, internal/lyrics).
 // Decoding ignores unknown fields; the raw object is kept next to each Track as `Item.meta`.
 
-struct Track: Codable, Equatable { let id: Int; let title, artist, album: String; let duration_ms: Int; let favorite: Bool }
+struct Track: Codable, Equatable {
+    let id: Int; let title, artist, album: String; let duration_ms: Int; let favorite: Bool
+    /// The loudness gain the server measured (dB, never above 0); nil until measured. Players read it from
+    /// `Item.meta` (`Gain.factor`), so a queued or cached track keeps it.
+    var gain_db: Double? = nil
+}
 
 struct LyricsDoc: Decodable {
     let found: Bool; let synced: Bool; let instrumental: Bool?; let lines: [Line]?; let offset_ms: Int?

@@ -2,13 +2,14 @@
 // sounding (music or an episode), and "end of this track".
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import type { Episode, Track } from "../api/types";
 import { EpisodeMini } from "../channels/EpisodeMini";
 import { EpisodesProvider, useEpisodes, type EpisodesPlayer } from "../channels/EpisodesProvider";
-import { installFakeNative } from "../native/fakeNative";
-import { trackItem } from "../native/items";
+import type { NativeState } from "../native/bridge";
+import { installFakeNative, stateEvent, type FakeNative } from "../native/fakeNative";
+import { episodeItem, trackItem } from "../native/items";
 import { FakeAudio, mockFetch } from "../test/setup";
 import { renderWithApp } from "../test/render";
 import { MiniPlayer } from "./MiniPlayer";
@@ -347,17 +348,147 @@ test.each([
   expect(within(dialog).getByRole("button", { name: "睡眠定时，剩余 30:00" })).toBeInTheDocument();
 });
 
-test("in the iPhone app (the native timer isn't wired yet) there is no sleep timer", async () => {
+test("in an iPhone app without the native timer (its state has no sleepRemainingMs) there is no sleep timer", async () => {
   vi.useRealTimers();
   const n = installFakeNative();
   try {
     renderWithApp(<MiniPlayer />);
     n.emit({ type: "queue", kind: "track", items: [trackItem(tr(1))], index: 0, source: "list" });
+    n.emit(stateEvent({ kind: "track", itemId: "1", sleepRemainingMs: undefined }));
     await userEvent.click(await screen.findByText("歌1"));
     const dialog = await screen.findByRole("dialog", { name: "正在播放" });
     expect(within(dialog).getByRole("button", { name: "下一首" })).toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "更多" })).toBeNull();
+    expect(n.sent("sleepTimer")).toEqual([]);
   } finally {
     n.uninstall();
   }
+});
+
+// In the app the engine owns the timer (it keeps time with the phone locked):
+// the menu only asks, and the chip shows what native's state says is left.
+describe("in the iPhone app", () => {
+  let n!: FakeNative;
+  beforeEach(() => {
+    n = installFakeNative();
+  });
+  afterEach(() => n.uninstall());
+
+  function renderNative() {
+    render(
+      <MemoryRouter>
+        <PlayerProvider userId={1}>
+          <EpisodesProvider userId={1}>
+            <SleepTimerProvider>
+              <SleepTimerMenu />
+            </SleepTimerProvider>
+          </EpisodesProvider>
+        </PlayerProvider>
+      </MemoryRouter>,
+    );
+    n.emit({ type: "queue", kind: "track", items: [trackItem(tr(1))], index: 0, source: "list" });
+  }
+  const state = (sleepRemainingMs: number | null, extra: Partial<NativeState> = {}) =>
+    n.emit(stateEvent({ kind: "track", itemId: "1", playing: true, positionMs: 10_000, durationMs: 200_000, sleepRemainingMs, ...extra }));
+
+  test("the menu appears once native's state carries sleepRemainingMs", () => {
+    renderNative();
+    expect(screen.queryByRole("button", { name: "更多" })).toBeNull();
+    state(null);
+    expect(screen.getByRole("button", { name: "更多" })).toBeInTheDocument();
+    expect(chip()).toBeNull();
+  });
+
+  test("minutes: posts sleepTimer, the chip follows native's time left and counts down between states", () => {
+    renderNative();
+    state(null);
+    choose("15 分钟");
+    expect(n.sent("sleepTimer")).toEqual([{ type: "sleepTimer", minutes: 15 }]);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 15:00");
+    advance(3000);
+    state(899_000);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 14:59");
+    // Paused, native sends nothing: the chip counts down by itself.
+    state(898_000, { playing: false });
+    advance(60_000);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 13:58");
+    // The web's own timer never runs in the app: no fade, no pause from here.
+    advance(15 * MIN);
+    expect(n.sent("pause")).toEqual([]);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 0:00");
+    // Native paused at the deadline and says so.
+    state(null, { playing: false });
+    expect(chip()).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "更多" }));
+    expect(within(screen.getByRole("menu")).queryByRole("menuitem", { name: "关闭定时" })).toBeNull();
+  });
+
+  test("end of track: the chip shows what native says is left of the item", () => {
+    renderNative();
+    state(null);
+    choose("播完这首");
+    expect(n.sent("sleepTimer")).toEqual([{ type: "sleepTimer", endOfTrack: true }]);
+    advance(500);
+    state(42_000, { positionMs: 158_000 });
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 0:42");
+    // Paused: the time left of a track stands still.
+    state(40_000, { positionMs: 160_000, playing: false });
+    advance(30_000);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 0:40");
+  });
+
+  test("off posts cancel and the chip goes at once", () => {
+    renderNative();
+    state(null);
+    choose("30 分钟");
+    state(1_799_000);
+    choose("关闭定时");
+    expect(n.sent("sleepTimer")).toEqual([{ type: "sleepTimer", minutes: 30 }, { type: "sleepTimer", cancel: true }]);
+    expect(chip()).toBeNull();
+    state(null);
+    expect(chip()).toBeNull();
+  });
+
+  test("a state sent before native took the choice does not undo it", () => {
+    renderNative();
+    state(null);
+    choose("45 分钟");
+    state(null);                       // already on its way when the tap was posted
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 45:00");
+    state(2_699_000);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 44:59");
+    // Native's own end later on is believed.
+    advance(3000);
+    state(null);
+    expect(chip()).toBeNull();
+  });
+
+  // A reload's first states: the inactive kind's comes first, and its time left
+  // says nothing about the timer. Only the playing kind's state decides.
+  test("a reload under end of this episode reads the episode's state, not music's", () => {
+    renderNative();
+    n.emit({ type: "queue", kind: "episode", items: [episodeItem(ep(1))], index: 0, source: "list" });
+    state(100_000, { playing: false, positionMs: 10_000, durationMs: 200_000 });           // music, inactive
+    n.emit(stateEvent({ kind: "episode", itemId: "episode0001", playing: true, positionMs: 1_700_000, durationMs: 1_800_000, sleepRemainingMs: 100_000 }));
+    n.emit(stateEvent({ kind: "episode", itemId: "episode0001", playing: false, positionMs: 1_700_000, durationMs: 1_800_000, sleepRemainingMs: 100_000 }));
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 1:40");
+    advance(30_000);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 1:40");
+  });
+
+  test("a page reloaded while native's timer runs shows it", () => {
+    renderNative();
+    // What is left equals what is left of the item: end of track, which stands still while paused.
+    state(190_000, { positionMs: 10_000, durationMs: 200_000, playing: false });
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 3:10");
+    advance(30_000);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 3:10");
+    state(null, { playing: false });
+    expect(chip()).toBeNull();
+    // Anything else is a deadline, which runs on.
+    state(600_000, { playing: false });
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 10:00");
+    advance(30_000);
+    expect(chip()).toHaveAccessibleName("睡眠定时，剩余 9:30");
+  });
 });

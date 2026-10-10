@@ -87,3 +87,20 @@ final class GaplessTests: EngineTestCase {
         XCTAssertEqual(backend.preloads.last, .some(nil))
     }
 }
+
+extension GaplessTests {
+    /// Two tracks at different levels: the preloaded item got its own gain when it was preloaded, so the
+    /// change at the end is the backend's alone. The engine sets no volume for it.
+    func testThePreloadedItemHasItsOwnGain() {
+        engine.handle(.setQueue(SetQueue(kind: .track, items: [gainTrack(1, gainDB: -2), gainTrack(2, gainDB: -10)], index: 0,
+                                         positionMs: 0, play: true, source: .list)))
+        backend.start()
+        XCTAssertEqual(backend.preloads.last, remote(2))
+        XCTAssertEqual(try XCTUnwrap(backend.preloadGains.last), 0.316, accuracy: 0.001)
+        backend.finish()
+        XCTAssertEqual(backend.loads.last?.0, remote(2))
+        XCTAssertEqual(try XCTUnwrap(backend.gains.last), 0.316, accuracy: 0.001)    // the same gain: the backend adopts the item as it is
+        XCTAssertTrue(backend.volumes.isEmpty, "the master volume is the sleep timer's only")
+        XCTAssertTrue(backend.currentGains.isEmpty)
+    }
+}

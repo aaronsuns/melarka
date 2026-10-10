@@ -45,9 +45,11 @@ import CryptoKit
     static let activationSyncInterval: TimeInterval = 3600
     /// Settings stores the cap here, in GB (`SettingsModel.capChoices`).
     static let cacheCapKey = "lark.cacheCapGB"
-    /// The web's last `setPrefs`, so a cold start (the car) streams at the chosen quality and shows car lyrics as set.
+    /// The web's last `setPrefs`, so a cold start (the car) streams at the chosen quality, shows car lyrics and
+    /// applies the loudness gain as set.
     static let prefsQualityKey = "lark.prefs.quality"
     static let prefsCarLyricsKey = "lark.prefs.carLyrics"
+    static let prefsLoudnessKey = "lark.prefs.loudness"
     var now: () -> Date = Date.init
     /// How long a sync waits for the network monitor's first answer (a cold background launch).
     var networkAnswerTimeout: TimeInterval = 3
@@ -270,7 +272,8 @@ import CryptoKit
 
     private var savedPrefs: NativePrefs? {
         guard let quality = defaults.string(forKey: Self.prefsQualityKey) else { return nil }
-        return NativePrefs(quality: quality, carLyrics: defaults.object(forKey: Self.prefsCarLyricsKey) as? Bool ?? true)
+        return NativePrefs(quality: quality, carLyrics: defaults.object(forKey: Self.prefsCarLyricsKey) as? Bool ?? true,
+                           loudness: defaults.object(forKey: Self.prefsLoudnessKey) as? Bool ?? true)
     }
 
     /// The API client for the current server. A 401 runs `signOut()` (token and session cookie), never `auth.clear()` alone.
@@ -312,6 +315,7 @@ import CryptoKit
         case .setPrefs(let p):
             defaults.set(p.quality, forKey: Self.prefsQualityKey)
             defaults.set(p.carLyrics, forKey: Self.prefsCarLyricsKey)
+            defaults.set(p.loudness, forKey: Self.prefsLoudnessKey)
             engine?.handle(message)
         default:
             engine?.handle(message)

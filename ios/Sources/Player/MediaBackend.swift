@@ -28,8 +28,15 @@ enum MediaSource: Equatable {
 @MainActor protocol MediaBackend: AnyObject {
     var delegate: MediaBackendDelegate? { get set }
     /// `generation` increases with every load (a retry of the same item too); callbacks report it back.
-    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, generation: Int)
-    func preload(_ s: MediaSource?)          // the next item, for a gapless change (AVQueuePlayer)
+    /// `gain` is the item's own loudness factor (`Gain.factor`, 0...1), applied to that item alone.
+    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, gain: Float, generation: Int)
+    /// The next item, for a gapless change (AVQueuePlayer), with its own gain, so it starts at its level.
+    func preload(_ s: MediaSource?, gain: Float)
+    /// The loudness switch: the loaded item's gain and the preloaded next item's, changed in place (nothing is
+    /// loaded or preloaded again, so the gapless change stays ready).
+    func setGain(_ g: Float, next: Float)
+    /// The master volume, for the sleep timer's fade; independent of each item's gain, kept across items.
+    func setVolume(_ v: Float)
     func play()
     func pause()
     func seek(ms: Int)
@@ -49,8 +56,10 @@ enum MediaSource: Equatable {
     private(set) var positionMs = 0
     var durationMs: Int? { nil }
     private(set) var isPlaying = false
-    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, generation: Int) { positionMs = startMs; isPlaying = false }
-    func preload(_ s: MediaSource?) {}
+    func load(_ s: MediaSource, startMs: Int, autoplay: Bool, rate: Double, gain: Float, generation: Int) { positionMs = startMs; isPlaying = false }
+    func preload(_ s: MediaSource?, gain: Float) {}
+    func setGain(_ g: Float, next: Float) {}
+    func setVolume(_ v: Float) {}
     func play() {}
     func pause() { isPlaying = false }
     func seek(ms: Int) { positionMs = ms }

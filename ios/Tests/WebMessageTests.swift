@@ -119,3 +119,45 @@ final class WebMessageTests: XCTestCase {
         return try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
     }
 }
+
+// MARK: - Sleep timer and loudness
+
+extension WebMessageTests {
+    func testDecodesSleepTimer() throws {
+        XCTAssertEqual(try WebMessage.decode(["type": "sleepTimer", "minutes": 15]), .sleepTimer(.minutes(15)))
+        XCTAssertEqual(try WebMessage.decode(["type": "sleepTimer", "minutes": 60]), .sleepTimer(.minutes(60)))
+        XCTAssertEqual(try WebMessage.decode(["type": "sleepTimer", "endOfTrack": true]), .sleepTimer(.endOfTrack))
+        XCTAssertEqual(try WebMessage.decode(["type": "sleepTimer", "cancel": true]), .sleepTimer(.cancel))
+        XCTAssertEqual(try WebMessage.decode(["type": "sleepTimer", "minutes": 30, "extra": 1]), .sleepTimer(.minutes(30)))
+    }
+
+    func testRejectsAMalformedSleepTimer() {
+        XCTAssertThrowsError(try WebMessage.decode(["type": "sleepTimer"]))                          // says nothing
+        XCTAssertThrowsError(try WebMessage.decode(["type": "sleepTimer", "minutes": 0]))
+        XCTAssertThrowsError(try WebMessage.decode(["type": "sleepTimer", "minutes": -15]))
+        XCTAssertThrowsError(try WebMessage.decode(["type": "sleepTimer", "minutes": "15"]))
+        XCTAssertThrowsError(try WebMessage.decode(["type": "sleepTimer", "minutes": 100_000]))
+        XCTAssertThrowsError(try WebMessage.decode(["type": "sleepTimer", "endOfTrack": false]))
+        XCTAssertThrowsError(try WebMessage.decode(["type": "sleepTimer", "cancel": "yes"]))
+    }
+
+    func testSetPrefsCarriesLoudness() throws {
+        XCTAssertEqual(try WebMessage.decode(["type": "setPrefs", "quality": "high", "carLyrics": true, "loudness": false]),
+                       .setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: false)))
+        XCTAssertEqual(try WebMessage.decode(["type": "setPrefs", "quality": "high", "carLyrics": true, "loudness": true]),
+                       .setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: true)))
+        // A web from before the switch: on, as the server's default.
+        XCTAssertEqual(try WebMessage.decode(["type": "setPrefs", "quality": "high", "carLyrics": true]),
+                       .setPrefs(NativePrefs(quality: "high", carLyrics: true, loudness: true)))
+        XCTAssertThrowsError(try WebMessage.decode(["type": "setPrefs", "quality": "high", "carLyrics": true, "loudness": "off"]))
+    }
+
+    func testStateCarriesSleepRemaining() throws {
+        let s = try detail(.state(StateEvent(kind: .track, itemId: "7", index: 0, playing: true, positionMs: 0, durationMs: 1,
+                                             buffering: false, error: nil, rate: 1, sleepRemainingMs: 61_000)))
+        XCTAssertEqual(s["sleepRemainingMs"] as? Int, 61_000)
+        let none = try detail(.state(StateEvent(kind: .episode, itemId: nil, index: 0, playing: false, positionMs: 0, durationMs: 0,
+                                                buffering: false, error: nil, rate: 1)))
+        XCTAssertTrue(none["sleepRemainingMs"] is NSNull, "an explicit null, never an absent key")
+    }
+}

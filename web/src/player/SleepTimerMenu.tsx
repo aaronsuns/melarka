@@ -21,7 +21,8 @@ function TrackChip({ onClick }: { onClick: () => void }) {
 /**
  * Now Playing's ⋯ menu with the sleep timer, and the 🌙 chip while one is
  * set (tapping it opens the same menu). Rendered by music's and episodes'
- * Now Playing; hidden where the timer isn't available (the iPhone app).
+ * Now Playing; hidden where the timer isn't available (an iPhone app without
+ * the native timer).
  */
 export function SleepTimerMenu() {
   const t = useT();
@@ -51,7 +52,7 @@ export function SleepTimerMenu() {
   return (
     <span className="sleep-menu" ref={box}>
       {s.choice &&
-        ("endOfTrack" in s.choice ? <TrackChip onClick={toggle} /> : <Chip time={formatRemaining(s.remainingMs ?? 0)} onClick={toggle} />)}
+        (s.remainingMs === null ? <TrackChip onClick={toggle} /> : <Chip time={formatRemaining(s.remainingMs)} onClick={toggle} />)}
       <button className="icon" aria-label={t("now.more")} aria-haspopup="menu" aria-expanded={open} onClick={toggle}>⋯</button>
       {open && (
         <div className="menu" role="menu" aria-label={t("sleep.title")}>

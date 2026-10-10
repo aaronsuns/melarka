@@ -14,6 +14,12 @@ import os
 ///   loops the queue with no refill (a new, reshuffled pass when shuffle is on); repeat one replays a track that
 ///   ended on its own, gaplessly. A cached favorite that stands in for a track under repeat all plays once and
 ///   leaves the queue again.
+/// - The sleep timer (`sleepTimer`, music and episodes) runs here, on `scheduler`, so it keeps time with the
+///   phone locked: after n minutes the volume fades to 0 over 10 s, playback pauses and the volume is back for
+///   the next play. "End of this track" fades over the item's last 10 s and stops at its end (music: the next
+///   track loaded, paused; an episode: stays on the finished one, as the web player does).
+/// - Loudness: each music item loads with its own gain (`Gain`, the `loudness` pref), the preloaded one too, so
+///   a gapless change keeps the right level. The master volume belongs to the sleep timer's fade.
 /// - Both queues are saved per user on every change and every 10 s while playing (`QueueStore`); the music
 ///   queue goes to `PUT /queue` (`QueueSync`). Music creates play events (`PlayEventQueue`); episodes send
 ///   `PUT /episodes/{id}/progress` instead.
@@ -46,6 +52,9 @@ import os
     /// Car lyrics that could not be fetched are asked again after this, then twice as long each time.
     static let lyricsRetryS: Double = 30
     static let lyricsRetryMaxS: Double = 600
+    /// The sleep timer's fade: this long, in this many steps (the web's FADE_MS and FADE_STEP_MS).
+    static let sleepFadeS: Double = 10
+    static let sleepFadeSteps = 40
     private static let log = Logger(subsystem: BuildInfo.bundleID, category: "engine")
 
     private let backend: MediaBackend
@@ -74,6 +83,7 @@ import os
     private(set) var pausedBySystem = false
     var prefs = NativePrefs(quality: "high", carLyrics: true) {
         didSet {
+            if prefs.loudness != oldValue.loudness { loudnessChanged() }
             guard prefs.carLyrics != oldValue.carLyrics else { return }
             lyricsID = nil; carLyrics = nil; lyricsRetry = nil
             if loaded?.kind == .track, let id = music.current?.trackID { fetchLyrics(id) }
@@ -98,6 +108,15 @@ import os
     /// (requeued after it). Dropped when it ends or is skipped, and before a new pass (the web's `substitutes`).
     private struct Substitute { let id: String; var requeue: String? }
     private var substitutes: [Substitute] = []
+    /// The sleep timer: a deadline (its fade starts 10 s before), or the end of the item playing.
+    private enum Sleep { case at(Date), endOfTrack }
+    private var sleep: Sleep?
+    /// The fade's start, then its steps.
+    private var sleepJobs: [Cancellable] = []
+    /// The minutes timer's fade is running.
+    private var sleepFading = false
+    /// The master volume the fade set last (1: no fade).
+    private var fadeLevel: Float = 1
     var onEvent: ((NativeEvent) -> Void)?
     /// The active kind changed (`RemoteCommands`: skip buttons for episodes).
     var onActiveChange: ((Item.Kind) -> Void)?
@@ -206,6 +225,7 @@ import os
         case .stop(let k): stop(k)
         case .setPrefs(let p): prefs = p
         case .setModes(let shuffle, let repeatMode): setModes(shuffle: shuffle, repeatMode: repeatMode)
+        case .sleepTimer(let r): sleepTimer(r)
         case .pauseForWeb: pause()
         case .flushEvents(let id): flushEvents(id)
         case .auth, .favoriteChanged, .openSettings: break
@@ -310,6 +330,7 @@ import os
     func play() {
         let q = queue(active)
         guard q.current != nil else { return }
+        catchUpSleep(playing: false)
         pausedBySystem = false
         if loaded?.kind == active {
             willStartPlayback?()
@@ -551,6 +572,7 @@ import os
         tasks.cancelAll(); sync.cancel()
         refillTimer?.cancel(); refillTimer = nil; refillWanted = false
         cancelRetry(); disarmStall(); stoppedOffline = false
+        clearSleep()
         backend.stop()
         loaded = nil; listen = nil; playing = false; buffering = false; error = nil; pausedBySystem = false
         lyricsID = nil; carLyrics = nil; lyricsRetry = nil; preloadedNext = nil
@@ -683,6 +705,109 @@ import os
         if loaded?.kind == .track { loaded?.index = index }
     }
 
+    // MARK: - Sleep timer
+
+    /// `sleepTimer`: one timer at a time, so a new choice replaces the one set (and undoes its fade).
+    func sleepTimer(_ r: SleepRequest) {
+        clearSleep(preloadAgain: r != .endOfTrack)
+        switch r {
+        case .cancel:
+            break
+        case .minutes(let n):
+            let s = Double(n) * 60
+            sleep = .at(now().addingTimeInterval(s))
+            sleepJobs = [scheduler.after(max(0, s - Self.sleepFadeS)) { [weak self] in self?.startSleepFade() }]
+        case .endOfTrack:
+            sleep = .endOfTrack
+            if let l = loaded { preloadNext(l.kind) }           // nothing next: the queue player stops at the end
+        }
+        emitStates()
+    }
+
+    /// The minutes timer's last 10 s: the volume steps down to 0, then playback pauses.
+    private func startSleepFade() {
+        guard !sleepFading else { return }
+        sleepJobs.forEach { $0.cancel() }
+        sleepFading = true
+        let n = Self.sleepFadeSteps, step = Self.sleepFadeS / Double(n)
+        sleepJobs = (1...n).map { i in
+            scheduler.after(Double(i) * step) { [weak self] in
+                guard let self else { return }
+                self.setFade(Float(n - i) / Float(n))
+                if i == n { self.sleepEnded() }
+            }
+        }
+    }
+
+    /// The deadline: paused (it stays paused if it already was), the volume back for the next play.
+    private func sleepEnded() {
+        sleepJobs = []; sleepFading = false
+        pause()
+        setFade(1)
+        sleep = nil
+        emitStates()
+    }
+
+    /// No timer: its jobs cancelled, the volume back, and the next item preloaded again after an end-of-track one.
+    private func clearSleep(preloadAgain: Bool = true) {
+        let wasEndOfTrack: Bool
+        if case .endOfTrack = sleep { wasEndOfTrack = true } else { wasEndOfTrack = false }
+        sleepJobs.forEach { $0.cancel() }
+        sleepJobs = []; sleepFading = false
+        sleep = nil
+        if fadeLevel != 1 { setFade(1) }
+        if wasEndOfTrack, preloadAgain, let l = loaded { preloadNext(l.kind) }
+    }
+
+    /// The scheduler's clock stops while the phone sleeps (paused and locked), so its job can come late; the
+    /// deadline is wall time. Past the fade's start, the fade starts now. Past the deadline itself before a play,
+    /// the timer is over: it would have paused a player that was paused anyway, and the play goes on.
+    private func catchUpSleep(playing: Bool) {
+        guard case .at(let deadline) = sleep, !sleepFading else { return }
+        let t = now()
+        if t >= deadline && !playing {
+            clearSleep()
+            emitStates()
+        } else if t >= deadline.addingTimeInterval(-Self.sleepFadeS) {
+            startSleepFade()
+        }
+    }
+
+    private func setFade(_ level: Float) {
+        fadeLevel = level
+        backend.setVolume(level)
+    }
+
+    /// "End of this track": the volume follows what is left of the item in its last 10 s.
+    private func fadeTowardsTheEnd(positionMs: Int) {
+        guard case .endOfTrack = sleep, let d = backend.durationMs ?? current?.durationMs, d > 0 else { return }
+        let level = Float(min(1, max(0, Double(d - positionMs) / (Self.sleepFadeS * 1000))))
+        if level != fadeLevel { setFade(level) }
+    }
+
+    /// What the state says is left: to the deadline, or of the item playing; nil with no timer.
+    private var sleepRemainingMs: Int? {
+        switch sleep {
+        case nil:
+            return nil
+        case .at(let deadline):
+            return max(0, Int((deadline.timeIntervalSince(now()) * 1000).rounded()))
+        case .endOfTrack:
+            let d = (loaded?.kind == active ? backend.durationMs : nil) ?? current?.durationMs ?? 0
+            return max(0, d - position(active))
+        }
+    }
+
+    // MARK: - Loudness
+
+    /// The loudness switch: the loaded track's level and the preloaded next one's change in place (nothing is
+    /// preloaded again, so a switch in a track's last seconds keeps the change gapless).
+    private func loudnessChanged() {
+        guard let l = loaded, l.kind == .track, let item = music.current else { return }
+        let next = preloadedNext.flatMap { p in queue(p.kind).items.first { $0.id == p.id } }
+        backend.setGain(Gain.factor(item, enabled: prefs.loudness), next: next.map { Gain.factor($0, enabled: prefs.loudness) } ?? 1)
+    }
+
     // MARK: - Backend events
 
     /// A callback about the item loaded last; anything else is about a replaced item and is dropped.
@@ -724,6 +849,8 @@ import os
             l.lastMs = positionMs
             listen = l
         }
+        fadeTowardsTheEnd(positionMs: positionMs)
+        catchUpSleep(playing: true)
         emitState(active)
         periodic()
         retryLyricsIfDue()
@@ -732,6 +859,7 @@ import os
     func backendFinished(generation g: Int) {
         guard isCurrent(g), let l = loaded else { return }
         cancelRetry(); disarmStall()
+        if case .endOfTrack = sleep { return sleepAtTheEnd(l) }
         if l.kind == .track {
             finishListen(.ended)
             consecutiveFailures = 0
@@ -755,6 +883,25 @@ import os
             }
             emitState(.episode); persist()
         }
+    }
+
+    /// "End of this track" reached: music moves on to the next track, loaded but paused (repeat one gives way);
+    /// an episode stays where it ended. Then the timer is off and the volume back for the next play.
+    private func sleepAtTheEnd(_ l: Loaded) {
+        sleep = nil; sleepJobs = []
+        if l.kind == .track {
+            finishListen(.ended)
+            consecutiveFailures = 0
+            dropSubstitutes()
+            advanceMusic(user: false, autoplay: false)
+        } else {
+            sendProgress(id: l.id, positionS: 0, played: true, emit: true)
+            loaded = nil; playing = false; buffering = false
+            modify(.episode) { $0.positionMs = 0 }
+            persist()
+        }
+        setFade(1)
+        emitStates()
     }
 
     func backendFailed(network isNetwork: Bool, generation g: Int) {
@@ -952,15 +1099,23 @@ import os
         if k == .episode { lastProgress = now() }
         knownMs = startMs
         generation += 1
+        if case .endOfTrack = sleep, fadeLevel != 1 { setFade(1) }    // the timer goes on with this item, from full volume
         if autoplay { willStartPlayback?() }
-        backend.load(src, startMs: startMs, autoplay: autoplay, rate: k == .episode ? rate : 1, generation: generation)
+        backend.load(src, startMs: startMs, autoplay: autoplay, rate: k == .episode ? rate : 1,
+                     gain: Gain.factor(item, enabled: prefs.loudness), generation: generation)
         preloadNext(k)
     }
 
     /// The next item into the backend for a gapless change.
     /// Repeat one: the current item again (the loop is gapless: `load` matches the preloaded source on the id).
     /// Repeat all without shuffle, at the last item: the first one, which the next pass starts with.
+    /// "End of this track" armed: nothing, so the queue player stops at the end instead of running into the next.
     private func preloadNext(_ k: Item.Kind) {
+        if case .endOfTrack = sleep {
+            preloadedNext = nil
+            backend.preload(nil, gain: 1)
+            return
+        }
         let q = queue(k)
         let usable = { [unowned self] (i: Item) in k == .episode || (!self.isFailed(i) && (self.network.isOnline || self.isLocal(i))) }
         var next = q.upcoming.first(where: usable)
@@ -972,7 +1127,7 @@ import os
         let src = next.flatMap(mediaSource)
         // A stream preloaded here is also downloaded by the lookahead: accepted, so the change stays gapless.
         preloadedNext = next.flatMap { n in src.map { (k, n.id, $0) } }
-        backend.preload(src)
+        backend.preload(src, gain: next.map { Gain.factor($0, enabled: prefs.loudness) } ?? 1)
     }
 
     /// The lookahead: the next 2 tracks into the cache, once the current music item sounds (so its own
@@ -994,7 +1149,8 @@ import os
         knownMs = r.positionMs
         generation += 1
         willStartPlayback?()
-        backend.load(src, startMs: r.positionMs, autoplay: true, rate: l.kind == .episode ? rate : 1, generation: generation)
+        backend.load(src, startMs: r.positionMs, autoplay: true, rate: l.kind == .episode ? rate : 1,
+                     gain: Gain.factor(item, enabled: prefs.loudness), generation: generation)
         preloadNext(l.kind)          // the load dropped the preloaded next item
         emitState(l.kind)
     }
@@ -1074,8 +1230,9 @@ import os
     }
 
     /// Plays `c` next: a queued item moved up to just after the current one, or a cached favorite inserted
-    /// there; `requeue` (an interrupted item) goes right after it. False for `.none`.
-    private func apply(_ c: NextChooser.Choice, requeue: Item? = nil) -> Bool {
+    /// there; `requeue` (an interrupted item) goes right after it. False for `.none`. `autoplay` false: loaded,
+    /// not played (the sleep timer's end of track).
+    private func apply(_ c: NextChooser.Choice, requeue: Item? = nil, autoplay: Bool = true) -> Bool {
         switch c {
         case .queue(let j):
             if j != music.index + 1 {
@@ -1092,13 +1249,13 @@ import os
             music = PlayModes.newPass(music, shuffle: modes.shuffle, random: random)
             let local = mustBeLocal || !network.isOnline
             guard let start = music.items.firstIndex(where: { !isFailed($0) && (!local || isLocal($0)) }) else { return false }
-            load(.track, index: start, startMs: 0, autoplay: true)
+            load(.track, index: start, startMs: 0, autoplay: autoplay)
             return true
         case .none:
             return false
         }
         if let requeue { music.items.insert(requeue, at: music.index + 2) }
-        load(.track, index: music.index + 1, startMs: 0, autoplay: true)
+        load(.track, index: music.index + 1, startMs: 0, autoplay: autoplay)
         return true
     }
 
@@ -1109,12 +1266,12 @@ import os
     }
 
     /// Picks and loads the next music item (the end of one, a failure, or the user's next).
-    private func advanceMusic(user: Bool, forceLocal: Bool = false) {
+    private func advanceMusic(user: Bool, forceLocal: Bool = false, autoplay: Bool = true) {
         let offline = !network.isOnline
         let mustBeLocal = forceLocal || offline || consecutiveFailures >= Self.maxConsecutiveFailures
         let choice = chooseNext(mustBeLocal: mustBeLocal, wrap: modes.repeatMode == .all)
         if case .insert = choice, offline { onEvent?(.notice(Self.offlineNotice)) }
-        if !apply(choice) {
+        if !apply(choice, autoplay: autoplay) {
             if user { return }      // nothing to go to: the user's next leaves things as they are
             // The end, or nothing playable: stopped, and play starts the current item again.
             let failed = consecutiveFailures > 0 || forceLocal
@@ -1233,6 +1390,12 @@ import os
         onEvent?(.queue(kind: k, items: q.items, index: q.index, source: q.source))
     }
 
+    /// Both kinds' states, the active one last (the web mirrors each kind from its latest state).
+    private func emitStates() {
+        emitState(active == .track ? .episode : .track)
+        emitState(active)
+    }
+
     private func emitState(_ k: Item.Kind) {
         let q = queue(k)
         let isActive = k == active, isLoaded = loaded?.kind == k
@@ -1240,7 +1403,8 @@ import os
         onEvent?(.state(StateEvent(kind: k, itemId: q.current?.id, index: q.index, playing: isActive && playing,
                                    positionMs: position(k), durationMs: duration, buffering: isActive && buffering,
                                    error: isActive ? error : nil, rate: k == .episode ? rate : 1,
-                                   shuffle: k == .track && modes.shuffle, repeatMode: k == .track ? modes.repeatMode : .off)))
+                                   shuffle: k == .track && modes.shuffle, repeatMode: k == .track ? modes.repeatMode : .off,
+                                   sleepRemainingMs: sleepRemainingMs)))
         if isActive { refreshNowPlaying() }
     }
 
