@@ -41,7 +41,8 @@ final class LarkPlayerItem: AVPlayerItem {
 ///   nothing here logs a source.
 /// - Loudness: each item carries its own gain as an `AVAudioMix` on its audio track, so a preloaded item
 ///   starts at its own level with nothing to do at the change. An attenuated item never plays before its mix
-///   is on (the mix needs the audio track loaded, which playback needs anyway); until then it is loading. `player.volume` is the master volume, which
+///   is on (the mix needs the audio track loaded, which playback needs anyway); until then it is loading, for
+///   at most `mixWaitS`: a track load that hangs lets the item play unmixed, and the mix goes on if it lands. `player.volume` is the master volume, which
 ///   only the sleep timer's fade moves; a rebuilt player gets it back.
 @MainActor final class AVPlayerBackend: MediaBackend {
     weak var delegate: MediaBackendDelegate?
@@ -58,8 +59,16 @@ final class LarkPlayerItem: AVPlayerItem {
     private(set) var adoptedPreloads = 0
     /// The master volume (`setVolume`), carried over to a rebuilt player.
     private var volume: Float = 1
+    /// The longest an attenuated item waits for its mix before it plays unmixed.
+    static let mixWaitS: Double = 2
+    private let scheduler: Scheduler
+    private let loadAudioTrack: @MainActor (AVAsset) async -> AVAssetTrack?
 
-    init() {
+    /// `scheduler` bounds the wait for a mix; `loadAudioTrack` finds the track the mix goes on (tests replace both).
+    init(scheduler: Scheduler? = nil,
+         loadAudioTrack: @escaping @MainActor (AVAsset) async -> AVAssetTrack? = { try? await $0.loadTracks(withMediaType: .audio).first }) {
+        self.scheduler = scheduler ?? MainScheduler()
+        self.loadAudioTrack = loadAudioTrack
         setUpPlayer()
         observers.add(NotificationCenter.default.addObserver(forName: AVPlayerItem.didPlayToEndTimeNotification, object: nil, queue: nil) { [weak self] n in
             guard let item = n.object as? LarkPlayerItem else { return }
@@ -228,10 +237,18 @@ final class LarkPlayerItem: AVPlayerItem {
             return
         }
         item.mixPending = true
+        // Never held for good: a track load that hangs plays the item unmixed after the wait.
+        let wait = scheduler.after(Self.mixWaitS) { [weak self, weak item] in
+            guard let self, let item, item.gain == g, item.mixPending else { return }
+            item.mixPending = false
+            self.startIfWaiting(item)
+        }
+        let load = loadAudioTrack
         Task { @MainActor [weak self, weak item] in
-            guard let item else { return }
-            let track = try? await item.asset.loadTracks(withMediaType: .audio).first
-            guard item.gain == g else { return }               // a newer gain decides
+            guard let asset = item?.asset else { return wait.cancel() }
+            let track = await load(asset)
+            wait.cancel()
+            guard let item, item.gain == g else { return }     // a newer gain decides
             if let track {
                 let p = AVMutableAudioMixInputParameters(track: track)
                 p.setVolume(g, at: .zero)

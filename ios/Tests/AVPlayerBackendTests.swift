@@ -355,3 +355,54 @@ extension AVPlayerBackendTests {
         XCTAssertEqual(try XCTUnwrap(mixVolume(next)), 0.25, accuracy: 0.0001)
     }
 }
+
+// MARK: - A mix that never comes
+
+/// Loads an asset's audio track only once `release` is set (until then it hangs, as a stuck loadTracks would).
+@MainActor final class HeldTrackLoader {
+    var release = false
+    private(set) var calls = 0
+    func load(_ asset: AVAsset) async -> AVAssetTrack? {
+        calls += 1
+        while !release { try? await Task.sleep(nanoseconds: 10_000_000) }
+        return try? await asset.loadTracks(withMediaType: .audio).first
+    }
+}
+
+extension AVPlayerBackendTests {
+    /// The mix's track load hangs: after `mixWaitS` the item plays unmixed (never held for good, so never-stop
+    /// never stalls on it), and the mix still goes on if the track turns up later.
+    func testAHangingTrackLoadPlaysUnmixedAfterTheWait() async throws {
+        let url = try silent(3)
+        let scheduler = FakeScheduler(), loader = HeldTrackLoader()
+        let d = RecordingDelegate()
+        let b = AVPlayerBackend(scheduler: scheduler, loadAudioTrack: { await loader.load($0) }); b.delegate = d; backend = b
+        b.load(.file(url), startMs: 0, autoplay: true, rate: 1, gain: 0.5, generation: 1)
+        let item = try XCTUnwrap(b.player.currentItem as? LarkPlayerItem)
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertEqual(b.player.rate, 0, "still waiting for the mix")
+        XCTAssertTrue(item.mixPending)
+        scheduler.advance(AVPlayerBackend.mixWaitS - 0.1)
+        XCTAssertEqual(b.player.rate, 0)
+        scheduler.advance(0.1)
+        XCTAssertFalse(item.mixPending)
+        XCTAssertNotEqual(b.player.rate, 0, "played unmixed after the wait")
+        try await waitUntil(timeout: 10) { d.started }
+        XCTAssertNil(item.audioMix)
+        loader.release = true
+        try await waitUntil(timeout: 10) { item.audioMix != nil }
+        XCTAssertEqual(try XCTUnwrap(mixVolume(item)), 0.5, accuracy: 0.0001)
+    }
+
+    /// A mix that lands in time cancels the wait: nothing happens when it would have run out.
+    func testAMixInTimeCancelsTheWait() async throws {
+        let url = try silent(3)
+        let scheduler = FakeScheduler(), loader = HeldTrackLoader()
+        loader.release = true
+        let b = AVPlayerBackend(scheduler: scheduler, loadAudioTrack: { await loader.load($0) }); backend = b
+        b.load(.file(url), startMs: 0, autoplay: true, rate: 1, gain: 0.5, generation: 1)
+        let item = try XCTUnwrap(b.player.currentItem)
+        try await waitUntil(timeout: 10) { item.audioMix != nil && b.player.rate != 0 }
+        XCTAssertEqual(scheduler.pending, 0)
+    }
+}
