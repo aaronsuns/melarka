@@ -10,11 +10,11 @@ struct Track: Codable, Equatable {
     var gain_db: Double? = nil
 }
 
-struct LyricsDoc: Decodable {
+struct LyricsDoc: Codable, Equatable {
     let found: Bool; let synced: Bool; let instrumental: Bool?; let lines: [Line]?; let offset_ms: Int?
     /// Plain (unsynced) lyrics: the server sends `text` when the lyrics have no timestamps.
     let text: String?
-    struct Line: Decodable, Equatable { let t_ms: Int; let text: String }
+    struct Line: Codable, Equatable { let t_ms: Int; let text: String }
 }
 
 struct ServerQueue: Decodable { let track_ids: [Int]; let current_index: Int; let position_ms: Int; let version: Int; let updated_by: String; let updated_at: Int }

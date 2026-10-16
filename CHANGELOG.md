@@ -15,6 +15,13 @@ the iPhone app share one version number.
   (no page reload, stream retries, queue refills, queue or play-event uploads, lyrics or covers,
   syncs or prefetches), even on airplane Wi-Fi with no internet, and opens straight into the
   offline player. It stays on until you turn it off; then everything that waited goes.
+- **Lyrics offline in the iPhone app**: lyrics are kept with each cached song (and fetched for
+  songs cached earlier at the next favorites sync). The offline player shows the line being sung
+  and the next one; a tap opens the whole lyrics, following the song, where a tap on a line jumps
+  there. The lock screen and car show cached lyrics without the network too.
+- **A tidier offline player**: one compact row at the top (title, state, and round Stay Offline,
+  retry and close buttons) instead of three blocks of text, and a now-playing card tinted with
+  the song's colour.
 
 ### Changed
 

@@ -106,11 +106,14 @@ actor AsyncSemaphore {
     static let noCoverTTL: TimeInterval = 7 * 24 * 3600
 
     /// The cover is on disk, or the server said it has none within `noCoverTTL` (the marker's date is ours: `now`).
-    private func coverKnown(_ id: Int) -> Bool {
-        guard let a = try? fm.attributesOfItem(atPath: coverURL(id).path) else { return false }
+    private func coverKnown(_ id: Int) -> Bool { Self.known(coverURL(id), now: now(), fm: fm) }
+
+    /// A non-empty file, or an empty "none" marker younger than `noCoverTTL`.
+    private static func known(_ url: URL, now: Date, fm: FileManager) -> Bool {
+        guard let a = try? fm.attributesOfItem(atPath: url.path) else { return false }
         if ((a[.size] as? NSNumber)?.int64Value ?? 0) > 0 { return true }
         guard let at = a[.modificationDate] as? Date else { return false }
-        return now().timeIntervalSince(at) < Self.noCoverTTL
+        return now.timeIntervalSince(at) < noCoverTTL
     }
 
     init(root: URL, api: LarkAPIProtocol, network: NetworkStatus, capBytes: Int64 = CacheStore.defaultCap,
@@ -128,7 +131,7 @@ actor AsyncSemaphore {
         guard fm.fileExists(atPath: url.path) else {
             Self.log.info("cached file of track \(id) is gone; dropped")
             entries[id] = nil
-            removeCover(id)
+            removeExtras(id)
             markDirty()
             return nil
         }
@@ -148,7 +151,7 @@ actor AsyncSemaphore {
             if fm.fileExists(atPath: root.appendingPathComponent(e.file).path) { out.append((e.track, e.meta)) } else { gone.append(id) }
         }
         if !gone.isEmpty {
-            gone.forEach { entries[$0] = nil; removeCover($0) }
+            gone.forEach { entries[$0] = nil; removeExtras($0) }
             markDirty()
         }
         return out
@@ -226,7 +229,7 @@ actor AsyncSemaphore {
         dropDownloads()
         entries = [:]
         pendingWrite?.cancel(); pendingWrite = nil; dirty = false
-        for u in [filesDir, stagingDir, coversDir, indexURL] { try? fm.removeItem(at: u) }
+        for u in [filesDir, stagingDir, coversDir, lyricsDir, indexURL] { try? fm.removeItem(at: u) }
     }
 
     /// Sign-out or another user: this cache stays on disk for its user's next sign-in, and does nothing more.
@@ -303,7 +306,7 @@ actor AsyncSemaphore {
         for (id, e) in order {
             guard used > capBytes else { break }
             try? fm.removeItem(at: root.appendingPathComponent(e.file))
-            removeCover(id)
+            removeExtras(id)
             entries[id] = nil
             used -= e.bytes
         }
@@ -351,6 +354,7 @@ actor AsyncSemaphore {
             return
         }
         await cacheCover(trackID: track.id)
+        await cacheLyrics(trackID: track.id)
     }
 
     // MARK: Covers
@@ -394,7 +398,54 @@ actor AsyncSemaphore {
         ids.filter { entries[$0] != nil && !coverKnown($0) }
     }
 
-    private func removeCover(_ id: Int) { try? fm.removeItem(at: coverURL(id)) }
+    /// A track leaves the cache: its cover and lyrics go with it.
+    private func removeExtras(_ id: Int) {
+        try? fm.removeItem(at: coverURL(id))
+        try? fm.removeItem(at: lyricsURL(id))
+    }
+
+    // MARK: Lyrics
+
+    /// `lyrics/<id>`: a cached track's lyrics as the server sent them; an empty file marks a track with none.
+    private var lyricsDir: URL { root.appendingPathComponent("lyrics", isDirectory: true) }
+    private func lyricsURL(_ id: Int) -> URL { lyricsDir.appendingPathComponent(String(id)) }
+
+    /// The lyrics are on disk, or the server said it has none within `noCoverTTL` (lyrics found later show up then).
+    private func lyricsKnown(_ id: Int) -> Bool { Self.known(lyricsURL(id), now: now(), fm: fm) }
+
+    func cachedLyrics(trackID id: Int) -> LyricsDoc? {
+        guard entries[id] != nil, let data = try? Data(contentsOf: lyricsURL(id)), !data.isEmpty else { return nil }
+        return try? JSONDecoder().decode(LyricsDoc.self, from: data)
+    }
+
+    /// Fetches a cached track's lyrics once, like its cover (after the download; the favorites sync for tracks
+    /// cached before lyrics were kept). A network error leaves it for next time; none found gets an empty marker.
+    func cacheLyrics(trackID id: Int) async {
+        guard !closed, entries[id] != nil, !lyricsKnown(id) else { return }
+        let ep = epoch
+        var data = Data()
+        do {
+            let doc = try await api.lyrics(id)
+            if doc.found { data = try JSONEncoder().encode(doc) }
+        } catch LarkError.http(status: 404, _) {
+        } catch {
+            return
+        }
+        guard epoch == ep, !closed, entries[id] != nil else { return }
+        do {
+            try fm.createDirectory(at: lyricsDir, withIntermediateDirectories: true)
+            excludeFromBackup(lyricsDir)
+            try data.write(to: lyricsURL(id), options: .atomic)
+            if data.isEmpty { try fm.setAttributes([.modificationDate: now()], ofItemAtPath: lyricsURL(id).path) }
+        } catch {
+            if Self.isOutOfSpace(error) { outOfSpace = true }
+        }
+    }
+
+    /// Cached tracks among `ids` whose lyrics were never fetched, or whose "none" has expired.
+    func missingLyrics(_ ids: [Int]) -> [Int] {
+        ids.filter { entries[$0] != nil && !lyricsKnown($0) }
+    }
 
     /// A track's size before it is fetched: its duration at AAC 256k, at least a minute's worth.
     static func estimatedBytes(_ t: Track) -> Int64 {
@@ -429,8 +480,9 @@ actor AsyncSemaphore {
             let known = Set(entries.values.map(\.file))
             for n in names where !known.contains("files/\(n)") { try? fm.removeItem(at: filesDir.appendingPathComponent(n)) }
         }
-        if let names = try? fm.contentsOfDirectory(atPath: coversDir.path) {
-            for n in names where Int(n).map({ entries[$0] == nil }) ?? true { try? fm.removeItem(at: coversDir.appendingPathComponent(n)) }
+        for dir in [coversDir, lyricsDir] {
+            guard let names = try? fm.contentsOfDirectory(atPath: dir.path) else { continue }
+            for n in names where Int(n).map({ entries[$0] == nil }) ?? true { try? fm.removeItem(at: dir.appendingPathComponent(n)) }
         }
     }
 
@@ -483,4 +535,5 @@ actor AsyncSemaphore {
     func touch(trackID: Int) { store?.touch(trackID: trackID) }
     func cachedFavorites() -> [(Track, JSONValue)] { store?.cachedFavorites() ?? [] }
     func prefetch(_ items: [Item]) { store?.prefetch(items) }
+    func cachedLyrics(trackID: Int) -> LyricsDoc? { store?.cachedLyrics(trackID: trackID) }
 }

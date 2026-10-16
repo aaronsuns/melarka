@@ -103,6 +103,7 @@ private struct NowPlayingCard: View {
     /// The slider's value while a finger is on it; nil otherwise (it follows the engine).
     @State private var scrubMs: Double?
     @State private var scrubbing = false
+    @State private var showLyrics = false
 
     var body: some View {
         if let item = model.current {
@@ -117,6 +118,11 @@ private struct NowPlayingCard: View {
                     }
                 }
                 .accessibilityElement(children: .combine)
+                if let lyrics = model.lyrics {
+                    Button { showLyrics = true } label: { LyricsPreview(lyrics: lyrics, positionMs: model.positionMs) }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text("Lyrics"))
+                }
                 progress
                 transport
                 if let error = model.error, !model.playing {
@@ -125,6 +131,7 @@ private struct NowPlayingCard: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
+            .sheet(isPresented: $showLyrics) { LyricsSheet(model: model) }
         } else {
             VStack(spacing: 6) {
                 Text("Nothing playing").font(.headline)
@@ -203,6 +210,90 @@ private struct NowPlayingCard: View {
         case .off: return Text("Repeat: Off")
         case .all: return Text("Repeat All")
         case .one: return Text("Repeat One")
+        }
+    }
+}
+
+/// Under the title: the line being sung and the next one (timed lyrics), or a button to read plain ones.
+private struct LyricsPreview: View {
+    let lyrics: OfflineLyrics
+    let positionMs: Int
+
+    var body: some View {
+        if lyrics.synced {
+            let now = lyrics.index(atMs: positionMs)
+            let current = now.flatMap { OfflineLyrics.blank(lyrics.lines[$0].text) ? nil : lyrics.lines[$0].text }
+            let next = lyrics.nextWords(after: now).map { lyrics.lines[$0].text }
+            VStack(spacing: 4) {
+                Text(current ?? "♪").font(.body.weight(.semibold)).foregroundStyle(.primary)
+                Text(next ?? " ").font(.subheadline).foregroundStyle(.secondary)
+            }
+            .lineLimit(1)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10).padding(.horizontal, 12)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.ultraThinMaterial))
+            .animation(.easeInOut(duration: 0.25), value: now)
+        } else {
+            Label { Text("Lyrics") } icon: { Image(systemName: "quote.bubble") }
+                .font(.subheadline.weight(.semibold))
+                .padding(.vertical, 8).padding(.horizontal, 14)
+                .background(Capsule().fill(.ultraThinMaterial))
+        }
+    }
+}
+
+/// The whole lyrics: timed lines follow the song (the current one bold, kept in the middle; a tap seeks there),
+/// plain lyrics as text.
+private struct LyricsSheet: View {
+    @ObservedObject var model: OfflinePlayerModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let lyrics = model.lyrics {
+                    if lyrics.synced { timed(lyrics) } else {
+                        ScrollView {
+                            Text(lyrics.text ?? "").font(.title3).frame(maxWidth: .infinity, alignment: .leading).padding(20)
+                        }
+                    }
+                } else {
+                    Text(verbatim: "♪").font(.largeTitle).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle(model.current?.title ?? "")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+        .presentationDragIndicator(.visible)
+    }
+
+    private func timed(_ lyrics: OfflineLyrics) -> some View {
+        let now = lyrics.index(atMs: model.positionMs)
+        return ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(lyrics.lines.indices, id: \.self) { i in
+                        let line = lyrics.lines[i].text
+                        Button { model.seek(to: lyrics.startMs(of: i)) } label: {
+                            Text(OfflineLyrics.blank(line) ? "♪" : line)
+                                .font(.title3.weight(i == now ? .bold : .regular))
+                                .foregroundStyle(i == now ? Color.primary : Color.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .buttonStyle(.plain)
+                        .id(i)
+                    }
+                }
+                .padding(.horizontal, 20).padding(.vertical, 40)
+            }
+            .onAppear { if let now { proxy.scrollTo(now, anchor: .center) } }
+            .onChange(of: now) { _, i in
+                guard let i else { return }
+                withAnimation(.easeInOut(duration: 0.35)) { proxy.scrollTo(i, anchor: .center) }
+            }
         }
     }
 }

@@ -195,6 +195,8 @@ func lyricsDoc(lines: [(Int, String)] = [(0, "x")], offset: Int? = nil, synced: 
     func touch(trackID: Int) { touched.append(trackID) }
     func cachedFavorites() -> [(Track, JSONValue)] { favorites }
     func prefetch(_ items: [Item]) { prefetched.append(items.compactMap(\.trackID)) }
+    var lyrics: [Int: LyricsDoc] = [:]
+    func cachedLyrics(trackID: Int) -> LyricsDoc? { lyrics[trackID] }
 }
 
 @MainActor final class FakeNetwork: NetworkStatus {

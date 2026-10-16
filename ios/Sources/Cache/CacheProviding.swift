@@ -12,6 +12,9 @@ import Foundation
     func cachedFavorites() -> [(Track, JSONValue)]
     /// Download these tracks ahead (the lookahead). Items, not ids, so the cache can keep their metadata.
     func prefetch(_ items: [Item])
+    /// A cached track's lyrics, kept beside its audio: offline (the offline player, the lock screen) they are all
+    /// there is. nil when the track is not cached, its lyrics were not fetched yet, or it has none.
+    func cachedLyrics(trackID: Int) -> LyricsDoc?
 }
 
 /// No cache.
@@ -20,4 +23,5 @@ import Foundation
     func touch(trackID: Int) {}
     func cachedFavorites() -> [(Track, JSONValue)] { [] }
     func prefetch(_ items: [Item]) {}
+    func cachedLyrics(trackID: Int) -> LyricsDoc? { nil }
 }

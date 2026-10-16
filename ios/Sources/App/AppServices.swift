@@ -558,7 +558,8 @@ import CryptoKit
         let cache = self.cache
         let model = OfflinePlayerModel(player: engine, favorites: { cache.cachedFavorites() },
                                        retry: { [weak self] in self?.retryPage() },
-                                       artwork: { [weak self] id in self?.cachedArtwork(trackID: id) })
+                                       artwork: { [weak self] id in self?.cachedArtwork(trackID: id) },
+                                       lyrics: { cache.cachedLyrics(trackID: $0) })
         offlinePlayer = model
         engine.emitAll()           // seeds it with the queue and state (the page, if any, gets them again: harmless)
     }

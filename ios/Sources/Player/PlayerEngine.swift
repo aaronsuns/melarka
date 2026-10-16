@@ -1441,6 +1441,8 @@ import os
         guard nowPlaying != nil, prefs.carLyrics else { lyricsID = nil; carLyrics = nil; lyricsRetry = nil; return }
         guard lyricsID != id else { return }
         lyricsID = id; carLyrics = nil; lyricsRetry = nil
+        // A cached track's lyrics are on the phone: no request, and they show offline too.
+        if let doc = cache.cachedLyrics(trackID: id) { carLyrics = CarLyrics(doc); return }
         requestLyrics(id)
     }
 

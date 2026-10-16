@@ -599,6 +599,29 @@
         }
       }
     },
+    "Lyrics" : {
+      "comment" : "Offline player: the song's lyrics",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lyrics"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "歌词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "歌词"
+          }
+        }
+      }
+    },
     "Melarka Settings" : {
       "comment" : "Settings: title",
       "localizations" : {

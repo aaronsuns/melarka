@@ -50,6 +50,11 @@ import os
             guard onWiFi, !Task.isCancelled, !cache.outOfSpace else { break }
             await cache.cacheCover(trackID: id)
         }
+        // Lyrics of favorites cached before lyrics were kept, the same way.
+        for id in cache.missingLyrics(favorites.map(\.0.id)) {
+            guard onWiFi, !Task.isCancelled, !cache.outOfSpace else { break }
+            await cache.cacheLyrics(trackID: id)
+        }
     }
 
     /// Asked when a download gets its slot: still on Wi-Fi, no out-of-space error yet, and room for it beside

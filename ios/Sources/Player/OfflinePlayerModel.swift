@@ -44,17 +44,30 @@ extension PlayerEngine: OfflinePlayerControl {}
     private let cachedFavorites: () -> [(Track, JSONValue)]
     private let retryAction: () -> Void
     private let artwork: (Int) -> URL?
+    private let lyricsFor: (Int) -> LyricsDoc?
+    /// The current song's lyrics, read once per song (state events come several times a second).
+    private var lyricsRead: (id: Int, lyrics: OfflineLyrics?)?
     private var currentID: String?
     private var source = QueueSource.list
 
-    /// `artwork`: a cached track's cover file (`CacheStore.artworkURL`), nil for none.
+    /// `artwork`: a cached track's cover file (`CacheStore.artworkURL`), nil for none; `lyrics`: its cached lyrics.
     init(player: OfflinePlayerControl, favorites: @escaping () -> [(Track, JSONValue)], retry: @escaping () -> Void,
-         artwork: @escaping (Int) -> URL? = { _ in nil }) {
+         artwork: @escaping (Int) -> URL? = { _ in nil }, lyrics: @escaping (Int) -> LyricsDoc? = { _ in nil }) {
         self.player = player
         cachedFavorites = favorites
         retryAction = retry
         self.artwork = artwork
+        lyricsFor = lyrics
         reload()
+    }
+
+    /// The current song's lyrics on the phone; nil when none are cached (or it is instrumental).
+    var lyrics: OfflineLyrics? {
+        guard let id = current?.trackID else { return nil }
+        if let r = lyricsRead, r.id == id { return r.lyrics }
+        let l = lyricsFor(id).flatMap(OfflineLyrics.init)
+        lyricsRead = (id, l)
+        return l
     }
 
     /// The item's cover on the phone, nil when there is none (the view draws a tile instead).
@@ -168,4 +181,53 @@ extension PlayerEngine: OfflinePlayerControl {}
         let h = s / 3600, m = (s % 3600) / 60, sec = s % 60
         return h > 0 ? String(format: "%d:%02d:%02d", h, m, sec) : String(format: "%d:%02d", m, sec)
     }
+}
+
+/// Lyrics as the offline player shows them: timed lines that follow the song, or plain text.
+struct OfflineLyrics: Equatable {
+    /// Timed lines; empty for plain lyrics.
+    let lines: [LyricsDoc.Line]
+    let offsetMs: Int
+    /// Plain lyrics (no timestamps); nil for timed ones.
+    let text: String?
+
+    /// nil when there is nothing to show: not found, instrumental, or empty.
+    init?(_ doc: LyricsDoc) {
+        guard doc.found, doc.instrumental != true else { return nil }
+        offsetMs = doc.offset_ms ?? 0
+        if doc.synced, let lines = doc.lines, !lines.isEmpty {
+            self.lines = lines
+            text = nil
+        } else if let t = doc.text ?? doc.lines?.map(\.text).joined(separator: "\n"),
+                  !t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines = []
+            text = t
+        } else {
+            return nil
+        }
+    }
+
+    var synced: Bool { !lines.isEmpty }
+
+    /// The line playing at `positionMs` (its time has come), nil before the first.
+    func index(atMs positionMs: Int) -> Int? {
+        let ms = positionMs - offsetMs
+        var lo = 0, hi = lines.count
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if lines[mid].t_ms <= ms { lo = mid + 1 } else { hi = mid }
+        }
+        return lo > 0 ? lo - 1 : nil
+    }
+
+    /// Where the song is when line `i` starts (a tap on a line seeks there).
+    func startMs(of i: Int) -> Int { max(0, lines[i].t_ms + offsetMs) }
+
+    /// The first line after `i` (or from the start) with words in it.
+    func nextWords(after i: Int?) -> Int? {
+        let from = (i ?? -1) + 1
+        return lines.indices.dropFirst(from).first { !Self.blank(lines[$0].text) }
+    }
+
+    static func blank(_ s: String) -> Bool { s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }
