@@ -9,24 +9,32 @@ import (
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
 
-func TestSeedsMostPlayedThenNewestFavoritesDeduped(t *testing.T) {
+// Affinity: a favorite counts 1; each listen adds the square of how much of
+// the track it played, a skip takes 0.5, and listens fade (half after 30 days,
+// none after 90). Favorites mostly skipped, short plays and others' plays don't seed.
+func TestSeedsRankByListeningAndFavorites(t *testing.T) {
 	e := newEnv(t)
 	ctx := context.Background()
 	u, other := e.user("u"), e.user("other")
-	a, b, c := e.track("A", "x", 200), e.track("B", "x", 200), e.track("C", "x", 200)
-	short, old, gone := e.track("Short", "x", 200), e.track("Old", "x", 200), e.track("Gone", "x", 200)
-	f1, f2 := e.track("F1", "y", 200), e.track("F2", "y", 200)
-	e.play(u, b, 5, t0.Add(-time.Hour), 120)
-	e.play(u, a, 3, t0.Add(-2*time.Hour), 120)
-	e.play(u, c, 1, t0.Add(-24*time.Hour), 30)
-	e.play(u, short, 9, t0.Add(-time.Hour), 29)      // under 30 s: not a real listen
-	e.play(u, old, 9, t0.Add(-31*24*time.Hour), 200) // older than 30 days
-	e.play(other, f1, 20, t0.Add(-time.Hour), 200)   // someone else's plays
-	e.play(u, gone, 9, t0.Add(-time.Hour), 200)
+	full, favLoved := e.track("Full", "a1", 200), e.track("FavLoved", "a2", 200)
+	half, old, favNew := e.track("Half", "a3", 200), e.track("Old", "a4", 200), e.track("FavNew", "a5", 200)
+	favSkipped, ancient, short := e.track("FavSkipped", "a6", 200), e.track("Ancient", "a7", 200), e.track("Short", "a8", 200)
+	gone, disliked, theirs := e.track("Gone", "a9", 200), e.track("Disliked", "a10", 200), e.track("Theirs", "a11", 200)
+	e.play(u, full, 4, t0, 200)                   // 4
+	e.fav(u, favLoved, t0.Add(-400*24*time.Hour)) // an old favorite still loved: 1 + 2
+	e.play(u, favLoved, 2, t0, 200)
+	e.play(u, half, 4, t0, 100)                      // 4 × 0.25 = 1
+	e.play(u, old, 4, t0.Add(-60*24*time.Hour), 200) // 4 × 0.25 (two half-lives) = 1
+	e.fav(u, favNew, t0)                             // 1
+	e.fav(u, favSkipped, t0)                         // 1 − 3 × 0.5 < 0
+	e.skip(u, favSkipped, 3, t0, 10)
+	e.play(u, ancient, 9, t0.Add(-91*24*time.Hour), 200) // past 90 days
+	e.play(u, short, 9, t0, 20)                          // stopped early, not skipped: says nothing
+	e.play(u, gone, 9, t0, 200)
 	e.exec(`UPDATE tracks SET status='trashed' WHERE id=?`, gone)
-	e.fav(u, f1, t0.Add(-48*time.Hour))
-	e.fav(u, f2, t0.Add(-time.Hour)) // newest favorite first
-	e.fav(u, a, t0)                  // already a played seed: not twice
+	e.play(u, disliked, 9, t0, 200)
+	e.exec(`INSERT INTO dislikes(user_id,track_id,created_at) VALUES (?,?,0)`, u, disliked)
+	e.play(other, theirs, 20, t0, 200)
 
 	seeds, err := e.svc.Seeds(ctx, u)
 	if err != nil {
@@ -36,48 +44,67 @@ func TestSeedsMostPlayedThenNewestFavoritesDeduped(t *testing.T) {
 	for _, s := range seeds {
 		got = append(got, fmt.Sprintf("%s:%s", s.Title, s.Kind))
 	}
-	want := "[B:played A:played C:played F2:favorite F1:favorite]"
+	want := "[Full:played FavLoved:played Half:played Old:played FavNew:favorite]"
 	if fmt.Sprint(got) != want {
 		t.Fatalf("seeds %v, want %s", got, want)
 	}
-	if seeds[0].DurationS != 200 || seeds[0].Artist != "x" {
+	if seeds[0].DurationS != 200 || seeds[0].Artist != "a1" {
 		t.Fatalf("seed %+v", seeds[0])
 	}
-	// A favorite seed earns a small recency bonus: newer beats older.
-	if !(seeds[3].Weight > seeds[4].Weight && seeds[4].Weight >= 1 && seeds[0].Weight == 1) {
-		t.Fatalf("weights %v %v %v", seeds[0].Weight, seeds[3].Weight, seeds[4].Weight)
+	// Weights run from 1 to 1.5 with affinity: the best 1.5, a lone favorite (1 of 4) 1.125.
+	if seeds[0].Weight != 1.5 || seeds[4].Weight != 1.125 {
+		t.Fatalf("weights %v %v", seeds[0].Weight, seeds[4].Weight)
 	}
 }
 
-func TestSeedsCapAtTenMixingPlaysAndFavorites(t *testing.T) {
+// Ten seeds: the five best always, five drawn by affinity (the same all day,
+// another draw tomorrow), and never more than two of one artist.
+func TestSeedsFiveBestThenADailyDrawWithAnArtistCap(t *testing.T) {
 	e := newEnv(t)
+	ctx := context.Background()
 	u := e.user("u")
-	for i := range 12 {
-		e.play(u, e.track(fmt.Sprintf("P%d", i), "x", 200), 20-i, t0.Add(-time.Hour), 100)
-		e.fav(u, e.track(fmt.Sprintf("F%d", i), "y", 200), t0.Add(-time.Duration(i)*time.Hour))
+	for i := range 30 {
+		e.play(u, e.track(fmt.Sprintf("P%d", i), fmt.Sprintf("artist%d", i), 200), 40-i, t0, 200)
 	}
-	seeds, err := e.svc.Seeds(context.Background(), u)
-	if err != nil || len(seeds) != 10 {
-		t.Fatalf("%d %v", len(seeds), err)
+	for i := range 4 {
+		e.play(u, e.track(fmt.Sprintf("Same%d", i), "Same", 200), 100, t0, 200)
 	}
-	played, favs := 0, 0
-	for _, s := range seeds {
-		if s.Kind == KindPlayed {
-			played++
-		} else {
-			favs++
+	titles := func() []string {
+		seeds, err := e.svc.Seeds(ctx, u)
+		if err != nil || len(seeds) != 10 {
+			t.Fatalf("%d %v", len(seeds), err)
+		}
+		var out []string
+		for _, s := range seeds {
+			out = append(out, s.Title)
+		}
+		return out
+	}
+	first := titles()
+	if got := fmt.Sprint(first[:5]); got != "[Same0 Same1 P0 P1 P2]" {
+		t.Fatalf("the best five %s", got)
+	}
+	for _, title := range first[5:] {
+		if title == "Same2" || title == "Same3" {
+			t.Fatalf("a third seed of one artist: %v", first)
 		}
 	}
-	if played != 5 || favs != 5 || seeds[0].Title != "P0" {
-		t.Fatalf("played %d favs %d first %s", played, favs, seeds[0].Title)
+	if again := titles(); fmt.Sprint(again) != fmt.Sprint(first) {
+		t.Fatalf("another draw the same day: %v vs %v", again, first)
 	}
-	// Only favorites: all ten slots go to them.
-	v := e.user("v")
-	for i := range 12 {
-		e.fav(v, e.track(fmt.Sprintf("G%d", i), "z", 200), t0)
+	drawn := map[string]bool{}
+	for range 7 {
+		e.clock.Add(24 * time.Hour)
+		day := titles()
+		if fmt.Sprint(day[:5]) != fmt.Sprint(first[:5]) {
+			t.Fatalf("the best five changed: %v", day)
+		}
+		for _, title := range day[5:] {
+			drawn[title] = true
+		}
 	}
-	if seeds, _ := e.svc.Seeds(context.Background(), v); len(seeds) != 10 {
-		t.Fatalf("favorites-only seeds %d", len(seeds))
+	if len(drawn) <= 5 {
+		t.Fatalf("a week of draws used only %d tracks: %v", len(drawn), drawn)
 	}
 }
 
@@ -155,22 +182,22 @@ func TestSeedVideoSearchErrorIsNotAMiss(t *testing.T) {
 	}
 }
 
-// At most 10 seed searches per user per day.
+// At most 20 seed searches per user per day.
 func TestSeedSearchBudgetPerDay(t *testing.T) {
 	e := newEnv(t)
 	ctx := context.Background()
 	u := e.user("u")
-	for i := range 12 {
+	for i := range 22 {
 		tr := e.track(fmt.Sprintf("S%d", i), "x", 0)
 		e.svc.seedVideo(ctx, u, Seed{TrackID: tr, Title: fmt.Sprintf("S%d", i), Artist: "x"})
 	}
-	if q, _ := e.yt.calls(); len(q) != 10 {
-		t.Fatalf("searches %d, want 10", len(q))
+	if q, _ := e.yt.calls(); len(q) != 20 {
+		t.Fatalf("searches %d, want 20", len(q))
 	}
 	e.clock.Add(24 * time.Hour)
 	tr := e.track("Tomorrow", "x", 0)
 	e.svc.seedVideo(ctx, u, Seed{TrackID: tr, Title: "Tomorrow", Artist: "x"})
-	if q, _ := e.yt.calls(); len(q) != 11 {
+	if q, _ := e.yt.calls(); len(q) != 21 {
 		t.Fatalf("next day's search not run: %d", len(q))
 	}
 }

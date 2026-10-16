@@ -16,6 +16,15 @@ the iPhone app share one version number.
   syncs or prefetches), even on airplane Wi-Fi with no internet, and opens straight into the
   offline player. It stays on until you turn it off; then everything that waited goes.
 
+### Changed
+
+- **For you picks from what you really like**: seeds used to be the most played songs of the
+  last 30 days and the newest favorites, which in practice meant recent downloads (they are
+  favorited automatically). Now every favorite and every song you listen to has a score: songs
+  played to the end again and again count most, songs skipped early count against, and listening
+  fades over 90 days. The five best are always seeds, the other five a daily draw from the rest,
+  at most two per artist; and up to 20 library songs a day are looked up on YouTube (was 10).
+
 ### Fixed
 
 - **A track stuck at 0:00 while "playing"**: in browsers whose media engine can stall with the

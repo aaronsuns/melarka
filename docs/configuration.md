@@ -111,15 +111,19 @@ your download jobs.
 ## For you
 
 Home shows **For you** (为你推荐): about 30 YouTube songs picked for each user from up to ten
-seeds, which are their most played songs of the last 30 days and their newest favorites. For each
-seed Melarka reads its YouTube Mix and, when `LARK_LASTFM_API_KEY` is set, Last.fm's similar
-tracks. A song suggested by more seeds ranks higher.
+seeds, the songs they like most. A favorite counts, and so does listening over the last 90 days:
+songs played to the end again and again count most, recent plays more than old ones, and songs
+skipped in the first 30 seconds count against. The five best-liked songs are always seeds; the
+other five are drawn from the rest by how much they are liked, a new draw each day, so the whole
+collection takes its turn. At most two seeds share an artist. For each seed Melarka reads its
+YouTube Mix and, when `LARK_LASTFM_API_KEY` is set, Last.fm's similar tracks. A song suggested by
+more seeds, and by better-liked ones, ranks higher.
 
 - Never suggested: songs already downloaded or in the library, songs you marked **Not
   interested**, anything under 1 or over 10 minutes, live streams, and compilations.
 - The list refreshes nightly at `recommendations.refresh_at`, one user at a time, and on demand
   with **Refresh**.
-- The work is gentle: yt-dlp runs niced, yields to people's searches, and searches at most 10
+- The work is gentle: yt-dlp runs niced, yields to people's searches, and searches at most 20
   seed songs per user per day. Failures wait and are not retried in a loop.
 
 ## Channels

@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
+	"math/rand/v2"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -17,49 +20,88 @@ type Seed struct {
 	Title, Artist string
 	DurationS     int
 	Kind          string  // KindPlayed | KindFavorite
-	Weight        float64 // 1, plus a small recency bonus for a new favorite
+	Weight        float64 // 1 to 1.5, with the track's affinity
 }
 
 const usableTrack = `t.status!='trashed' AND t.missing_since IS NULL AND t.broken=0`
 
-// Seeds: up to 10 — the most played tracks of the last 30 days (plays of at
-// least 30 s) and the newest favorites, deduped, half and half when both
-// have enough. Disliked and unusable tracks never seed.
+// Seeds: up to 10 of the tracks the user likes most. Each track's affinity
+// is 1 for a favorite plus its listening of the last 90 days: a listen adds
+// the square of how much of the track it played (1 for a full listen, 0.25
+// for half), a skip in the first 30 s takes 0.5, and a listen counts half
+// after 30 days. So a favorite skipped often ranks low and a song played to
+// the end again and again ranks high, favorite or not. The 5 best are always
+// seeds; the rest are drawn by affinity, a new draw each day, so the whole
+// collection takes its turn. At most 2 seeds share an artist. Disliked and
+// unusable tracks never seed; a track the user doesn't like (affinity ≤ 0)
+// neither.
 func (s *Service) Seeds(ctx context.Context, userID int64) ([]Seed, error) {
 	now := s.now()
-	played, err := s.seedIDs(ctx, `SELECT e.track_id, 0 FROM play_events e JOIN tracks t ON t.id=e.track_id
-		WHERE e.user_id=? AND e.started_at>=? AND e.played_seconds>=? AND `+usableTrack+`
-		  AND NOT EXISTS (SELECT 1 FROM dislikes d WHERE d.user_id=e.user_id AND d.track_id=e.track_id)
-		GROUP BY e.track_id ORDER BY COUNT(*) DESC, MAX(e.started_at) DESC, e.track_id LIMIT ?`,
-		userID, now.Add(-playWindow).Unix(), minPlayedSeconds, maxSeeds)
-	if err != nil {
-		return nil, err
+	cands := map[int64]*candidate{}
+	get := func(id int64) *candidate {
+		c := cands[id]
+		if c == nil {
+			c = &candidate{id: id}
+			cands[id] = c
+		}
+		return c
 	}
-	favs, err := s.seedIDs(ctx, `SELECT f.track_id, f.created_at FROM favorites f JOIN tracks t ON t.id=f.track_id
+	favs, err := s.DB.QueryContext(ctx, `SELECT f.track_id FROM favorites f JOIN tracks t ON t.id=f.track_id
 		WHERE f.user_id=? AND `+usableTrack+`
-		  AND NOT EXISTS (SELECT 1 FROM dislikes d WHERE d.user_id=f.user_id AND d.track_id=f.track_id)
-		ORDER BY f.created_at DESC, f.track_id DESC LIMIT ?`, userID, 2*maxSeeds)
+		  AND NOT EXISTS (SELECT 1 FROM dislikes d WHERE d.user_id=f.user_id AND d.track_id=f.track_id)`, userID)
 	if err != nil {
 		return nil, err
 	}
-	isPlayed := map[int64]bool{}
-	for _, p := range played {
-		isPlayed[p.id] = true
+	for favs.Next() {
+		var id int64
+		if err := favs.Scan(&id); err != nil {
+			favs.Close()
+			return nil, err
+		}
+		get(id).favorite = true
 	}
-	var newFavs []seedRow
-	for _, f := range favs {
-		if !isPlayed[f.id] {
-			newFavs = append(newFavs, f)
+	if err := favs.Close(); err != nil {
+		return nil, err
+	}
+	plays, err := s.DB.QueryContext(ctx, `SELECT e.track_id, e.started_at, e.played_seconds, e.skipped, t.duration_ms
+		FROM play_events e JOIN tracks t ON t.id=e.track_id
+		WHERE e.user_id=? AND e.started_at>=? AND `+usableTrack+`
+		  AND NOT EXISTS (SELECT 1 FROM dislikes d WHERE d.user_id=e.user_id AND d.track_id=e.track_id)`,
+		userID, now.Add(-playWindow).Unix())
+	if err != nil {
+		return nil, err
+	}
+	for plays.Next() {
+		var id, at, secs, durMS int64
+		var skipped bool
+		if err := plays.Scan(&id, &at, &secs, &skipped, &durMS); err != nil {
+			plays.Close()
+			return nil, err
+		}
+		age := max(0, now.Sub(time.Unix(at, 0)))
+		get(id).listening += listenValue(secs, skipped, durMS) * math.Pow(0.5, float64(age)/float64(playHalfLife))
+	}
+	if err := plays.Close(); err != nil {
+		return nil, err
+	}
+
+	var ranked []*candidate
+	for _, c := range cands {
+		if c.affinity() > 0 {
+			ranked = append(ranked, c)
 		}
 	}
-	nP := min(len(played), max(maxPlayedSeeds, maxSeeds-len(newFavs)))
-	nF := min(len(newFavs), maxSeeds-nP)
-	rows := append(played[:nP:nP], newFavs[:nF]...)
-	idList := make([]int64, len(rows))
-	for i, r := range rows {
-		idList[i] = r.id
+	sort.Slice(ranked, func(i, j int) bool {
+		if a, b := ranked[i].affinity(), ranked[j].affinity(); a != b {
+			return a > b
+		}
+		return ranked[i].id < ranked[j].id
+	})
+	ids := make([]int64, len(ranked))
+	for i, c := range ranked {
+		ids[i] = c.id
 	}
-	tracks, err := s.Library.TracksByIDs(ctx, userID, idList)
+	tracks, err := s.Library.TracksByIDs(ctx, userID, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -67,43 +109,106 @@ func (s *Service) Seeds(ctx context.Context, userID int64) ([]Seed, error) {
 	for i, t := range tracks {
 		byID[t.ID] = i
 	}
-	seeds := []Seed{}
-	for i, r := range rows {
-		ti, ok := byID[r.id]
-		if !ok {
-			continue
+	pool := ranked[:0]
+	for _, c := range ranked {
+		if ti, ok := byID[c.id]; ok {
+			c.artist = strings.ToLower(strings.TrimSpace(tracks[ti].Artist))
+			pool = append(pool, c)
 		}
-		t := tracks[ti]
-		sd := Seed{TrackID: t.ID, Title: t.Title, Artist: t.Artist, DurationS: int(t.DurationMS / 1000), Kind: KindPlayed, Weight: 1}
-		if i >= nP {
-			sd.Kind = KindFavorite
-			age := now.Sub(time.Unix(r.at, 0))
-			sd.Weight += favoriteBonus * max(0, 1-float64(age)/float64(playWindow))
+	}
+
+	perArtist := map[string]int{}
+	fits := func(c *candidate) bool { return c.artist == "" || perArtist[c.artist] < maxSeedsPerArtist }
+	var picked []*candidate
+	take := func(i int) {
+		c := pool[i]
+		picked = append(picked, c)
+		perArtist[c.artist]++
+		pool = append(pool[:i], pool[i+1:]...)
+	}
+	for i := 0; i < len(pool) && len(picked) < coreSeeds; {
+		if fits(pool[i]) {
+			take(i)
+		} else {
+			i++
+		}
+	}
+	// The draw: the same all day (a retried refresh agrees), another tomorrow.
+	day := uint64(now.Unix()) / 86400
+	rng := rand.New(rand.NewPCG(uint64(userID), day))
+	for len(picked) < maxSeeds {
+		total := 0.0
+		for _, c := range pool {
+			if fits(c) {
+				total += c.affinity()
+			}
+		}
+		if total <= 0 {
+			break
+		}
+		r := rng.Float64() * total
+		pick := -1
+		for i, c := range pool {
+			if !fits(c) {
+				continue
+			}
+			pick = i
+			if r -= c.affinity(); r < 0 {
+				break
+			}
+		}
+		take(pick)
+	}
+
+	best := 0.0
+	if len(picked) > 0 {
+		best = picked[0].affinity()
+	}
+	seeds := []Seed{}
+	for _, c := range picked {
+		t := tracks[byID[c.id]]
+		sd := Seed{TrackID: t.ID, Title: t.Title, Artist: t.Artist, DurationS: int(t.DurationMS / 1000), Kind: KindFavorite,
+			Weight: 1 + seedWeightSpread*c.affinity()/best}
+		if !c.favorite || c.listening >= favoriteAffinity {
+			sd.Kind = KindPlayed // listened to more than its favorite counts: "因为你常听"
 		}
 		seeds = append(seeds, sd)
 	}
 	return seeds, nil
 }
 
-type seedRow struct {
-	id, at int64
+// candidate: a track that may seed, and why.
+type candidate struct {
+	id        int64
+	favorite  bool
+	listening float64 // the decayed sum of listenValue
+	artist    string  // normalized, for the per-artist cap
 }
 
-func (s *Service) seedIDs(ctx context.Context, q string, args ...any) ([]seedRow, error) {
-	rows, err := s.DB.QueryContext(ctx, q, args...)
-	if err != nil {
-		return nil, err
+func (c *candidate) affinity() float64 {
+	a := c.listening
+	if c.favorite {
+		a += favoriteAffinity
 	}
-	defer rows.Close()
-	var out []seedRow
-	for rows.Next() {
-		var r seedRow
-		if err := rows.Scan(&r.id, &r.at); err != nil {
-			return nil, err
-		}
-		out = append(out, r)
+	return a
+}
+
+// listenValue: what one play says about liking the track. A skip in the first
+// 30 s is a no; another short play (stopped, switched away) says nothing; a
+// longer one the square of how much of the track it played, so finishing it
+// counts most. Unknown length: a full listen.
+func listenValue(playedS int64, skipped bool, durMS int64) float64 {
+	if skipped {
+		return -skipPenalty
 	}
-	return out, rows.Err()
+	if playedS < minPlayedSeconds {
+		return 0
+	}
+	if durMS <= 0 {
+		return 1
+	}
+	c := min(1, float64(playedS)*1000/float64(durMS))
+	return c * c
 }
 
 // seedVideo is the YouTube video a seed track is: its download job's video

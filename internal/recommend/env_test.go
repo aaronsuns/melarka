@@ -205,6 +205,16 @@ func (e *env) play(user, track int64, n int, at time.Time, secs int) {
 	}
 }
 
+// skip records n plays of secs seconds skipped by the user.
+func (e *env) skip(user, track int64, n int, at time.Time, secs int) {
+	e.t.Helper()
+	for range n {
+		evN++
+		e.exec(`INSERT INTO play_events(user_id,track_id,client_event_id,started_at,played_seconds,skipped) VALUES (?,?,?,?,?,1)`,
+			user, track, fmt.Sprintf("ev%d", evN), at.Unix(), secs)
+	}
+}
+
 func (e *env) fav(user, track int64, at time.Time) {
 	e.t.Helper()
 	e.exec(`INSERT INTO favorites(user_id,track_id,created_at) VALUES (?,?,?)`, user, track, at.Unix())

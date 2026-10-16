@@ -1,5 +1,6 @@
-// Package recommend builds each user's "为你推荐" list: seeds from
-// the user's most-played and newest favorite tracks, candidates from each
+// Package recommend builds each user's "为你推荐" list: seeds from the
+// tracks the user likes most (favorites, and what they play to the end
+// again and again, minus what they skip), candidates from each
 // seed's YouTube Mix and Last.fm's similar tracks, filtered against the
 // library, downloads and dismissals, ranked by how many seeds agree.
 //
@@ -49,14 +50,19 @@ const (
 // Limits.
 const (
 	maxSeeds          = 10
-	maxPlayedSeeds    = 5 // when there are enough favorites to fill the rest
-	playWindow        = 30 * 24 * time.Hour
+	coreSeeds         = 5 // the best liked; the rest a daily weighted draw
+	maxSeedsPerArtist = 2
+	playWindow        = 90 * 24 * time.Hour
+	playHalfLife      = 30 * 24 * time.Hour // a listen counts half after 30 days
 	minPlayedSeconds  = 30
+	skipPenalty       = 0.5 // a skip in the first 30 s
+	favoriteAffinity  = 1   // a favorite, before any listening
+	seedWeightSpread  = 0.5 // seed weights run from 1 to 1.5 with affinity
 	mixEntries        = 50
 	lastfmPerSeed     = 5
 	lastfmArtists     = 2  // artist.getSimilar fallback
 	keepTop           = 30 // about 30 shown
-	seedSearchesDay   = 10
+	seedSearchesDay   = 20
 	otherSearchesDay  = 20 // Last.fm suggestions resolved to YouTube
 	missRetry         = 30 * 24 * time.Hour
 	hitRetry          = 90 * 24 * time.Hour
@@ -65,7 +71,6 @@ const (
 	minDurationS      = 60
 	maxDurationS      = 600
 	lastfmAgreement   = 0.5
-	favoriteBonus     = 0.25 // for a favorite made just now, fading to 0 over 30 days
 )
 
 var (

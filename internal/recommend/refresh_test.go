@@ -116,19 +116,19 @@ func TestRefreshFiltersAndRanks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := ids(res.Items); got != "sharedsugg1,only2aaaaaa,failedother,only1aaaaaa" {
+	// Seed 1, played to the end 5 times, outweighs seed 2, a favorite never played.
+	if got := ids(res.Items); got != "sharedsugg1,failedother,only1aaaaaa,only2aaaaaa" {
 		t.Fatalf("items %s", got)
 	}
 	it := res.Items[0]
-	// The strongest seed is the recent favorite (its recency bonus beats a play seed).
-	if it.Reason == nil || it.Reason.TrackID != s2 || it.Reason.Kind != KindFavorite || it.Reason.Title != "Faded" || it.Reason.Artist != "Alan Walker" {
+	if it.Reason == nil || it.Reason.TrackID != s1 || it.Reason.Kind != KindPlayed || it.Reason.Title != "甜蜜蜜" || it.Reason.Artist != "邓丽君" {
 		t.Fatalf("reason %+v", it.Reason)
 	}
 	if it.Title != "蔡琴 - 恰似你的温柔" || it.Channel != "蔡琴" || it.DurationS != 247 ||
 		it.URL != "https://www.youtube.com/watch?v=sharedsugg1" || it.Thumbnail != "https://i.ytimg.com/vi/sharedsugg1/hqdefault.jpg" {
 		t.Fatalf("item %+v", it)
 	}
-	if res.Items[3].Reason.Kind != KindPlayed || res.RefreshedAt == nil || *res.RefreshedAt != t0.Unix() || res.Refreshing {
+	if res.Items[3].Reason.Kind != KindFavorite || res.RefreshedAt == nil || *res.RefreshedAt != t0.Unix() || res.Refreshing {
 		t.Fatalf("%+v %+v", res.Items[3].Reason, res)
 	}
 	if e.gate.n == 0 {
@@ -231,10 +231,10 @@ func TestLastFMCandidates(t *testing.T) {
 		t.Fatal(err)
 	}
 	res, _ := e.svc.List(ctx, u)
-	if got := ids(res.Items); got != "sharedsugg1,mixonlyaaaa,somebodyaaa,lastfms2aaa" {
+	if got := ids(res.Items); got != "sharedsugg1,mixonlyaaaa,lastfms2aaa,somebodyaaa" {
 		t.Fatalf("items %s", got)
 	}
-	if res.Items[0].Score != 1.5 {
+	if res.Items[0].Score != 2 { // the best seed (1.5) + agreement (0.5)
 		t.Fatalf("agreement score %v", res.Items[0].Score)
 	}
 	searches, _ := e.yt.calls()
