@@ -17,6 +17,7 @@ struct OfflinePlayerView: View {
             Divider()
             List {
                 Section { NowPlayingCard(model: model) }
+                    .listRowBackground(cardBackground)
                 if !model.upNext.isEmpty {
                     Section {
                         ForEach(model.upNext) { entry in
@@ -38,46 +39,60 @@ struct OfflinePlayerView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .onAppear { model.reload() }
     }
 
+    /// A wash of the song's colour (the same hue as its drawn tile) fading into the card.
+    private var cardBackground: some View {
+        let card = Color(.secondarySystemGroupedBackground)
+        guard let id = model.current?.id else { return LinearGradient(colors: [card], startPoint: .top, endPoint: .bottom) }
+        return LinearGradient(colors: [Artwork.color(id, 0.5).opacity(0.35), card], startPoint: .top, endPoint: .bottom)
+    }
+
+    /// One row: the state on the left (the server, or why it isn't loading); Stay Offline, retry and close on the right.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Label { Text("Offline Mode") } icon: { Image(systemName: "wifi.slash") }
-                        .font(.headline)
-                    Text(server.host ?? server.absoluteString)
-                        .font(.footnote).foregroundStyle(.secondary).lineLimit(1)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 8)
-                Button(action: onClose) {
-                    Image(systemName: "xmark.circle.fill").font(.title2).foregroundStyle(.secondary)
-                }
-                .accessibilityLabel(Text("Close"))
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Offline Mode").font(.headline).lineLimit(1)
+                status.font(.caption).foregroundStyle(stayOffline ? Color.orange : Color.secondary).lineLimit(1)
             }
-            VStack(alignment: .leading, spacing: 6) {
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 4)
+            // Round buttons, grey; Stay Offline turns orange when on.
+            Toggle(isOn: $stayOffline) { Label { Text("Stay Offline") } icon: { Image(systemName: "airplane") } }
+                .toggleStyle(.button)
+                .labelStyle(.iconOnly)
+                .tint(stayOffline ? .orange : .secondary)
+                .background(Circle().fill(Color(.tertiarySystemFill)).opacity(stayOffline ? 0 : 1))
+            if !stayOffline {
                 Button { model.retry() } label: {
-                    HStack(spacing: 6) {
-                        if model.connecting { ProgressView() } else { Image(systemName: "arrow.clockwise") }
-                        model.connecting ? Text("Connecting…") : Text("Retry Connection")
-                    }
+                    if model.connecting { ProgressView() } else { Image(systemName: "arrow.clockwise") }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(model.connecting || stayOffline)
-                if model.stillOffline && !stayOffline {
-                    Text("Still can't connect to the server").font(.footnote).foregroundStyle(.secondary)
-                }
-                StayOfflineToggle(isOn: $stayOffline)
+                .disabled(model.connecting)
+                .accessibilityLabel(Text("Retry Connection"))
             }
+            Button(action: onClose) { Image(systemName: "xmark") }
+                .accessibilityLabel(Text("Close"))
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .tint(.secondary)
+        .font(.subheadline.weight(.semibold))
+        .padding(.horizontal, 16).padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
+        .background(.bar)
+    }
+
+    /// Under the title: Stay Offline, the retry running or failed, or else the server.
+    private var status: Text {
+        if stayOffline { return Text("Stay Offline") }
+        if model.connecting { return Text("Connecting…") }
+        if model.stillOffline { return Text("Still can't connect to the server") }
+        return Text(verbatim: server.host ?? server.absoluteString)
     }
 }
 
@@ -94,6 +109,7 @@ private struct NowPlayingCard: View {
             VStack(spacing: 14) {
                 Artwork(url: model.artworkURL(item), seed: item.id, title: item.title)
                     .frame(width: min(coverSize, 280), height: min(coverSize, 280))
+                    .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
                 VStack(spacing: 4) {
                     Text(item.title).font(.title3.bold()).multilineTextAlignment(.center).lineLimit(3)
                     if !item.artist.isEmpty {
@@ -164,7 +180,7 @@ private struct NowPlayingCard: View {
                 .accessibilityLabel(Text("Previous"))
             Spacer()
             Button { model.togglePlay() } label: {
-                Image(systemName: model.playing ? "pause.circle.fill" : "play.circle.fill").font(.system(size: 56))
+                Image(systemName: model.playing ? "pause.circle.fill" : "play.circle.fill").font(.system(size: 64))
             }
             .accessibilityLabel(model.playing ? Text("Pause") : Text("Play"))
             Spacer()
