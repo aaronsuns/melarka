@@ -306,7 +306,7 @@ final class OfflinePlayerModelTests: EngineTestCase {
         let (s, _) = try offlineServices()
         let engine = try XCTUnwrap(s.engine)
         func layOut(_ model: OfflinePlayerModel) {
-            let view = OfflinePlayerView(model: model, server: server, onClose: {})
+            let view = OfflinePlayerView(model: model, server: server, stayOffline: .constant(false), onClose: {})
                 .environment(\.dynamicTypeSize, .accessibility3)
             let host = UIHostingController(rootView: view)
             host.view.frame = CGRect(x: 0, y: 0, width: 390, height: 844)

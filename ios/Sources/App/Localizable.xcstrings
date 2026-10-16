@@ -1588,6 +1588,29 @@
         }
       }
     },
+    "Stay Offline" : {
+      "comment" : "The switch that stops every reconnect (a flight)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stay Offline"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持离线"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持离线"
+          }
+        }
+      }
+    },
     "Still can't connect to the server" : {
       "comment" : "Offline player: the retry failed",
       "localizations" : {
@@ -1699,6 +1722,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "测试：随机播放收藏"
+          }
+        }
+      }
+    },
+    "The app won't try to reconnect until you turn this off. Saves battery on a flight." : {
+      "comment" : "Under the Stay Offline switch",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app won't try to reconnect until you turn this off. Saves battery on a flight."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭前不会尝试重新连接，乘飞机时更省电。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭前不会尝试重新连接，乘飞机时更省电。"
           }
         }
       }

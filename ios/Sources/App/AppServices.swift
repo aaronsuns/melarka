@@ -31,7 +31,7 @@ import CryptoKit
     /// The per-user offline cache under `cacheRoot/<userId>`; nil when a test injected its own `cache`.
     private let userCache: UserCache?
     private let cacheRoot: URL
-    private let network: NetworkStatus
+    private let network: SwitchableNetworkStatus
     private var syncTask: Task<Void, Never>?
     /// Bumped when a sync is dropped (another user, sign-out), so its late end touches nothing.
     private var syncGeneration = 0
@@ -45,6 +45,8 @@ import CryptoKit
     static let activationSyncInterval: TimeInterval = 3600
     /// Settings stores the cap here, in GB (`SettingsModel.capChoices`).
     static let cacheCapKey = "lark.cacheCapGB"
+    /// The Stay Offline switch, kept until the user turns it off.
+    static let stayOfflineKey = "lark.stayOffline"
     /// The web's last `setPrefs`, so a cold start (the car) streams at the chosen quality, shows car lyrics and
     /// applies the loudness gain as set.
     static let prefsQualityKey = "lark.prefs.quality"
@@ -90,8 +92,10 @@ import CryptoKit
         self.userCache = userCache
         self.cache = cache ?? userCache!
         self.cacheRoot = cacheRoot ?? CacheStore.defaultRoot()
-        let network = network ?? PathNetworkStatus()
+        let network = SwitchableNetworkStatus(network ?? PathNetworkStatus(), stayOffline: defaults.bool(forKey: Self.stayOfflineKey))
         self.network = network
+        stayOffline = network.stayOffline
+        pageFailed = network.stayOffline        // the page is not loaded: the error screen or the offline player
         network.observe { [weak self] in self?.networkChanged() }
         updateCache()
         if userCache != nil {
@@ -109,7 +113,10 @@ import CryptoKit
         let nowPlaying = systemIntegration ? NowPlayingController(sink: MPNowPlayingInfoCenter.default(), artwork: { [weak api, weak self] item in
             guard let api else { return nil }
             return try await Self.nowPlayingArtwork(for: item, cached: { self?.cachedArtwork(trackID: $0) },
-                                                    fetch: { try await api.artwork($0) })
+                                                    fetch: { [weak self] in
+                guard self?.network.isOnline ?? false else { throw URLError(.notConnectedToInternet) }
+                return try await api.artwork($0)
+            })
         }) : nil
         let e = PlayerEngine(backend: backend, api: api, cache: cache, store: queueStore,
                              events: PlayEventQueue(api: api, store: queueStore), network: network, nowPlaying: nowPlaying)
@@ -149,6 +156,7 @@ import CryptoKit
         }
         lastActivationSync = now()
         syncFavorites()
+        if stayOffline { openOfflinePlayer() }
     }
 
     /// An event for the page: through the bridge (dropped while the page is frozen; re-sent on activation).
@@ -489,15 +497,41 @@ import CryptoKit
 
     /// The page is back: the offline player closes and the web UI shows what the engine is playing.
     func pageDidLoad() {
+        guard !stayOffline else { return }          // the empty page of Stay Offline
         pageFailed = false
         offlinePlayer = nil
     }
 
     func retryPage() {
-        guard let serverURL else { return }
+        guard let serverURL, !stayOffline else { return }
         pageFailed = false
         offlinePlayer?.retryStarted()
         if let loadPage { loadPage(serverURL) } else { webView?.load(URLRequest(url: serverURL)) }
+    }
+
+    // MARK: - Stay Offline
+
+    /// Stay Offline (a flight): nothing tries the server until it is turned off, whatever the phone's network says.
+    @Published private(set) var stayOffline = false
+
+    /// On: the page stops loading and the offline player opens. Off: everything waiting for the network goes
+    /// (`networkChanged`: the page loads again, the engine resumes, a skipped sync runs).
+    func setStayOffline(_ on: Bool) {
+        guard on != stayOffline else { return }
+        stayOffline = on
+        defaults.set(on, forKey: Self.stayOfflineKey)
+        if on {
+            // The page's own requests stop too: an empty page until Stay Offline is off (`retryPage` loads it then).
+            webView?.load(URLRequest(url: URL(string: "about:blank")!))
+            pageFailed = true
+            openOfflinePlayer()
+        }
+        network.stayOffline = on
+    }
+
+    /// For the switches (the offline player, the error screen, Settings).
+    var stayOfflineBinding: Binding<Bool> {
+        Binding(get: { [weak self] in self?.stayOffline ?? false }, set: { [weak self] in self?.setStayOffline($0) })
     }
 
     /// The native settings sheet (更换服务器, cache, the test button), also without a page.

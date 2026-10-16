@@ -60,6 +60,9 @@ there; it signs you out of the old one.
 - **Server**: the address in use, and changing it.
 - **Offline cache**: how much is used, the size limit, **sync favorites now**, and clearing it.
   Favorites are cached automatically on Wi-Fi.
+- **Stay Offline**: for a flight. The app stops trying to reach the server (even on airplane Wi-Fi
+  without internet) and plays from the offline cache until you turn it off. Also in the offline
+  player and on the "can't connect" screen.
 - **Car autoplay**: a step-by-step guide to starting playback when the car connects, and a test
   button.
 - **About**: the app version.

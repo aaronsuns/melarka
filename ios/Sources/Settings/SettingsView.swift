@@ -34,6 +34,7 @@ struct SettingsView: View {
                 } footer: {
                     Text("Favorites are cached automatically on Wi‑Fi and play without a network.")
                 }
+                Section { StayOfflineToggle(isOn: services.stayOfflineBinding) }
                 Section("Car Autoplay") {
                     NavigationLink("How to Set Up") { ShortcutsGuideView() }
                     Button("Test: Shuffle Favorites") { Task { await model.testShuffle() } }

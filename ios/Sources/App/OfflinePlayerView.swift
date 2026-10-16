@@ -8,6 +8,7 @@ import UIKit
 struct OfflinePlayerView: View {
     @ObservedObject var model: OfflinePlayerModel
     let server: URL
+    @Binding var stayOffline: Bool
     let onClose: () -> Void
 
     var body: some View {
@@ -67,10 +68,11 @@ struct OfflinePlayerView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(model.connecting)
-                if model.stillOffline {
+                .disabled(model.connecting || stayOffline)
+                if model.stillOffline && !stayOffline {
                     Text("Still can't connect to the server").font(.footnote).foregroundStyle(.secondary)
                 }
+                StayOfflineToggle(isOn: $stayOffline)
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 12)

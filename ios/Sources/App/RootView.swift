@@ -11,10 +11,11 @@ struct RootView: View {
                     WebShell(webView: services.web(for: server), serverURL: server,
                              onCookiesChanged: { Task { await services.harvestCookies() } },
                              onLoadFailed: { services.pageDidFail($0) },
-                             onLoaded: { services.pageDidLoad() })
+                             onLoaded: { services.pageDidLoad() }, loadOnAppear: !services.stayOffline)
                         .id(server)
                     if let player = services.offlinePlayer {
-                        OfflinePlayerView(model: player, server: server, onClose: { services.closeOfflinePlayer() })
+                        OfflinePlayerView(model: player, server: server, stayOffline: services.stayOfflineBinding,
+                                          onClose: { services.closeOfflinePlayer() })
                     } else if services.pageFailed {
                         PageErrorView(services: services, server: server)
                     }
@@ -42,15 +43,30 @@ struct PageErrorView: View {
             Text(server.host ?? server.absoluteString).font(.footnote).foregroundStyle(.secondary)
             Button { services.retryPage() } label: { Text("Retry").frame(maxWidth: 220) }
                 .buttonStyle(.borderedProminent)
+                .disabled(services.stayOffline)
             Button { services.openSettings() } label: { Text("Settings").frame(maxWidth: 220) }
                 .buttonStyle(.bordered)
             if services.hasOfflineFavorites {
                 Button { Task { await services.playOfflineFavorites() } } label: { Text("Play Offline Favorites").frame(maxWidth: 220) }
                     .buttonStyle(.bordered)
             }
+            StayOfflineToggle(isOn: services.stayOfflineBinding).frame(maxWidth: 320)
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
+    }
+}
+
+/// Stay Offline, with what it does under it (the offline player, the error screen, Settings).
+struct StayOfflineToggle: View {
+    @Binding var isOn: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle(isOn: $isOn) { Label { Text("Stay Offline") } icon: { Image(systemName: "airplane") } }
+            Text("The app won't try to reconnect until you turn this off. Saves battery on a flight.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
     }
 }

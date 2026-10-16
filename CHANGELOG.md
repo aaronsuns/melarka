@@ -8,6 +8,14 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+### Added
+
+- **Stay Offline in the iPhone app** (for a flight): a switch in the offline player, on the
+  "can't connect" screen and in Settings. While it is on, the app tries nothing on the network
+  (no page reload, stream retries, queue refills, queue or play-event uploads, lyrics or covers,
+  syncs or prefetches), even on airplane Wi-Fi with no internet, and opens straight into the
+  offline player. It stays on until you turn it off; then everything that waited goes.
+
 ### Fixed
 
 - **A track stuck at 0:00 while "playing"**: in browsers whose media engine can stall with the

@@ -11,6 +11,8 @@ struct WebShell: UIViewRepresentable {
     /// The page failed to load, or loaded (the native error screen).
     var onLoadFailed: @MainActor (Error) -> Void = { _ in }
     var onLoaded: @MainActor () -> Void = {}
+    /// False with Stay Offline on: the page is not loaded (`AppServices.retryPage` loads it once it is off).
+    var loadOnAppear = true
 
     func makeCoordinator() -> Coordinator {
         let c = Coordinator(serverURL: serverURL, onCookiesChanged: onCookiesChanged)
@@ -23,7 +25,7 @@ struct WebShell: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.configuration.websiteDataStore.httpCookieStore.add(context.coordinator)
-        if webView.url == nil { webView.load(URLRequest(url: serverURL)) }
+        if loadOnAppear && webView.url == nil { webView.load(URLRequest(url: serverURL)) }
         return webView
     }
 

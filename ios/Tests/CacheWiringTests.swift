@@ -266,7 +266,7 @@ import WebKit
     func testNetworkHasBothTheEngineAndTheCacheAsObservers() throws {
         let s = try makeServices()
         _ = s.engine
-        XCTAssertEqual(network.observers.count, 2)
+        XCTAssertEqual(network.observers.count, 1)    // the Stay Offline switch, which passes every change on to both
     }
 }
 

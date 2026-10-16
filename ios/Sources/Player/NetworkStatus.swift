@@ -24,6 +24,32 @@ extension NetworkStatus {
     }
 }
 
+/// The Stay Offline switch (a flight): offline whatever the phone's path says, so nothing that waits for the
+/// network (page reloads, retries, refills, syncs, prefetches) tries a server it can't reach. Turning it off is
+/// a change like the network coming back.
+@MainActor final class SwitchableNetworkStatus: NetworkStatus {
+    private let inner: NetworkStatus
+    private var observers: [@MainActor () -> Void] = []
+    var stayOffline: Bool {
+        didSet { if stayOffline != oldValue { observers.forEach { $0() } } }
+    }
+
+    init(_ inner: NetworkStatus, stayOffline: Bool = false) {
+        self.inner = inner
+        self.stayOffline = stayOffline
+        inner.observe { [weak self] in
+            guard let self else { return }
+            self.observers.forEach { $0() }
+        }
+    }
+
+    var isOnline: Bool { !stayOffline && inner.isOnline }
+    var isExpensive: Bool { inner.isExpensive }
+    /// Switched off-line is a sure answer: a cold launch waits for nothing.
+    var answered: Bool { stayOffline || inner.answered }
+    func observe(_ fn: @escaping @MainActor () -> Void) { observers.append(fn) }
+}
+
 @MainActor final class PathNetworkStatus: NetworkStatus {
     private let monitor = NWPathMonitor()
     private(set) var isOnline = true

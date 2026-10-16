@@ -199,6 +199,8 @@ import os
             let ids = music.items.compactMap(\.trackID)
             return .init(trackIDs: ids, index: ids.isEmpty ? 0 : min(music.index, ids.count - 1), positionMs: max(0, position(.track)))
         }
+        sync.online = { [network] in network.isOnline }
+        events.online = { [network] in network.isOnline }
         sync.onOwnDevice = { [weak self] device in
             guard let self, self.ownDevice != device else { return }
             self.ownDevice = device
@@ -954,6 +956,7 @@ import os
 
     private func networkChanged() {
         guard network.isOnline else { return }
+        sync.reconnected()
         if refillTimer != nil || refillWanted {
             refillTimer?.cancel(); refillTimer = nil
             refillWanted = false
@@ -1442,6 +1445,8 @@ import os
     }
 
     private func requestLyrics(_ id: Int) {
+        // Offline: asked on the first tick back online (`retryLyricsIfDue`), not tried now.
+        guard network.isOnline else { lyricsRetry = (now(), Self.lyricsRetryS); return }
         let e = epoch
         lyricsInFlight = id
         tasks.run { [weak self, api] in
@@ -1463,7 +1468,7 @@ import os
     }
 
     private func retryLyricsIfDue() {
-        guard let r = lyricsRetry, let id = lyricsID, lyricsInFlight == nil, now() >= r.at,
+        guard network.isOnline, let r = lyricsRetry, let id = lyricsID, lyricsInFlight == nil, now() >= r.at,
               loaded?.kind == .track, music.current?.trackID == id, prefs.carLyrics, nowPlaying != nil else { return }
         requestLyrics(id)
     }

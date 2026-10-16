@@ -14,6 +14,8 @@ import Foundation
     private var inFlight: Task<Void, Never>?
     private var lastFlush: Date?
     let tasks = TaskBag()
+    /// Offline a POST can only fail: events wait on disk, and the first tick back online sends them.
+    var online: () -> Bool = { true }
 
     init(api: LarkAPIProtocol, store: QueueStore, now: @escaping () -> Date = Date.init) {
         self.api = api; self.store = store; self.now = now
@@ -31,7 +33,7 @@ import Foundation
                                        played_seconds: playedSeconds, skipped: skipped, quality: quality)]
         if all.count > Self.maxPending { all.removeFirst(all.count - Self.maxPending) }   // the oldest go
         save(all)
-        tasks.run { [weak self] in await self?.flush() }
+        if online() { tasks.run { [weak self] in await self?.flush() } }
     }
 
     /// Sends everything pending. A flush already in flight is waited for, then whatever is left goes too.
@@ -60,7 +62,7 @@ import Foundation
 
     /// Called from the engine's 10 s tick: a flush every 30 s while anything is pending.
     func flushIfDue() {
-        guard !pending.isEmpty, lastFlush.map({ now().timeIntervalSince($0) >= Self.flushEvery }) ?? true else { return }
+        guard online(), !pending.isEmpty, lastFlush.map({ now().timeIntervalSince($0) >= Self.flushEvery }) ?? true else { return }
         tasks.run { [weak self] in await self?.flush() }
     }
 

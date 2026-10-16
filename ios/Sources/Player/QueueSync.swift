@@ -16,7 +16,11 @@ import Foundation
     private var debounced: Cancellable?
     private var lastPush: Date?
     private var epoch = 0
+    /// A push skipped offline: sent when the network is back (`reconnected`).
+    private var owed = false
     let tasks = TaskBag()
+    /// Offline a PUT can only fail: none is tried, so a flight does not try every 15 s.
+    var online: () -> Bool = { true }
 
     /// The music queue as it should be sent now.
     var snapshot: () -> Snapshot = { Snapshot(trackIDs: [], index: 0, positionMs: 0) }
@@ -43,6 +47,8 @@ import Foundation
     func push() {
         debounced?.cancel(); debounced = nil
         lastPush = now()
+        guard online() else { owed = true; return }
+        owed = false
         let s = snapshot(), e = epoch
         tasks.run { [weak self, api] in
             // Errors (offline, 5xx) are left for the next edit or the next 15 s tick: the queue is also on disk.
@@ -52,9 +58,14 @@ import Foundation
         }
     }
 
+    /// The network is back: the queue as it is now, if a push was skipped meanwhile.
+    func reconnected() {
+        if owed { push() }
+    }
+
     /// Sign-out: nothing more goes out for the old user.
     func cancel() {
-        epoch += 1
+        epoch += 1; owed = false
         debounced?.cancel(); debounced = nil
         lastPush = nil
         tasks.cancelAll()
