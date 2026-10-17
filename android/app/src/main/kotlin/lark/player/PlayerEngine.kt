@@ -106,6 +106,9 @@ class PlayerEngine(
             field = value
             if (value.loudness != old.loudness) loudnessChanged()
             if (value.carLyrics == old.carLyrics) return
+            lyricsId = null; carLyrics = null; lyricsRetry = null
+            if (loaded?.kind == Kind.track) music.current?.trackId?.let { fetchLyrics(it) }
+            refreshNowPlaying()
         }
 
     /** The episode playback rate; music always plays at 1. */
@@ -135,6 +138,14 @@ class PlayerEngine(
      */
     private class Substitute(val id: String, var requeue: String?)
     private var substitutes = mutableListOf<Substitute>()
+    /** The sleep timer: a deadline (its fade starts 10 s before), or the end of the item playing. */
+    private var sleep: Sleep? = null
+    /** The fade's start, then its steps. */
+    private var sleepJobs: List<Cancellable> = emptyList()
+    /** The minutes timer's fade is running. */
+    private var sleepFading = false
+    /** The master volume the fade set last (1: no fade). */
+    private var fadeLevel = 1f
     var onEvent: ((NativeEvent) -> Unit)? = null
 
     /** The active kind changed (the media session: skip buttons for episodes). */
@@ -155,7 +166,15 @@ class PlayerEngine(
                                      val playing: Boolean, val rate: Double, val durationMs: Long?, val line: String?)
     private var nowPlayingKey: NowPlayingKey? = null
     private var forceNowPlaying = false
+    /** The current track's lyrics for the car display (`prefs.carLyrics`), and the track they are for. */
+    private var carLyrics: CarLyrics? = null
     private var lyricsId: Long? = null
+    /** The lyrics fetch for [lyricsId] threw: when to ask again, and the wait after the next failure. */
+    private data class LyricsRetry(val at: Instant, val nextWait: Double)
+    private var lyricsRetry: LyricsRetry? = null
+    private var lyricsInFlight: Long? = null
+    /** Counts lyrics requests, so only the latest answer is shown. */
+    private var lyricsRequest = 0
 
     /** What the backend holds: always the current item of `kind`'s queue. */
     private data class Loaded(val kind: Kind, val index: Int, val id: String)
@@ -242,10 +261,10 @@ class PlayerEngine(
             is WebMessage.Stop -> stop(m.kind)
             is WebMessage.SetPrefs -> prefs = m.prefs
             is WebMessage.SetModes -> setModes(m.shuffle, m.repeat)
-            is WebMessage.SleepTimer -> {}
+            is WebMessage.SleepTimer -> sleepTimer(m.request)
             WebMessage.PauseForWeb -> pause()
             is WebMessage.FlushEvents -> flushEvents(m.id)
-            is WebMessage.LyricsChanged -> {}
+            is WebMessage.LyricsChanged -> if (lyricsId == m.trackId) requestLyrics(m.trackId)
             is WebMessage.Auth, is WebMessage.FavoriteChanged, WebMessage.OpenSettings -> {}
         }
     }
@@ -348,6 +367,7 @@ class PlayerEngine(
     fun play() {
         val q = queue(active)
         if (q.current == null) return
+        catchUpSleep(playing = false)
         pausedBySystem = false
         if (loaded?.kind == active) {
             willStartPlayback?.invoke()
@@ -579,9 +599,11 @@ class PlayerEngine(
         tasks.cancelAll(); sync.cancel()
         refillTimer?.cancel(); refillTimer = null; refillWanted = false
         cancelRetry(); disarmStall(); stoppedOffline = false
+        clearSleep()
         backend.stop()
         loaded = null; listen = null; playing = false; buffering = false; error = null; pausedBySystem = false
         lyricsId = null; preloadedNext = null
+        carLyrics = null; lyricsRetry = null; lyricsInFlight = null
         music = PlaybackQueue.empty; episodes = PlaybackQueue.empty; active = Kind.track
         failedAt.clear(); consecutiveFailures = 0; refilling = false; refillExhausted = false
         modes = PlayModes(); substitutes = mutableListOf()
@@ -717,6 +739,100 @@ class PlayerEngine(
         if (loaded?.kind == Kind.track) loaded = loaded?.copy(index = index)
     }
 
+    // MARK: - Sleep timer
+
+    /** `sleepTimer`: one timer at a time, so a new choice replaces the one set (and undoes its fade). */
+    fun sleepTimer(r: SleepRequest) {
+        clearSleep(preloadAgain = r != SleepRequest.EndOfTrack)
+        when (r) {
+            SleepRequest.Cancel -> {}
+            is SleepRequest.Minutes -> {
+                val s = r.minutes * 60.0
+                sleep = Sleep.At(clock.now().plusMillis((s * 1000).toLong()))
+                sleepJobs = listOf(scheduler.after(maxOf(0.0, s - SLEEP_FADE_S)) { startSleepFade() })
+            }
+            SleepRequest.EndOfTrack -> {
+                sleep = Sleep.EndOfTrack
+                loaded?.let { preloadNext(it.kind) }           // nothing next: the player stops at the end
+            }
+        }
+        emitStates()
+    }
+
+    /** The minutes timer's last 10 s: the volume steps down to 0, then playback pauses. */
+    private fun startSleepFade() {
+        if (sleepFading) return
+        sleepJobs.forEach { it.cancel() }
+        sleepFading = true
+        val steps = SleepTimer.fadeSteps()
+        sleepJobs = steps.mapIndexed { n, (delay, level) ->
+            scheduler.after(delay) {
+                setFade(level)
+                if (n == steps.size - 1) sleepEnded()
+            }
+        }
+    }
+
+    /** The deadline: paused (it stays paused if it already was), the volume back for the next play. */
+    private fun sleepEnded() {
+        sleepJobs = emptyList(); sleepFading = false
+        pause()
+        setFade(1f)
+        sleep = null
+        emitStates()
+    }
+
+    /** No timer: its jobs cancelled, the volume back, and the next item preloaded again after an end-of-track one. */
+    private fun clearSleep(preloadAgain: Boolean = true) {
+        val wasEndOfTrack = sleep == Sleep.EndOfTrack
+        sleepJobs.forEach { it.cancel() }
+        sleepJobs = emptyList(); sleepFading = false
+        sleep = null
+        if (fadeLevel != 1f) setFade(1f)
+        if (wasEndOfTrack && preloadAgain) loaded?.let { preloadNext(it.kind) }
+    }
+
+    /**
+     * The scheduler's clock may stop while the phone sleeps (paused, screen off), so its job can come late; the
+     * deadline is wall time. Past the fade's start, the fade starts now. Past the deadline itself before a play,
+     * the timer is over: it would have paused a player that was paused anyway, and the play goes on.
+     */
+    private fun catchUpSleep(playing: Boolean) {
+        val s = sleep as? Sleep.At ?: return
+        if (sleepFading) return
+        val t = clock.now()
+        if (!t.isBefore(s.deadline) && !playing) {
+            clearSleep()
+            emitStates()
+        } else if (!t.isBefore(s.deadline.minusMillis((SLEEP_FADE_S * 1000).toLong()))) {
+            startSleepFade()
+        }
+    }
+
+    private fun setFade(level: Float) {
+        fadeLevel = level
+        backend.setMasterVolume(level)
+    }
+
+    /** "End of this track": the volume follows what is left of the item in its last 10 s. */
+    private fun fadeTowardsTheEnd(positionMs: Long) {
+        if (sleep != Sleep.EndOfTrack) return
+        val d = backend.durationMs ?: current?.durationMs ?: return
+        if (d <= 0) return
+        val level = SleepTimer.endOfTrackLevel(d, positionMs)
+        if (level != fadeLevel) setFade(level)
+    }
+
+    /** What the state says is left: to the deadline, or of the item playing; null with no timer. */
+    private fun sleepRemainingMs(): Long? = when (val s = sleep) {
+        null -> null
+        is Sleep.At -> SleepTimer.remainingMs(s.deadline, clock.now())
+        Sleep.EndOfTrack -> {
+            val d = (if (loaded?.kind == active) backend.durationMs else null) ?: current?.durationMs ?: 0L
+            maxOf(0L, d - position(active))
+        }
+    }
+
     // MARK: - Loudness
 
     /**
@@ -775,14 +891,18 @@ class PlayerEngine(
             if (d in 1L..1999L) l.seconds += d / 1000.0
             l.lastMs = positionMs
         }
+        fadeTowardsTheEnd(positionMs)
+        catchUpSleep(playing = true)
         emitState(active)
         periodic()
+        retryLyricsIfDue()
     }
 
     override fun backendFinished(generation: Int) {
         if (!isCurrent(generation)) return
         val l = loaded ?: return
         cancelRetry(); disarmStall()
+        if (sleep == Sleep.EndOfTrack) return sleepAtTheEnd(l)
         if (l.kind == Kind.track) {
             finishListen(ListenEnd.ended)
             consecutiveFailures = 0
@@ -806,6 +926,27 @@ class PlayerEngine(
             }
             emitState(Kind.episode); persist()
         }
+    }
+
+    /**
+     * "End of this track" reached: music moves on to the next track, loaded but paused (repeat one gives way);
+     * an episode stays where it ended. Then the timer is off and the volume back for the next play.
+     */
+    private fun sleepAtTheEnd(l: Loaded) {
+        sleep = null; sleepJobs = emptyList()
+        if (l.kind == Kind.track) {
+            finishListen(ListenEnd.ended)
+            consecutiveFailures = 0
+            dropSubstitutes()
+            advanceMusic(user = false, autoplay = false)
+        } else {
+            sendProgress(l.id, 0, played = true, emit = true)
+            loaded = null; playing = false; buffering = false
+            modify(Kind.episode) { it.copy(positionMs = 0) }
+            persist()
+        }
+        setFade(1f)
+        emitStates()
     }
 
     /** `network`: the failure is the network's (the parameter keeps the interface's name; the status is [NetworkStatus]). */
@@ -989,6 +1130,7 @@ class PlayerEngine(
         preloadedNext = null
         val item = queue(k).current ?: return
         val trackId = item.trackId
+        if (trackId != null) fetchLyrics(trackId) else { lyricsId = null; carLyrics = null; lyricsRetry = null }
         val same = preloaded?.takeIf { it.kind == k && it.id == item.id }?.source
         val src = same ?: mediaSource(item)
         if (src == null) {
@@ -1010,6 +1152,7 @@ class PlayerEngine(
         if (k == Kind.episode) lastProgress = clock.now()
         knownMs = startMs
         loadGeneration += 1
+        if (sleep == Sleep.EndOfTrack && fadeLevel != 1f) setFade(1f)    // the timer goes on with this item, from full volume
         if (autoplay) willStartPlayback?.invoke()
         backend.load(src, startMs, autoplay, if (k == Kind.episode) rate.toFloat() else 1f, Gain.factor(item, prefs.loudness), loadGeneration)
         preloadNext(k)
@@ -1022,6 +1165,11 @@ class PlayerEngine(
      * "End of this track" armed: nothing, so the player stops at the end instead of running into the next.
      */
     private fun preloadNext(k: Kind) {
+        if (sleep == Sleep.EndOfTrack) {
+            preloadedNext = null
+            backend.preload(null, 1f)
+            return
+        }
         val q = queue(k)
         val usable = { i: Item -> k == Kind.episode || (!isFailed(i) && (network.isOnline || isLocal(i))) }
         var next = q.upcoming.firstOrNull(usable)
@@ -1327,7 +1475,86 @@ class PlayerEngine(
             positionMs = position(k), durationMs = duration, buffering = isActive && buffering,
             error = if (isActive) error else null, rate = if (k == Kind.episode) rate else 1.0,
             shuffle = k == Kind.track && modes.shuffle, repeat = if (k == Kind.track) modes.repeatMode else RepeatMode.off,
-            sleepRemainingMs = null))
+            sleepRemainingMs = sleepRemainingMs()))
+        if (isActive) refreshNowPlaying()
+    }
+
+    // MARK: - Now playing and car lyrics
+
+    /**
+     * Writes now playing when what it shows changed: the item, playing or not (buffering counts as not, so the
+     * lock screen's clock does not run ahead), the rate, the duration or the car-lyrics line; and after a seek.
+     * Ticks only get here, so a line change is one write, not one every half second.
+     */
+    private fun refreshNowPlaying() {
+        val np = nowPlaying ?: return
+        val force = forceNowPlaying
+        forceNowPlaying = false
+        val item = queue(active).current
+        if (item == null) {
+            if (nowPlayingKey != null) { nowPlayingKey = null; np.clear() }
+            return
+        }
+        val pos = position(active)
+        val line = if (active == Kind.track && prefs.carLyrics && lyricsId == item.trackId) carLyrics?.line(pos) else null
+        val r = if (active == Kind.episode) rate else 1.0
+        val duration = if (loaded?.kind == active) backend.durationMs else null
+        val key = NowPlayingKey(item.kind, item.id, item.title, item.artist, item.album, playing && !buffering, r, duration, line)
+        if (!force && key == nowPlayingKey) return
+        nowPlayingKey = key
+        np.show(item, pos, duration, r, key.playing, line)
+    }
+
+    /**
+     * The car-lyrics lines for a track that is being loaded (once per track: a retry keeps them). An answer,
+     * found or not, is kept; a fetch that threw (offline) leaves the song title and is asked again while the
+     * track plays, after 30 s, then 60 s, … up to 10 minutes ([retryLyricsIfDue], on ticks).
+     */
+    private fun fetchLyrics(id: Long) {
+        if (nowPlaying == null || !prefs.carLyrics) { lyricsId = null; carLyrics = null; lyricsRetry = null; return }
+        if (lyricsId == id) return
+        lyricsId = id; carLyrics = null; lyricsRetry = null
+        // A cached track's lyrics are on the phone: they show at once, offline too. Online, fresh ones are asked
+        // as well, since an offset set since the download (here or on another device) must reach the car.
+        val doc = cache.cachedLyrics(id)
+        if (doc != null) {
+            carLyrics = CarLyrics.of(doc)
+            if (network.isOnline) requestLyrics(id)
+            return
+        }
+        requestLyrics(id)
+    }
+
+    private fun requestLyrics(id: Long) {
+        // Offline: asked on the first tick back online ([retryLyricsIfDue]), not tried now.
+        if (!network.isOnline) { lyricsRetry = LyricsRetry(clock.now(), LYRICS_RETRY_S); return }
+        val e = epoch
+        lyricsInFlight = id
+        lyricsRequest += 1
+        val request = lyricsRequest
+        tasks.run {
+            val doc = try { api.lyrics(id) } catch (ex: CancellationException) { throw ex } catch (_: Exception) { null }
+            if (lyricsInFlight == id) lyricsInFlight = null
+            if (doc != null) cache.updateLyrics(id, doc)
+            // Only the latest request counts: an older answer may predate a change the web just saved.
+            if (epoch != e || lyricsId != id || lyricsRequest != request) return@run
+            if (doc != null) {
+                carLyrics = CarLyrics.of(doc)
+                lyricsRetry = null
+            } else {
+                val wait = lyricsRetry?.nextWait ?: LYRICS_RETRY_S
+                lyricsRetry = LyricsRetry(clock.now().plusMillis((wait * 1000).toLong()), minOf(wait * 2, LYRICS_RETRY_MAX_S))
+            }
+            refreshNowPlaying()
+        }
+    }
+
+    private fun retryLyricsIfDue() {
+        if (!network.isOnline || lyricsInFlight != null || !prefs.carLyrics || nowPlaying == null) return
+        val r = lyricsRetry ?: return
+        val id = lyricsId ?: return
+        if (clock.now().isBefore(r.at) || loaded?.kind != Kind.track || music.current?.trackId != id) return
+        requestLyrics(id)
     }
 
     companion object {
