@@ -32,8 +32,9 @@ type Result struct {
 	OffsetMS int `json:"offset_ms"`
 }
 
-// MaxOffsetMS bounds a lyrics offset either way.
-const MaxOffsetMS = 30000
+// MaxOffsetMS bounds a lyrics offset either way: 5 minutes, room for a long
+// intro or lyrics timed for another version of the song.
+const MaxOffsetMS = 300000
 
 // Stored is one stored candidate, as the admin picker lists it.
 type Stored struct {

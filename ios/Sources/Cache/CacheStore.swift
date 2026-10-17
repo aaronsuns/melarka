@@ -431,7 +431,17 @@ actor AsyncSemaphore {
         } catch {
             return
         }
-        guard epoch == ep, !closed, entries[id] != nil else { return }
+        guard epoch == ep else { return }
+        writeLyrics(id, data)
+    }
+
+    func updateLyrics(trackID id: Int, _ doc: LyricsDoc) {
+        writeLyrics(id, doc.found ? (try? JSONEncoder().encode(doc)) ?? Data() : Data())
+    }
+
+    /// `data` empty: the "none" marker, dated now.
+    private func writeLyrics(_ id: Int, _ data: Data) {
+        guard !closed, entries[id] != nil else { return }
         do {
             try fm.createDirectory(at: lyricsDir, withIntermediateDirectories: true)
             excludeFromBackup(lyricsDir)
@@ -536,4 +546,5 @@ actor AsyncSemaphore {
     func cachedFavorites() -> [(Track, JSONValue)] { store?.cachedFavorites() ?? [] }
     func prefetch(_ items: [Item]) { store?.prefetch(items) }
     func cachedLyrics(trackID: Int) -> LyricsDoc? { store?.cachedLyrics(trackID: trackID) }
+    func updateLyrics(trackID: Int, _ doc: LyricsDoc) { store?.updateLyrics(trackID: trackID, doc) }
 }

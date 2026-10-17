@@ -46,7 +46,7 @@ func (s *Server) lyricsFail(w http.ResponseWriter, err error) {
 
 // setLyricsOffset takes {"offset_ms": n, "lyrics_id"?: id}: the selected
 // lyrics show n ms later (negative: earlier) for everyone, clamped to
-// ±30000. 204; 409 lyrics_changed when lyrics_id is no longer the selected
+// ±300000. 204; 409 lyrics_changed when lyrics_id is no longer the selected
 // one, no_lyrics when nothing is selected.
 func (s *Server) setLyricsOffset(w http.ResponseWriter, r *http.Request) {
 	id, ok := s.withID(w, r)

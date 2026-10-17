@@ -82,5 +82,5 @@ export function formatOffset(ms: number): string {
   return ms > 0 ? `+${s}s` : ms < 0 ? `\u2212${s}s` : `${s}s`;
 }
 
-export const MAX_OFFSET_MS = 30000;
+export const MAX_OFFSET_MS = 300000; // as the server: 5 minutes either way
 export const clampOffset = (ms: number) => Math.max(-MAX_OFFSET_MS, Math.min(MAX_OFFSET_MS, ms));

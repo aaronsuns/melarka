@@ -49,6 +49,7 @@ export type ToNative =
   | { type: "auth"; signedIn: boolean; userId?: number }
   | { type: "pauseForWeb" }
   | { type: "favoriteChanged"; trackId: number; on: boolean }
+  | { type: "lyricsChanged"; trackId: number }
   | { type: "flushEvents"; id: string }
   | { type: "openSettings" }
   | { type: "setModes"; shuffle: boolean; repeat: RepeatMode }

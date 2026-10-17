@@ -197,6 +197,8 @@ func lyricsDoc(lines: [(Int, String)] = [(0, "x")], offset: Int? = nil, synced: 
     func prefetch(_ items: [Item]) { prefetched.append(items.compactMap(\.trackID)) }
     var lyrics: [Int: LyricsDoc] = [:]
     func cachedLyrics(trackID: Int) -> LyricsDoc? { lyrics[trackID] }
+    var updatedLyrics: [(Int, LyricsDoc)] = []
+    func updateLyrics(trackID: Int, _ doc: LyricsDoc) { updatedLyrics.append((trackID, doc)) }
 }
 
 @MainActor final class FakeNetwork: NetworkStatus {

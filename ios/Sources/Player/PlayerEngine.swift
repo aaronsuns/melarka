@@ -141,6 +141,8 @@ import os
     /// The lyrics fetch for `lyricsID` threw: when to ask again, and the wait after the next failure.
     private var lyricsRetry: (at: Date, nextWait: Double)?
     private var lyricsInFlight: Int?
+    /// Counts lyrics requests, so only the latest answer is shown.
+    private var lyricsRequest = 0
 
     /// What the backend holds: always the current item of `kind`'s queue.
     private struct Loaded { let kind: Item.Kind; var index: Int; let id: String }
@@ -230,6 +232,7 @@ import os
         case .sleepTimer(let r): sleepTimer(r)
         case .pauseForWeb: pause()
         case .flushEvents(let id): flushEvents(id)
+        case .lyricsChanged(let id): if lyricsID == id { requestLyrics(id) }
         case .auth, .favoriteChanged, .openSettings: break
         }
     }
@@ -1441,8 +1444,13 @@ import os
         guard nowPlaying != nil, prefs.carLyrics else { lyricsID = nil; carLyrics = nil; lyricsRetry = nil; return }
         guard lyricsID != id else { return }
         lyricsID = id; carLyrics = nil; lyricsRetry = nil
-        // A cached track's lyrics are on the phone: no request, and they show offline too.
-        if let doc = cache.cachedLyrics(trackID: id) { carLyrics = CarLyrics(doc); return }
+        // A cached track's lyrics are on the phone: they show at once, offline too. Online, fresh ones are asked
+        // as well, since an offset set since the download (here or on another device) must reach the car.
+        if let doc = cache.cachedLyrics(trackID: id) {
+            carLyrics = CarLyrics(doc)
+            if network.isOnline { requestLyrics(id) }
+            return
+        }
         requestLyrics(id)
     }
 
@@ -1451,12 +1459,16 @@ import os
         guard network.isOnline else { lyricsRetry = (now(), Self.lyricsRetryS); return }
         let e = epoch
         lyricsInFlight = id
+        lyricsRequest += 1
+        let request = lyricsRequest
         tasks.run { [weak self, api] in
             let result: Result<LyricsDoc, Error>
             do { result = .success(try await api.lyrics(id)) } catch { result = .failure(error) }
             guard let self else { return }
             if self.lyricsInFlight == id { self.lyricsInFlight = nil }
-            guard self.epoch == e, self.lyricsID == id else { return }
+            if case .success(let doc) = result { self.cache.updateLyrics(trackID: id, doc) }
+            // Only the latest request counts: an older answer may predate a change the web just saved.
+            guard self.epoch == e, self.lyricsID == id, self.lyricsRequest == request else { return }
             switch result {
             case .success(let doc):
                 self.carLyrics = CarLyrics(doc)

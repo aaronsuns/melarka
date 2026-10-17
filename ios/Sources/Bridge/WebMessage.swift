@@ -19,6 +19,7 @@ enum SleepRequest: Equatable { case minutes(Int), endOfTrack, cancel }
 /// - `seek {kind, ms}`, `skip {kind, ms}` (ms may be negative), `setRate {rate}`
 /// - `setPrefs {quality, carLyrics, loudness?}` (`loudness` absent: on), `auth {signedIn, userId?}`, `pauseForWeb`
 /// - `favoriteChanged {trackId, on}`, `flushEvents {id}`, `openSettings`
+/// - `lyricsChanged {trackId}`: the server now has other lyrics or another offset for the track (saved already)
 /// - `setModes {shuffle, repeat}` (`repeat`: "off" | "all" | "one"; music only)
 /// - `sleepTimer {minutes}` | `sleepTimer {endOfTrack: true}` | `sleepTimer {cancel: true}` (music and episodes)
 /// Unknown fields are ignored. `auth` never carries the token: native reads it from the HttpOnly cookie.
@@ -32,6 +33,7 @@ enum WebMessage: Equatable {
     case auth(signedIn: Bool, userId: Int?)
     case pauseForWeb
     case favoriteChanged(trackId: Int, on: Bool)
+    case lyricsChanged(trackId: Int)
     case flushEvents(id: String)
     case openSettings
     case setModes(shuffle: Bool, repeatMode: RepeatMode)
@@ -91,6 +93,7 @@ enum WebMessage: Equatable {
             case "pauseForWeb": message = .pauseForWeb
             case "favoriteChanged":
                 message = .favoriteChanged(trackId: try c.decode(Int.self, forKey: .trackId), on: try c.decode(Bool.self, forKey: .on))
+            case "lyricsChanged": message = .lyricsChanged(trackId: try c.decode(Int.self, forKey: .trackId))
             case "flushEvents": message = .flushEvents(id: try c.decode(String.self, forKey: .id))
             case "openSettings": message = .openSettings
             case "setModes":

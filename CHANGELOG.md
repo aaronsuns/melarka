@@ -8,6 +8,27 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+### Added
+
+- **One-command install**: `deploy/install.sh` sets up and starts Melarka with Docker Compose
+  and prints how to sign in; running it again upgrades. The music folder is optional (without
+  one, songs go in `music/` in the install directory). `.env` can now pin the release
+  (`MELARKA_VERSION`, otherwise `latest`), open Melarka to the home network (`MELARKA_BIND`) and
+  move the port (`MELARKA_PORT`).
+
+### Changed
+
+- **Lyrics can be shifted by up to 5 minutes** either way (was 30 seconds), for songs with a long
+  intro or lyrics timed for another version.
+
+### Fixed
+
+- **Car lyrics follow an alignment at once**: shifting or aligning lyrics, or switching to other
+  lyrics, in the iPhone app now moves the line shown in the car and on the lock screen too.
+  Before, the car kept the old timing until the song was played again, and for cached songs it
+  kept it for good. Cached songs also pick up changes made on another device the next time they
+  play online.
+
 ## [0.2.2] - 2026-10-16
 
 ### Added

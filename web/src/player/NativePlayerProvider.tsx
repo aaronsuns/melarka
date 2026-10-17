@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, onFavoriteSet } from "../api/client";
+import { api, onFavoriteSet, onLyricsChanged } from "../api/client";
 import type { Quality, Track } from "../api/types";
 import { t } from "../i18n/i18n";
 import { nativePost, onNative, type NativeState } from "../native/bridge";
@@ -188,6 +188,7 @@ export function NativePlayerProvider({ children, onOpen, carLyrics = true, loudn
   }, [quality, carLyrics, loudness]);
   // Native's favorites cache follows every toggle.
   useEffect(() => onFavoriteSet((trackId, on) => nativePost({ type: "favoriteChanged", trackId, on })), []);
+  useEffect(() => onLyricsChanged((trackId) => nativePost({ type: "lyricsChanged", trackId })), []);
   // A preview or a video taking the session pauses native (an episode is
   // native's own: it switched itself).
   useEffect(

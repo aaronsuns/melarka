@@ -40,6 +40,20 @@ final class CacheLyricsTests: CacheTestCase {
         XCTAssertTrue(api.lyricsCalls.isEmpty)
     }
 
+    /// A fresh answer (an offset changed) replaces the kept lyrics of a cached track; an uncached one keeps none.
+    func testUpdateLyricsReplacesTheKeptCopy() async throws {
+        api.lyricsAnswers[1] = lyricsDoc(offset: 300)
+        try put(1, bytes: 10, fav: true, at: t0)
+        await cache.cacheLyrics(trackID: 1)
+        cache.updateLyrics(trackID: 1, lyricsDoc(offset: 4500))
+        XCTAssertEqual(cache.cachedLyrics(trackID: 1)?.offset_ms, 4500)
+        cache.updateLyrics(trackID: 1, lyricsDoc(found: false))     // lyrics gone: kept as "none"
+        XCTAssertNil(cache.cachedLyrics(trackID: 1))
+        XCTAssertEqual(cache.missingLyrics([1]), [])
+        cache.updateLyrics(trackID: 2, lyricsDoc())
+        XCTAssertNil(cache.cachedLyrics(trackID: 2))
+    }
+
     func testTheLyricsGoWithTheirTrack() async throws {
         api.lyricsAnswers[1] = lyricsDoc()
         try put(1, bytes: 10, fav: false, at: t0)
