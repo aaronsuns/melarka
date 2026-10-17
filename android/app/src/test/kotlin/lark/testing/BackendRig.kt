@@ -1,6 +1,7 @@
 package lark.testing
 
 import android.content.Context
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
@@ -95,6 +96,7 @@ class BackendRig(context: Context, val scheduler: FakeScheduler = FakeScheduler(
     val backend: Media3Backend = Media3Backend(scheduler, http) { gain ->
         TestExoPlayerBuilder(context).setRenderersFactory(LarkRenderersFactory(context, gain, listOf(capture)) { if (backedUp) BackedUpSink(it) else it }).build().also {
             player = it
+            it.setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
             it.addAnalyticsListener(object : AnalyticsListener {
                 override fun onAudioEnabled(eventTime: AnalyticsListener.EventTime, decoderCounters: DecoderCounters) { audioEnabled++ }
             })
@@ -103,5 +105,5 @@ class BackendRig(context: Context, val scheduler: FakeScheduler = FakeScheduler(
 
     fun waitUntil(condition: () -> Boolean) = RobolectricUtil.runMainLooperUntil { condition() }
 
-    fun release() { backend.stop(); player.release() }
+    fun release() = backend.release()
 }

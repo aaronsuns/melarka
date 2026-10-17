@@ -57,24 +57,43 @@ private class LarkAudioRenderer(
     handler: Handler, listener: AudioRendererEventListener, sink: AudioSink,
     private val gain: GainProcessor,
 ) : MediaCodecAudioRenderer(context, adapterFactory, selector, fallback, handler, listener, sink) {
-    /** Stream offset -> the stream's cell, for the streams handed over and not yet output. Offsets are unique per item. */
-    private val cells = LinkedHashMap<Long, GainCell?>()
+    private val cells = StreamCells(gain)
 
     override fun onStreamChanged(formats: Array<Format>, startPositionUs: Long, offsetUs: Long, mediaPeriodId: MediaSource.MediaPeriodId) {
         // Before super: the first stream is made the output stream right there, which asks for its cell.
-        cells[offsetUs] = cellOf(getTimeline(), mediaPeriodId)
-        while (cells.size > 8) cells.remove(cells.keys.first())
+        cells.handedOver(offsetUs, cellOf(getTimeline(), mediaPeriodId))
         super.onStreamChanged(formats, startPositionUs, offsetUs, mediaPeriodId)
     }
 
     override fun onOutputStreamOffsetUsChanged(outputStreamOffsetUs: Long) {
         super.onOutputStreamOffsetUsChanged(outputStreamOffsetUs)
-        gain.use(cells[outputStreamOffsetUs])
+        cells.reached(outputStreamOffsetUs)
     }
 
     private fun cellOf(timeline: Timeline, id: MediaSource.MediaPeriodId): GainCell? {
         if (timeline.isEmpty || timeline.getIndexOfPeriod(id.periodUid) < 0) return null
         val window = timeline.getWindow(timeline.getPeriodByUid(id.periodUid, Timeline.Period()).windowIndex, Timeline.Window())
         return window.mediaItem.localConfiguration?.tag as? GainCell
+    }
+}
+
+/**
+ * Stream offset -> the stream's cell, for the streams handed to the renderer and not yet output (offsets are unique per
+ * item). A stream whose cell could not be found keeps the previous cell, never full volume, and is counted in
+ * [GainProcessor.cellMisses] (a smoke test asserts zero).
+ */
+@UnstableApi
+internal class StreamCells(private val gain: GainProcessor) {
+    private val cells = LinkedHashMap<Long, GainCell?>()
+    val misses: Int get() = gain.cellMisses.get()
+
+    fun handedOver(offsetUs: Long, cell: GainCell?) {
+        cells[offsetUs] = cell
+        while (cells.size > 8) cells.remove(cells.keys.first())
+    }
+
+    fun reached(offsetUs: Long) {
+        val cell = cells[offsetUs]
+        if (cell == null) gain.cellMisses.incrementAndGet() else gain.use(cell)
     }
 }

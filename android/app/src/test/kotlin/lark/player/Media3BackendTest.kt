@@ -1,7 +1,11 @@
 package lark.player
 
 import android.net.Uri
+import android.media.AudioManager
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.datasource.HttpDataSource
+import org.robolectric.Shadows.shadowOf
 import androidx.media3.datasource.DataSpec
 import androidx.test.core.app.ApplicationProvider
 import lark.testing.BackendRig
@@ -15,6 +19,7 @@ import okio.Buffer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -51,11 +56,16 @@ class Media3BackendTest {
 
     @Test fun playsGeneratedFileToTheEnd() {
         load(tone(1.0), 1)
-        rig.waitUntil { d.started && d.finished }
+        rig.waitUntil { d.started }
+        rig.scheduler.advance(0.5)                        // the tick timer is the scheduler's
+        assertTrue(d.ticks.toString(), d.ticks.isNotEmpty() && d.ticks.all { it.second == 1 })
+        rig.waitUntil { d.finished }
         assertTrue(d.events.toString(), d.has("started:1"))
         assertTrue(d.events.toString(), d.has("finished:1"))
         assertFalse(d.events.toString(), d.events.any { it.startsWith("paused:") || it.startsWith("failed:") })
-        rig.scheduler.advance(0.5)                        // the tick timer is the scheduler's
+        val n = d.ticks.size
+        rig.scheduler.advance(1.0)
+        assertEquals("no ticks once the item has ended", n, d.ticks.size)
     }
 
     @Test fun missingFileReportsFailureNotNetwork() {
@@ -319,12 +329,13 @@ class Media3BackendTest {
         assertEquals(1, rig.audioEnabled)
         // 8000 (item one, unchanged), then 4000 (item two at its 0.25): never 16000 (unattenuated), never 2000 (tail attenuated).
         assertEquals(listOf(8000, 4000), rig.capture.steps())
+        assertEquals("every stream's item was found", 0, backend.gainMisses)
     }
 
     /**
-     * The same with a sink that is full: the renderer still holds the last buffers of item one when item two's stream
-     * is handed to it, so a factor switched when the stream arrives (rather than when the output reaches it) would
-     * attenuate item one's tail.
+     * The same with a sink that refuses each buffer a few times, as a full AudioTrack does. A regression check on the
+     * levels only: in Robolectric a WAV runs in bypass, so this does not prove that the factor is switched when the
+     * output reaches the item (a switch at stream input would pass too). That is checked on a device (Task 14).
      */
     @Test fun theGainChangesAtTheItemBoundaryEvenWhenTheSinkIsBackedUp() {
         backedUpRig()
@@ -353,6 +364,11 @@ class Media3BackendTest {
     @Test fun unityPlaysAtOnce() {
         load(tone(2.0), 1)
         assertTrue(player.playWhenReady)
+        assertEquals(1, player.mediaItemCount)
+        assertEquals(1f, cell(0).factor, 0f)
+        assertNotEquals(Player.STATE_IDLE, player.playbackState)      // prepared, nothing held back
+        rig.waitUntil { d.started }
+        assertEquals(listOf("buffering:true:1", "started:1"), d.events)
     }
 
     /** The loudness switch changes the preloaded item in place: the same item, nothing preloaded again. */
@@ -374,6 +390,83 @@ class Media3BackendTest {
         assertEquals(0.3f, player.volume, 0.0001f)
         backend.setMasterVolume(2f)                                  // clamped
         assertEquals(1f, player.volume, 0f)
-        assertNull(player.currentMediaItem?.localConfiguration?.tag.takeIf { it !is GainCell })
+    }
+
+    // -- interruptions
+
+    /** The listener ExoPlayer's audio focus manager registered with the (shadow) AudioManager: what the system calls on a focus change. */
+    private fun focusListener(context: android.content.Context): AudioManager.OnAudioFocusChangeListener {
+        val request = shadowOf(context.getSystemService(AudioManager::class.java)).lastAudioFocusRequest
+        val field = generateSequence<Class<*>>(request.javaClass) { it.superclass }
+            .flatMap { it.declaredFields.asSequence() }.first { AudioManager.OnAudioFocusChangeListener::class.java.isAssignableFrom(it.type) }
+        field.isAccessible = true
+        return field.get(request) as AudioManager.OnAudioFocusChangeListener
+    }
+
+    /** A phone call: ExoPlayer keeps playWhenReady and suppresses playback, so the pause is reported from the suppression reason and the system's resume is a start. */
+    @Test fun aTransientFocusLossIsReportedAsAPauseAndTheResumeAsAStart() {
+        load(tone(10.0), 1)
+        rig.waitUntil { d.started }
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val focus = focusListener(context)
+        focus.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+        rig.waitUntil { d.has("paused:1") }
+        assertEquals(1, d.events.count { it == "paused:1" })
+        assertTrue("ExoPlayer resumes by itself, so the backend still wants playback", player.playWhenReady)
+        assertFalse(backend.isPlaying)
+        focus.onAudioFocusChange(AudioManager.AUDIOFOCUS_GAIN)
+        rig.waitUntil { d.events.count { it == "started:1" } == 2 }
+        assertEquals(1, d.events.count { it == "paused:1" })
+    }
+
+    /** A pause the engine asked for during a focus loss is not reported again, and nothing is reported while it is not wanted. */
+    @Test fun aFocusLossWhileTheEngineHasPausedReportsNothing() {
+        load(tone(10.0), 1)
+        rig.waitUntil { d.started }
+        backend.pause()
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        focusListener(context)
+            .onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+        rig.waitUntil { player.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS || !player.playWhenReady }
+        assertFalse(d.events.toString(), d.events.any { it.startsWith("paused:") })
+    }
+
+    // -- what counts as a network failure
+
+    private fun failure(cause: Throwable, code: Int = PlaybackException.ERROR_CODE_IO_UNSPECIFIED) = PlaybackException("x", cause, code)
+    private val spec = DataSpec(Uri.parse("https://lark.test/x"))
+
+    @Test fun anyDroppedConnectionInTheChainIsANetworkFailure() {
+        // A drop in the middle of a read, a reset stream, an EOF: HttpDataSourceException anywhere in the chain.
+        val read = HttpDataSource.HttpDataSourceException(java.io.EOFException("eof"), spec, PlaybackException.ERROR_CODE_IO_UNSPECIFIED, HttpDataSource.HttpDataSourceException.TYPE_READ)
+        assertTrue(Media3Backend.isNetworkError(failure(read)))
+        assertTrue(Media3Backend.isNetworkError(failure(RuntimeException("wrapped", read))))
+        assertTrue(Media3Backend.isNetworkError(failure(java.net.SocketException("reset"))))
+        assertTrue(Media3Backend.isNetworkError(failure(java.net.UnknownHostException("h"))))
+        assertTrue(Media3Backend.isNetworkError(failure(java.io.IOException("x"), PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT)))
+    }
+
+    @Test fun aServerStatusACleartextRefusalAndOtherErrorsAreNotNetworkFailures() {
+        val status = HttpDataSource.InvalidResponseCodeException(404, "Not Found", null, emptyMap(), spec, ByteArray(0))
+        assertFalse(Media3Backend.isNetworkError(failure(status, PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS)))
+        val cleartext = HttpDataSource.CleartextNotPermittedException(java.io.IOException("c"), spec)
+        assertFalse(Media3Backend.isNetworkError(failure(cleartext, PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED)))
+        assertFalse(Media3Backend.isNetworkError(failure(java.io.FileNotFoundException("f"), PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND)))
+        assertFalse(Media3Backend.isNetworkError(failure(androidx.media3.common.ParserException.createForMalformedContainer("m", null), PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED)))
+    }
+
+    // -- release
+
+    @Test fun releaseDropsTheDelegateAndAPendingAdoptReport() {
+        val a = tone(1.0); val c = tone(3.0)
+        d.onFinished = { g -> if (g == 1) load(c, 2) }
+        load(a, 1)
+        backend.preload(c, 1f)
+        rig.waitUntil { d.has("finished:1") }
+        val before = d.events.toList()
+        rig.release()                                  // the adopt's "started" post is still queued
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertNull(backend.delegate)
+        assertEquals(before, d.events)
     }
 }

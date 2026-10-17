@@ -94,3 +94,39 @@ class GainTest {
 }
 
 private fun ByteBuffer.flipped(): ByteBuffer { flip(); return this }
+
+/** The renderer's bookkeeping: which cell the processor uses, and what a failed lookup does. */
+class StreamCellsTest {
+    private fun processor(): GainProcessor {
+        val p = GainProcessor()
+        p.configure(AudioProcessor.AudioFormat(44_100, 1, C.ENCODING_PCM_16BIT))
+        p.flush(AudioProcessor.StreamMetadata.DEFAULT)
+        return p
+    }
+
+    private fun level(p: GainProcessor): Int {
+        p.queueInput(ByteBuffer.allocate(2).order(ByteOrder.nativeOrder()).putShort(10000).flipped())
+        return p.output.order(ByteOrder.nativeOrder()).short.toInt()
+    }
+
+    @Test fun aStreamsCellIsUsedWhenTheOutputReachesItNotWhenItIsHandedOver() {
+        val p = processor(); val cells = StreamCells(p)
+        cells.handedOver(0, GainCell(1f)); cells.reached(0)
+        cells.handedOver(100, GainCell(0.25f))
+        assertEquals(10000, level(p))                    // still item one's
+        cells.reached(100)
+        assertEquals(2500, level(p))
+    }
+
+    @Test fun aMissedLookupKeepsThePreviousCellAndIsCounted() {
+        val p = processor(); val cells = StreamCells(p)
+        cells.handedOver(0, GainCell(0.5f)); cells.reached(0)
+        assertEquals(0, cells.misses)
+        cells.handedOver(100, null); cells.reached(100)           // no cell found for the next stream
+        assertEquals(5000, level(p))                              // not full volume
+        assertEquals(1, cells.misses)
+        cells.reached(999)                                        // a stream never handed over
+        assertEquals(5000, level(p))
+        assertEquals(2, cells.misses)
+    }
+}

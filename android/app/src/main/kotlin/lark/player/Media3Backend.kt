@@ -14,6 +14,7 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.FileDataSource
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
@@ -33,7 +34,9 @@ import java.net.UnknownHostException
  *
  * - [BackendDelegate.backendTick] comes from a 0.5 s timer on the scheduler while playing.
  * - `isPlaying` is `backendStarted`, a buffering state while the engine wants playback is `backendBuffering`, and a
- *   pause the engine did not ask for (audio focus, headphones unplugged, a media-session controller) is `backendPaused`.
+ *   pause the engine did not ask for is `backendPaused`: headphones unplugged, a permanent focus loss or a media-session
+ *   controller (playWhenReady false), and a transient focus loss, a call (playback suppressed). After the latter ExoPlayer
+ *   resumes by itself, and the engine hears `backendStarted` again.
  * - A failed item reports `network: true` only for a stream and only for a connection-level failure; a file, and a
  *   server that answers with an error status, never.
  * - Gapless: when the player moves to the preloaded item by itself, `backendFinished` tells the engine, whose `load` of
@@ -56,7 +59,11 @@ class Media3Backend(
     override var delegate: BackendDelegate? = null
 
     /** For the media session (Task 8); everything that plays goes through this class. */
-    val player: ExoPlayer = playerFactory(GainProcessor())
+    private val gain = GainProcessor()
+    val player: ExoPlayer = playerFactory(gain)
+
+    /** Streams whose item's gain could not be found (they kept the previous factor). Always 0; a smoke test asserts it. */
+    val gainMisses: Int get() = gain.cellMisses.get()
 
     /** Preloaded items taken over by a `load` (tests). */
     var adoptedPreloads = 0
@@ -99,6 +106,18 @@ class Media3Backend(
                 Player.STATE_ENDED -> ended(slot)
                 else -> {}
             }
+        }
+
+        /**
+         * A phone call or another app's transient claim: ExoPlayer keeps playWhenReady (and resumes by itself when the focus
+         * returns, which is then an `isPlaying` change and so a `backendStarted`), so the pause is told from here.
+         * `wantsPlay` stays true: this is not a pause the engine asked for, and not one that cancels playback.
+         */
+        override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+            if (playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS || !wantsPlay) return
+            val g = current()?.generation ?: return
+            reportedStarted = null
+            delegate?.backendPaused(g)
         }
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -197,6 +216,8 @@ class Media3Backend(
     /** Stops the timer and the player for good (the service's end). */
     fun release() {
         tick.cancel()
+        main.removeCallbacksAndMessages(null)
+        delegate = null
         player.removeListener(listener)
         player.release()
     }
@@ -330,11 +351,18 @@ class Media3Backend(
             is MediaSource.Remote -> OkHttpDataSource.Factory(http).setDefaultRequestProperties(mapOf("Authorization" to "Bearer ${src.token}"))
         }
 
-        /** A connection-level failure: no connection, a timeout, an unknown host. Not a server's error status. */
-        internal fun isNetworkError(e: PlaybackException): Boolean =
-            e.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
-                e.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
-                generateSequence<Throwable>(e) { it.cause }.any { it is UnknownHostException || it is SocketException || it is SocketTimeoutException }
+        /**
+         * A connection-level failure, as an `NSURLErrorDomain` error in iOS's chain: no connection, a timeout, an unknown
+         * host, and any `HttpDataSourceException` in the cause chain (a drop in the middle of a read, a reset stream, an
+         * EOF) except a server's error status and a refused cleartext request, which are the server's or the app's answer.
+         */
+        internal fun isNetworkError(e: PlaybackException): Boolean {
+            if (e.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+                e.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT) return true
+            val chain = generateSequence<Throwable>(e) { it.cause }.toList()
+            if (chain.any { it is HttpDataSource.InvalidResponseCodeException || it is HttpDataSource.CleartextNotPermittedException }) return false
+            return chain.any { it is UnknownHostException || it is SocketException || it is SocketTimeoutException || it is HttpDataSource.HttpDataSourceException }
+        }
 
         private fun MediaSource.uri(): Uri = when (this) {
             is MediaSource.File -> Uri.fromFile(file)

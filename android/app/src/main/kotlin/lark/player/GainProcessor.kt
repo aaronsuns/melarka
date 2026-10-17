@@ -5,6 +5,8 @@ import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
 import androidx.media3.common.util.UnstableApi
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
 
 /**
@@ -28,7 +30,10 @@ class GainCell(factor: Float) {
 class GainProcessor : BaseAudioProcessor() {
     private var cell: GainCell? = null
 
-    /** Playback thread only. `null` (nothing known) means no scaling. */
+    /** Streams whose item could not be found (they kept the previous item's factor). Should stay 0. */
+    val cellMisses = AtomicInteger()
+
+    /** Playback thread only. */
     fun use(cell: GainCell?) { this.cell = cell }
 
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat = when (inputAudioFormat.encoding) {
@@ -39,6 +44,7 @@ class GainProcessor : BaseAudioProcessor() {
     override fun queueInput(inputBuffer: ByteBuffer) {
         val size = inputBuffer.remaining()
         if (size == 0) return
+        inputBuffer.order(ByteOrder.nativeOrder())            // what the sink hands over; every path below reads and writes native order
         val out = replaceOutputBuffer(size)
         val f = cell?.factor ?: 1f
         if (f >= 1f) {
@@ -48,10 +54,15 @@ class GainProcessor : BaseAudioProcessor() {
                 C.ENCODING_PCM_16BIT -> while (inputBuffer.hasRemaining()) out.putShort((inputBuffer.short * f).roundToInt().toShort())
                 C.ENCODING_PCM_FLOAT -> while (inputBuffer.hasRemaining()) out.putFloat(inputBuffer.float * f)
                 C.ENCODING_PCM_32BIT -> while (inputBuffer.hasRemaining()) out.putInt((inputBuffer.int * f.toDouble()).roundToInt())
-                else -> while (inputBuffer.hasRemaining()) {           // 24 bit, little endian
-                    val s = (inputBuffer.get().toInt() and 0xFF) or ((inputBuffer.get().toInt() and 0xFF) shl 8) or (inputBuffer.get().toInt() shl 16)
-                    val v = (s * f).roundToInt()
-                    out.put(v.toByte()).put((v shr 8).toByte()).put((v shr 16).toByte())
+                else -> {                                                 // 24 bit, three bytes in native order
+                    val little = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN
+                    while (inputBuffer.hasRemaining()) {
+                        val b0 = inputBuffer.get().toInt() and 0xFF; val b1 = inputBuffer.get().toInt() and 0xFF; val b2 = inputBuffer.get().toInt()
+                        val s = if (little) b0 or (b1 shl 8) or (b2 shl 16) else (b0 shl 16) or (b1 shl 8) or (b2 and 0xFF)
+                        val v = (s * f).roundToInt()
+                        if (little) out.put(v.toByte()).put((v shr 8).toByte()).put((v shr 16).toByte())
+                        else out.put((v shr 16).toByte()).put((v shr 8).toByte()).put(v.toByte())
+                    }
                 }
             }
         }
