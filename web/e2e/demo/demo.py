@@ -204,8 +204,9 @@ def yt(args):
     if last.startswith("ytsearch10:"):
         print(json.dumps({"_type": "playlist", "entries": [
             {"id": vid, "title": t, "channel": ch, "webpage_url": f"https://www.youtube.com/watch?v={vid}", "duration": secs,
-             "thumbnails": [{"url": f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"}]}
-            for vid, t, ch, secs, _ in SEARCH]}, ensure_ascii=False))
+             "thumbnails": [{"url": f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"}],
+             "view_count": 2_400_000 // 3 ** i + 7_000}  # invented counts, falling down the list
+            for i, (vid, t, ch, secs, _) in enumerate(SEARCH)]}, ensure_ascii=False))
         return 0
     if last.startswith("ytsearch5:") or "&list=RD" in last:
         print(json.dumps({"_type": "playlist", "entries": []}))

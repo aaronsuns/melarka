@@ -44,6 +44,10 @@ test("README screenshots", async ({ browser }, info) => {
     await page.locator(".mini-info").click();
     await seekToLine(page, 4);
     await shot(page, "phone-now-playing");
+    // The same song on its cover.
+    await page.getByRole("dialog").getByRole("button", { name: "封面" }).click();
+    await coversLoaded(page);
+    await shot(page, "phone-now-playing-cover");
     await page.getByRole("dialog").getByRole("button", { name: "收起" }).click();
 
     // 频道 (Chinese).
@@ -79,11 +83,19 @@ test("README screenshots", async ({ browser }, info) => {
     await coversLoaded(page);
     await shot(page, "phone-search");
 
+    // 我的 (Settings), its grouped cards.
+    await page.getByRole("link", { name: "Me", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Me" })).toBeVisible();
+    await shot(page, "phone-settings");
+
     // A desktop browser window (English).
     const desk = await newContext(browser, { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
     try {
       const d = await desk.newPage();
       await loginWith(d, "admin", process.env.LARK_E2E_PW!); // already English
+      await expect(d.getByRole("heading", { name: "Melarka" })).toBeVisible();
+      await coversLoaded(d);
+      await shot(d, "desktop-home");
       await d.getByRole("link", { name: "Library" }).click();
       await d.getByRole("tab", { name: "Albums" }).click();
       await coversLoaded(d);

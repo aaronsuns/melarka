@@ -49,16 +49,23 @@ followed by a command that checks it worked.
 
 <!-- SCREENSHOTS -->
 <p align="center">
-  <img src="docs/screenshots/phone-home.jpg" width="16%" alt="Home: shuffle favorites, shuffle all, personal radio, top tags">
-  <img src="docs/screenshots/phone-favorites.jpg" width="16%" alt="Favorites with one-tap shuffle">
-  <img src="docs/screenshots/phone-tags.jpg" width="16%" alt="Browse by tags">
-  <img src="docs/screenshots/phone-now-playing.jpg" width="16%" alt="Now Playing with synced lyrics">
-  <img src="docs/screenshots/phone-channels.jpg" width="16%" alt="Followed YouTube channels (频道)">
-  <img src="docs/screenshots/phone-search.jpg" width="16%" alt="Search the library and YouTube">
+  <img src="docs/screenshots/phone-home.jpg" width="24%" alt="Home: shuffle favorites, shuffle all, personal radio, continue playing, For you, top tags">
+  <img src="docs/screenshots/phone-now-playing.jpg" width="24%" alt="Now Playing with synced lyrics">
+  <img src="docs/screenshots/phone-now-playing-cover.jpg" width="24%" alt="Now Playing on the cover">
+  <img src="docs/screenshots/phone-favorites.jpg" width="24%" alt="Favorites with one-tap shuffle">
 </p>
-<p align="center"><img src="docs/screenshots/desktop-albums.jpg" width="80%" alt="Albums in a desktop browser"></p>
-<p align="center"><sub>Home · Favorites · Tags · Now Playing · Channels · Search, then a desktop browser.
-Demo data: invented songs and channels, generated test tones and covers.</sub></p>
+<p align="center">
+  <img src="docs/screenshots/phone-search.jpg" width="24%" alt="Search the library and YouTube, with view counts">
+  <img src="docs/screenshots/phone-channels.jpg" width="24%" alt="Followed YouTube channels (频道)">
+  <img src="docs/screenshots/phone-tags.jpg" width="24%" alt="Browse by tags">
+  <img src="docs/screenshots/phone-settings.jpg" width="24%" alt="Settings">
+</p>
+<p align="center">
+  <img src="docs/screenshots/desktop-home.jpg" width="49%" alt="Home in a desktop browser, with the sidebar">
+  <img src="docs/screenshots/desktop-albums.jpg" width="49%" alt="Albums in a desktop browser">
+</p>
+<p align="center"><sub>On a phone: Home · Now Playing (lyrics, cover) · Favorites · Search · Channels · Tags · Settings.
+In a desktop browser: Home and Albums. Demo data: invented songs and channels, generated test tones and covers.</sub></p>
 <!-- /SCREENSHOTS -->
 
 ## Features
