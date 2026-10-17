@@ -377,6 +377,22 @@ it("favorite toggles are forwarded so native re-syncs its cache", async () => {
   ]);
 });
 
+it("saved lyrics changes are forwarded so native's car lyrics follow them", async () => {
+  mockFetch({
+    "PUT /api/v1/tracks/7/lyrics/offset": () => ({ status: 204 }),
+    "PUT /api/v1/tracks/8/lyrics/offset": () => ({ status: 409, body: { error: "x", code: "lyrics_changed" } }),
+    "POST /api/v1/tracks/7/lyrics/wrong": () => ({ body: { found: false, synced: false, report_id: 1 } }),
+  });
+  renderPlayer();
+  await act(() => api.setLyricsOffset(7, 4000, 1));
+  await act(() => api.setLyricsOffset(8, 4000, 1).catch(() => {})); // not saved: nothing to follow
+  await act(() => api.reportWrongLyrics(7, 1));
+  expect(n.sent("lyricsChanged")).toEqual([
+    { type: "lyricsChanged", trackId: 7 },
+    { type: "lyricsChanged", trackId: 7 },
+  ]);
+});
+
 it("episodes: ▶ on a list posts an episode queue at the resume position, never a music one", () => {
   const { episodeAudio } = renderPlayer(<><Probe /><EProbe /></>);
   const list = [ep("a", { published_at: 300, position_s: 120 }), ep("b", { published_at: 200, played: true }), ep("c", { published_at: 100 })];

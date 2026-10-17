@@ -250,6 +250,52 @@ func nowPlayingTrack(_ id: Int, title: String, artist: String, album: String = "
         XCTAssertEqual(api.lyricsCalls, [7, 7, 7])              // found: never asked again
     }
 
+    /// Lyrics aligned in the web while the track plays: the car line follows the new offset at once.
+    func testLyricsChangedMovesTheCarLine() async {
+        await playLyricsTrack(carLyrics: true)
+        tick(1600)
+        XCTAssertEqual(sink.title, "第一句")
+        api.lyricsAnswers[7] = lyricsDoc(lines: [(0, "前奏"), (1000, "第一句"), (5000, "第二句")], offset: 4000)
+        engine.handle(.lyricsChanged(trackId: 7))
+        await engine.idle()
+        XCTAssertEqual(api.lyricsCalls, [7, 7])
+        XCTAssertEqual(sink.title, "晴天")                     // 1600 − 4000: before the first line
+        tick(5100)
+        XCTAssertEqual(sink.title, "第一句")
+        XCTAssertEqual(cache.updatedLyrics.map(\.0), [7, 7])   // the cached copy follows too
+        XCTAssertEqual(cache.updatedLyrics.last?.1.offset_ms, 4000)
+    }
+
+    func testLyricsChangedForAnotherTrackIsIgnored() async {
+        await playLyricsTrack(carLyrics: true)
+        engine.handle(.lyricsChanged(trackId: 8))
+        await engine.idle()
+        XCTAssertEqual(api.lyricsCalls, [7])
+    }
+
+    /// A cached track shows its kept lyrics at once and, online, asks for fresh ones: an offset set on another
+    /// device since the download reaches the car.
+    func testCachedLyricsAreRefreshedWhenOnline() async {
+        cache.lyrics[7] = lyricsDoc(lines: [(0, "前奏"), (1000, "第一句"), (5000, "第二句")], offset: 500)
+        api.lyricsAnswers[7] = lyricsDoc(lines: [(0, "前奏"), (1000, "第一句"), (5000, "第二句")], offset: 4000)
+        await playLyricsTrack(carLyrics: true, keepAnswer: true)
+        XCTAssertEqual(api.lyricsCalls, [7])
+        tick(1600)
+        XCTAssertEqual(sink.title, "晴天")
+        XCTAssertEqual(cache.updatedLyrics.last?.1.offset_ms, 4000)
+    }
+
+    func testCachedLyricsOfflineAreNotAsked() async {
+        network.isOnline = false
+        cache.lyrics[7] = lyricsDoc(lines: [(0, "前奏"), (1000, "第一句"), (5000, "第二句")], offset: 500)
+        await playLyricsTrack(carLyrics: true, keepAnswer: true)
+        advanceClock(3600)
+        tick(1600)
+        await engine.idle()
+        XCTAssertEqual(api.lyricsCalls, [])
+        XCTAssertEqual(sink.title, "第一句")
+    }
+
     /// "Not found" is an answer: it is not asked again for this track.
     func testLyricsNotFoundIsNotRetried() async {
         api.lyricsAnswers[7] = lyricsDoc(found: false)

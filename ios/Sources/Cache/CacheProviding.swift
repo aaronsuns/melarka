@@ -15,6 +15,9 @@ import Foundation
     /// A cached track's lyrics, kept beside its audio: offline (the offline player, the lock screen) they are all
     /// there is. nil when the track is not cached, its lyrics were not fetched yet, or it has none.
     func cachedLyrics(trackID: Int) -> LyricsDoc?
+    /// A fresh answer from the server for a track's lyrics (another offset, other lyrics, none): it replaces the
+    /// kept copy when the track is cached, and is dropped otherwise.
+    func updateLyrics(trackID: Int, _ doc: LyricsDoc)
 }
 
 /// No cache.
@@ -24,4 +27,5 @@ import Foundation
     func cachedFavorites() -> [(Track, JSONValue)] { [] }
     func prefetch(_ items: [Item]) {}
     func cachedLyrics(trackID: Int) -> LyricsDoc? { nil }
+    func updateLyrics(trackID: Int, _ doc: LyricsDoc) {}
 }

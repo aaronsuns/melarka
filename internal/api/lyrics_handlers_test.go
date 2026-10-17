@@ -231,7 +231,13 @@ func TestLyricsOffsetAndWrongForMembers(t *testing.T) {
 	if r, _ := do(t, ts, kid, "PUT", p+"/offset", map[string]int{"offset_ms": -45000}); r.StatusCode != 204 {
 		t.Fatal(r.StatusCode)
 	}
-	if _, b := do(t, ts, kid, "GET", p, nil); !strings.Contains(string(b), `"offset_ms":-30000`) {
+	if _, b := do(t, ts, kid, "GET", p, nil); !strings.Contains(string(b), `"offset_ms":-45000`) {
+		t.Fatalf("a long intro's offset is kept: %s", b)
+	}
+	if r, _ := do(t, ts, kid, "PUT", p+"/offset", map[string]int{"offset_ms": -450000}); r.StatusCode != 204 {
+		t.Fatal(r.StatusCode)
+	}
+	if _, b := do(t, ts, kid, "GET", p, nil); !strings.Contains(string(b), `"offset_ms":-300000`) {
 		t.Fatalf("clamp: %s", b)
 	}
 	for _, body := range []any{map[string]any{}, map[string]any{"offset_ms": 1.5}, map[string]any{"offset_ms": "x"}, map[string]any{"offset": 1}} {
@@ -267,7 +273,7 @@ func TestLyricsOffsetAndWrongForMembers(t *testing.T) {
 	if r, b := do(t, ts, bro, "POST", p+"/wrong/undo", undo); r.StatusCode != 403 || !strings.Contains(string(b), `"code":"not_your_report"`) {
 		t.Fatalf("other's undo %d %s", r.StatusCode, b)
 	}
-	if r, b := do(t, ts, kid, "POST", p+"/wrong/undo", undo); r.StatusCode != 200 || !strings.Contains(string(b), `"t_ms":1000`) || !strings.Contains(string(b), `"offset_ms":-30000`) {
+	if r, b := do(t, ts, kid, "POST", p+"/wrong/undo", undo); r.StatusCode != 200 || !strings.Contains(string(b), `"t_ms":1000`) || !strings.Contains(string(b), `"offset_ms":-300000`) {
 		t.Fatalf("undo %d %s", r.StatusCode, b)
 	}
 	if r, _ := do(t, ts, kid, "POST", p+"/wrong/undo", undo); r.StatusCode != 404 {

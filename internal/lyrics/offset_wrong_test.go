@@ -20,7 +20,7 @@ func lineText(r Result) string {
 }
 
 // The offset belongs to the selected lyrics: kept while they stay selected
-// (a refresh that picks them again included), clamped to ±30 s, and back to
+// (a refresh that picks them again included), clamped to ±5 minutes, and back to
 // 0 whenever another candidate — or nothing — becomes selected.
 func TestOffsetClampAndResetOnReselect(t *testing.T) {
 	e := newLyricsEnv(t, &fakeProv{name: "lrclib", cands: []Candidate{
@@ -37,7 +37,7 @@ func TestOffsetClampAndResetOnReselect(t *testing.T) {
 	if err := e.svc.SetOffset(e.ctx, e.track+1, 0, 500); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing track: %v", err)
 	}
-	for _, c := range []struct{ in, want int }{{1500, 1500}, {99999, 30000}, {-99999, -30000}, {-1200, -1200}} {
+	for _, c := range []struct{ in, want int }{{1500, 1500}, {45000, 45000}, {999999, 300000}, {-999999, -300000}, {-1200, -1200}} {
 		if err := e.svc.SetOffset(e.ctx, e.track, 0, c.in); err != nil {
 			t.Fatal(err)
 		}

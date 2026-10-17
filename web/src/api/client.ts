@@ -61,6 +61,19 @@ export function onFavoriteSet(fn: (id: number, on: boolean) => void): () => void
   return () => void favoriteListeners.delete(fn);
 }
 
+// Told about every saved change to a track's lyrics (offset, other lyrics,
+// none): the iPhone app's car lyrics follow them.
+const lyricsListeners = new Set<(id: number) => void>();
+export function onLyricsChanged(fn: (id: number) => void): () => void {
+  lyricsListeners.add(fn);
+  return () => void lyricsListeners.delete(fn);
+}
+async function lyricsChange<T>(id: number, p: Promise<T>): Promise<T> {
+  const r = await p;
+  lyricsListeners.forEach((fn) => fn(id));
+  return r;
+}
+
 let onUnauthorized: () => void = () => {};
 export function setUnauthorizedHandler(fn: () => void) {
   onUnauthorized = fn;
@@ -187,19 +200,22 @@ export const api = {
   // Anyone signed in, for everyone: shift the shown lyrics; report them wrong.
   // Both name the shown lyrics (409 lyrics_changed when others are shown now).
   setLyricsOffset: (id: number, offsetMs: number, lyricsId: number) =>
-    req<void>("PUT", `/tracks/${id}/lyrics/offset`, { offset_ms: offsetMs, lyrics_id: lyricsId }),
-  reportWrongLyrics: (id: number, lyricsId: number) => req<Lyrics & { report_id: number }>("POST", `/tracks/${id}/lyrics/wrong`, { lyrics_id: lyricsId }),
+    lyricsChange(id, req<void>("PUT", `/tracks/${id}/lyrics/offset`, { offset_ms: offsetMs, lyrics_id: lyricsId })),
+  reportWrongLyrics: (id: number, lyricsId: number) =>
+    lyricsChange(id, req<Lyrics & { report_id: number }>("POST", `/tracks/${id}/lyrics/wrong`, { lyrics_id: lyricsId })),
   // The reporter (or an admin) takes a report back.
-  undoWrongLyrics: (id: number, reportId: number) => req<Lyrics>("POST", `/tracks/${id}/lyrics/wrong/undo`, { report_id: reportId }),
+  undoWrongLyrics: (id: number, reportId: number) =>
+    lyricsChange(id, req<Lyrics>("POST", `/tracks/${id}/lyrics/wrong/undo`, { report_id: reportId })),
   lyricsRejected: (id: number) => req<LyricsRejected[]>("GET", `/tracks/${id}/lyrics/rejected`),
   unrejectLyrics: (id: number, rejectedId: number) => req<void>("DELETE", `/tracks/${id}/lyrics/rejected/${rejectedId}`),
   lyricsCandidates: (id: number) => req<LyricsCandidate[]>("GET", `/tracks/${id}/lyrics/candidates`),
-  selectLyrics: (id: number, candidateId: number) => req<void>("PUT", `/tracks/${id}/lyrics`, { candidate_id: candidateId }),
+  selectLyrics: (id: number, candidateId: number) => lyricsChange(id, req<void>("PUT", `/tracks/${id}/lyrics`, { candidate_id: candidateId })),
   // override: search with this title and/or artist instead of the server's cleaned ones.
   // broad: match loosely (any singer, looser title/duration) and keep up to 10 candidates.
-  refreshLyrics: (id: number, override?: { title?: string; artist?: string; broad?: boolean }) => req<Lyrics>("POST", `/tracks/${id}/lyrics/refresh`, override),
+  refreshLyrics: (id: number, override?: { title?: string; artist?: string; broad?: boolean }) =>
+    lyricsChange(id, req<Lyrics>("POST", `/tracks/${id}/lyrics/refresh`, override)),
   // "This song has no lyrics": nothing shown, and automatic lookups stop.
-  noLyrics: (id: number) => req<void>("PUT", `/tracks/${id}/lyrics`, { none: true }),
+  noLyrics: (id: number) => lyricsChange(id, req<void>("PUT", `/tracks/${id}/lyrics`, { none: true })),
   deleteLyricsCandidate: (id: number, candidateId: number) => req<void>("DELETE", `/tracks/${id}/lyrics/candidates/${candidateId}`),
 
   recommendations: () => req<Recommendations>("GET", "/me/recommendations"),

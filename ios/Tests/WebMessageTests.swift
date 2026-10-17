@@ -49,6 +49,7 @@ final class WebMessageTests: XCTestCase {
         XCTAssertEqual(try WebMessage.decode(["type": "favoriteChanged", "trackId": 7, "on": true]), .favoriteChanged(trackId: 7, on: true))
         XCTAssertEqual(try WebMessage.decode(["type": "flushEvents", "id": "f1"]), .flushEvents(id: "f1"))
         XCTAssertEqual(try WebMessage.decode(["type": "openSettings"]), .openSettings)
+        XCTAssertEqual(try WebMessage.decode(["type": "lyricsChanged", "trackId": 7]), .lyricsChanged(trackId: 7))
     }
 
     func testDecodesSetModes() throws {
