@@ -3,10 +3,14 @@ agp = "8.7.3"
 kotlin = "2.1.0"
 junit = "4.13.2"
 kotlinx-serialization = "1.8.1"
+robolectric = "4.14.1"
+androidx-test-core = "1.6.1"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

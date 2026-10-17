@@ -1,0 +1,67 @@
+package lark.core
+
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.os.Handler
+import android.os.Looper
+
+/** What the default network's capabilities and the Data Saver setting say. */
+internal data class NetworkState(val online: Boolean, val expensive: Boolean)
+
+/**
+ * Online means the default network has validated internet access. Expensive means metered, or Data Saver
+ * (`restrictBackgroundStatus == ENABLED`) is on: the user asked for no bulk downloads.
+ */
+internal fun classifyNetwork(validatedInternet: Boolean, notMetered: Boolean, restrictBackground: Boolean) =
+    NetworkState(online = validatedInternet, expensive = !notMetered || restrictBackground)
+
+internal fun classifyNetwork(caps: NetworkCapabilities?, restrictBackground: Boolean) =
+    if (caps == null) NetworkState(online = false, expensive = restrictBackground)
+    else classifyNetwork(
+        validatedInternet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+        notMetered = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
+        restrictBackground = restrictBackground,
+    )
+
+class AndroidNetworkStatus(context: Context) : NetworkStatus {
+    private val cm = context.applicationContext.getSystemService(ConnectivityManager::class.java)
+    private val observers = mutableListOf<() -> Unit>()
+
+    override var isOnline = true
+        private set
+
+    /**
+     * Expensive until the first callback: a sync at launch must not run on a metered network before the system
+     * has answered. The first callback on Wi-Fi is a change, so a sync skipped meanwhile runs then.
+     */
+    override var isExpensive = true
+        private set
+    override var answered = false
+        private set
+
+    private val callback = object : ConnectivityManager.NetworkCallback() {
+        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = update(classifyNetwork(caps, restricted()))
+        override fun onLost(network: Network) = update(classifyNetwork(null, restricted()))
+    }
+
+    init {
+        cm.registerDefaultNetworkCallback(callback, Handler(Looper.getMainLooper()))
+        // No default network at all: the callback may never fire, and "offline" is a sure answer.
+        if (cm.activeNetwork == null) update(classifyNetwork(null, restricted()))
+    }
+
+    private fun restricted() = cm.restrictBackgroundStatus == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED
+
+    private fun update(state: NetworkState) {
+        if (answered && isOnline == state.online && isExpensive == state.expensive) return
+        answered = true
+        isOnline = state.online
+        isExpensive = state.expensive
+        observers.toList().forEach { it() }
+    }
+
+    override fun observe(fn: () -> Unit) { observers.add(fn) }
+}

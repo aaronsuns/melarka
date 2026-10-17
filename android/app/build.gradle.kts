@@ -25,6 +25,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     sourceSets {
         // The version function is shared with the build: one implementation, tested here.
         getByName("test").java.srcDir("../buildSrc/src/main/kotlin")
@@ -38,4 +42,6 @@ kotlin {
 dependencies {
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 }
