@@ -8,6 +8,8 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-10-17
+
 ### Added
 
 - **Downloads stop before the disk fills**: with less than `downloads.min_free_gb` (10 GB) free
@@ -211,7 +213,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/aaronsuns/melarka/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/aaronsuns/melarka/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/aaronsuns/melarka/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/aaronsuns/melarka/compare/v0.2.0...v0.2.1
