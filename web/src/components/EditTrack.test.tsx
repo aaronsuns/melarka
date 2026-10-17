@@ -1,4 +1,5 @@
 import { screen, within } from "@testing-library/react";
+import { vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { TrackList } from "./TrackList";
 import { MiniPlayer } from "../player/MiniPlayer";
@@ -139,4 +140,24 @@ test("a YouTube track in NowPlaying: its thumbnail, no library actions, 下载 k
   expect(within(now).getByRole("button", { name: /下载/ })).toBeInTheDocument();
   expect(now.querySelector(".now-art img, .cover img")?.getAttribute("src") ?? "").toContain("/api/v1/videos/mjuS9shGYhE/thumbnail");
   expect(f.mock.calls.some((c) => String(c[0]).includes("/lyrics"))).toBe(false);
+});
+
+test("NowPlaying adds the current song to a playlist (members too)", async () => {
+  const { f } = renderWithApp(<><Grab /><MiniPlayer /></>, {
+    role: "member",
+    routes: {
+      "GET /api/v1/playlists": () => ({ body: [{ id: 7, name: "车上", track_count: 1, updated_at: 1 }] }),
+      "GET /api/v1/playlists/7": () => ({ body: { playlist: { id: 7, name: "车上", track_count: 1, updated_at: 1 }, tracks: [tr(9)] } }),
+      "PUT /api/v1/playlists/7": () => ({ status: 204 }),
+    },
+  });
+  p.playList([tr(1), tr(2)], 0);
+  await userEvent.click(await screen.findByText("歌1"));
+  const now = await screen.findByRole("dialog", { name: "正在播放" });
+  await userEvent.click(within(now).getByRole("button", { name: "添加到歌单" }));
+  const picker = await screen.findByRole("dialog", { name: /添加到歌单/ });
+  await userEvent.click(await within(picker).findByRole("button", { name: /车上/ }));
+  await vi.waitFor(() => expect(f.mock.calls.some((c) => c[0] === "/api/v1/playlists/7" && c[1]?.method === "PUT")).toBe(true));
+  const put = f.mock.calls.find((c) => c[0] === "/api/v1/playlists/7" && c[1]?.method === "PUT")!;
+  expect(JSON.parse(put[1]!.body as string)).toEqual({ track_ids: [9, 1] });
 });

@@ -239,3 +239,6 @@ export const PersonIcon = ({ size = 24 }: { size?: number }) => (
 export const RadioIcon = ({ size = 22 }: { size?: number }) => (
   <Svg size={size} stroke={1.9}><rect x="3" y="8" width="18" height="12" rx="2.5" /><path d="m7 8 9-4.5" /><circle cx="15.5" cy="14" r="2.6" /><path d="M6.5 12.2h3.5M6.5 15.8h3.5" /></Svg>
 );
+export const ListPlusIcon = ({ size = 22 }: { size?: number }) => (
+  <Svg size={size} stroke={2}><path d="M4 6.5h11M4 11.5h11M4 16.5h7" /><path d="M17.5 13.5v7M14 17h7" /></Svg>
+);

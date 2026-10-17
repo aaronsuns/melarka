@@ -8,6 +8,12 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-10-17
+
+### Added
+
+- **Add the playing song to a playlist from Now Playing**: a 添加到歌单 button next to the heart.
+
 ## [0.2.9] - 2026-10-17
 
 ### Changed
@@ -265,7 +271,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.9...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.10...HEAD
+[0.2.10]: https://github.com/aaronsuns/melarka/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/aaronsuns/melarka/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/aaronsuns/melarka/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/aaronsuns/melarka/compare/v0.2.6...v0.2.7

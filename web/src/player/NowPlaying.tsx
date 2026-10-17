@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import { useAuth } from "../auth/AuthProvider";
 import { Cover } from "../components/Cover";
 import { VideoDownload } from "../components/VideoDownload";
+import { AddToPlaylist } from "../components/AddToPlaylist";
 import { isYouTube, trackCoverUrl, WatchURL } from "./youtubeTrack";
 import { EditTags } from "../components/EditTags";
 import { EditTrack } from "../components/EditTrack";
@@ -10,7 +11,7 @@ import { LyricsPicker } from "../components/LyricsPicker";
 import { duration, qualityLabel } from "../format";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
-import { BackwardFillIcon, ChevronDownIcon, ForwardFillIcon, HeartIcon, ListIcon, MicIcon, PauseFillIcon, PencilIcon, PhotoIcon, PlayFillIcon, RepeatIcon, RepeatOneIcon, ShuffleIcon, TagIcon, ThumbDownIcon, TrashIcon } from "../components/icons";
+import { BackwardFillIcon, ChevronDownIcon, ForwardFillIcon, HeartIcon, ListIcon, ListPlusIcon, MicIcon, PauseFillIcon, PencilIcon, PhotoIcon, PlayFillIcon, RepeatIcon, RepeatOneIcon, ShuffleIcon, TagIcon, ThumbDownIcon, TrashIcon } from "../components/icons";
 import type { Lyrics } from "../api/types";
 import { hasLyrics, LyricStrip, LyricsView, syncedLines } from "./Lyrics";
 import { usePlayer, usePlayerProgress } from "./PlayerProvider";
@@ -59,6 +60,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editingTags, setEditingTags] = useState(false);
+  const [addingToPlaylist, setAddingToPlaylist] = useState(false);
   const [view, setView] = useState<NowView | null>(readNowView);
   // Tapping the cover of a track without lyrics still opens the lyrics view
   // (it says there are none) — for that track only.
@@ -278,6 +280,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
         >
           <HeartIcon filled={fav} />
         </button>
+        <button className="icon" aria-label={t("track.addToPlaylist")} onClick={() => setAddingToPlaylist(true)}><ListPlusIcon /></button>
         <button className="icon" aria-label={t("common.notForMe")} onClick={() => run(track.id, async () => { await api.setDislike(track.id, true); p.remove(track.id); })}><ThumbDownIcon /></button>
         {user?.role === "admin" && (
           <button className="icon" aria-label={t("now.editInfo")} onClick={() => setEditing(true)}><PencilIcon /></button>
@@ -297,6 +300,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
       </div>
       )}
       {editingTags && <EditTags track={track} onClose={() => setEditingTags(false)} />}
+      {addingToPlaylist && !yt && <AddToPlaylist track={track} onClose={() => setAddingToPlaylist(false)} />}
       {pickingLyrics && <LyricsPicker track={track} onClose={() => setPickingLyrics(false)} onChanged={reloadLyrics} />}
       {editing && (
         <EditTrack
