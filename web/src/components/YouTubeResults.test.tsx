@@ -126,3 +126,11 @@ test("a playlist that fails to open offers 重试; an empty one says so", async 
   await userEvent.click(within(panel).getByRole("button", { name: "重试" }));
   expect(await within(panel).findByText("这个歌单里没有可播放的视频")).toBeInTheDocument();
 });
+
+test("a video row shows YouTube's view and like counts when known", async () => {
+  renderWithApp(<YouTubeResults query="歌" auto />, {
+    routes: { "GET /api/v1/youtube/search": () => ({ body: { videos: [{ ...vid("a"), view_count: 354_205, like_count: 4_000 }, vid("b")], playlists: [] } }) },
+  });
+  expect(await screen.findByText(/35\.4万次播放 · 4000赞/)).toBeInTheDocument();
+  expect(screen.getAllByText(/次播放/)).toHaveLength(1); // b has no counts: nothing shown
+});

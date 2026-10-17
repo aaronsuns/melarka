@@ -207,3 +207,11 @@ test("the page explains the empty state", async () => {
   renderWithApp(<RecommendationsPage />, { routes: { "GET /api/v1/me/recommendations": () => recs([]), "GET /api/v1/downloads": () => ({ body: [] }) } });
   expect(await screen.findByText("播放或收藏几首歌后，这里会出现为你挑选的新歌。每晚自动更新。")).toBeInTheDocument();
 });
+
+test("a recommendation shows YouTube's view and like counts when known", async () => {
+  renderWithApp(<RecommendationsPage />, {
+    routes: { "GET /api/v1/me/recommendations": () => recs([rec(1, { view_count: 234_239_467, like_count: 3_653_497 }), rec(2)]) },
+  });
+  expect(await screen.findByText(/2\.3亿次播放 · 365\.3万赞/)).toBeInTheDocument();
+  expect(screen.getAllByText(/次播放/)).toHaveLength(1);
+});

@@ -1,5 +1,5 @@
 import type { Track } from "./api/types";
-import { getLocale } from "./i18n/i18n";
+import { getLocale, t } from "./i18n/i18n";
 
 export function duration(ms: number): string {
   const total = Math.max(0, Math.round(ms / 1000));
@@ -86,4 +86,14 @@ export function formatSize(bytes: number): string {
 /** A day for people: "2026/10/3" in zh, "10/3/2026" in en (the UI locale). */
 export function formatDate(epochSec: number): string {
   return new Date(epochSec * 1000).toLocaleDateString(getLocale());
+}
+
+// "35.4万次播放 · 4000赞" / "354.2K views · 4K likes": YouTube's counts, compact in the UI
+// language; a count that is unknown (0 or absent) is left out, both unknown give "".
+export function popularity(views?: number, likes?: number): string {
+  const n = new Intl.NumberFormat(getLocale(), { notation: "compact", maximumFractionDigits: 1 });
+  const parts: string[] = [];
+  if (views && views > 0) parts.push(t("yt.views", { count: views, n: n.format(views) }));
+  if (likes && likes > 0) parts.push(t("yt.likes", { count: likes, n: n.format(likes) }));
+  return parts.join(" · ");
 }

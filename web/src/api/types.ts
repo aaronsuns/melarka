@@ -101,6 +101,8 @@ export interface Recommendation {
   url: string;
   reason: RecommendationReason | null;
   score: number;
+  view_count?: number; // YouTube's counts, absent when unknown
+  like_count?: number;
 }
 
 export interface Recommendations {
@@ -118,6 +120,8 @@ export interface YTVideo {
   thumbnail: string;
   duration_s: number;
   channel_id?: string;
+  view_count?: number; // YouTube's counts, absent when unknown (a search has views, likes only when cached)
+  like_count?: number;
 }
 
 export interface YTPlaylist {

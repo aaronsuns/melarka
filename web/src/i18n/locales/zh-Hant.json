@@ -26,6 +26,7 @@
   "common.notForMe": "不喜歡", "common.play": "播放", "common.pause": "暫停",
   "common.next": "下一首", "common.previous": "上一首",
   "common.songCount_other": "{count} 首",
+  "yt.views_other": "{n}次播放", "yt.likes_other": "{n}讚",
 
   "home.continuePlaying": "繼續播放",
   "home.downloadingCount_other": "下載中 {count} 首",

@@ -125,7 +125,7 @@ func (s *Server) youtubeSearch(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return ytdlp.SearchResult{}, false, err
 			}
-			videos = ytdlp.Popular(videos)
+			videos = s.withStats(ctx, ytdlp.Popular(videos))
 			if videos == nil {
 				videos = []ytdlp.Video{}
 			}
@@ -148,7 +148,7 @@ func (s *Server) youtubeSearch(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return ytdlp.SearchResult{}, false, err
 		}
-		videos = ytdlp.Popular(videos) // YouTube's order blended with the view counts
+		videos = s.withStats(ctx, ytdlp.Popular(videos)) // YouTube's order blended with the view counts
 		if plErr != nil {
 			s.Log.Warn("youtube playlist search", "query", clean, "err", plErr)
 			pls = nil
@@ -386,6 +386,44 @@ func (s *Server) retryDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(204)
+}
+
+// withStats fills in the like counts (and views a search lacked) that
+// recommendations already fetched for these videos (video_stats); vs is
+// changed in place and returned. A failed read leaves the videos as they are.
+func (s *Server) withStats(ctx context.Context, vs []ytdlp.Video) []ytdlp.Video {
+	if len(vs) == 0 {
+		return vs
+	}
+	args := make([]any, len(vs))
+	for i, v := range vs {
+		args[i] = v.ID
+	}
+	rows, err := s.Library.DB.QueryContext(ctx, `SELECT video_id, view_count, like_count FROM video_stats WHERE video_id IN (?`+
+		strings.Repeat(",?", len(vs)-1)+`)`, args...)
+	if err != nil {
+		s.Log.Warn("video stats", "err", err)
+		return vs
+	}
+	defer rows.Close()
+	type counts struct{ views, likes int64 }
+	got := map[string]counts{}
+	for rows.Next() {
+		var id string
+		var c counts
+		if rows.Scan(&id, &c.views, &c.likes) == nil {
+			got[id] = c
+		}
+	}
+	for i := range vs {
+		if c, ok := got[vs[i].ID]; ok {
+			if vs[i].Views <= 0 {
+				vs[i].Views = c.views
+			}
+			vs[i].Likes = c.likes
+		}
+	}
+	return vs
 }
 
 func (s *Server) downloadFail(w http.ResponseWriter, err error) {

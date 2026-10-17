@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api/client";
 import type { Recommendation } from "../api/types";
-import { duration, isSafeThumbnailUrl } from "../format";
+import { duration, isSafeThumbnailUrl, popularity } from "../format";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { Cover } from "./Cover";
@@ -47,7 +47,7 @@ export function RecommendationList({ items, onChange }: { items: Recommendation[
             <Cover seed={r.video_id} label={r.title} size={48} src={isSafeThumbnailUrl(r.thumbnail) ? r.thumbnail : undefined} noReferrer />
             <span className="yt-text">
               <span className="row-title">{r.title}</span>
-              <span className="ellipsis muted small">{r.channel} · {duration(r.duration_s * 1000)}</span>
+              <span className="ellipsis muted small">{[r.channel, duration(r.duration_s * 1000), popularity(r.view_count, r.like_count)].filter(Boolean).join(" · ")}</span>
               {rowErr[r.video_id] ? (
                 <RowErrorLine error={rowErr[r.video_id]} />
               ) : (

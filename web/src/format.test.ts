@@ -1,4 +1,5 @@
-import { duration, qualityLabel, coverStyle, initials, formatSize } from "./format";
+import { duration, qualityLabel, coverStyle, initials, formatSize, popularity } from "./format";
+import { setLocale } from "./i18n/i18n";
 import type { Track } from "./api/types";
 
 const t = (codec: string, bitrate: number, lossless: boolean) => ({ codec, bitrate, lossless }) as Track;
@@ -33,4 +34,15 @@ test("formatSize", () => {
   expect(formatSize(500 * MB)).toBe("500 MB");
   expect(formatSize(1024 * MB)).toBe("1 GB");
   expect(formatSize(1536 * MB)).toBe("1.5 GB");
+});
+
+test("popularity: compact counts in the UI language, nothing when unknown", () => {
+  expect(popularity(354_205, 4_000)).toBe("35.4万次播放 · 4000赞"); // the suite runs in zh-Hans
+  expect(popularity(234_239_467, 0)).toBe("2.3亿次播放");
+  expect(popularity(0, 0)).toBe("");
+  expect(popularity(undefined, undefined)).toBe("");
+  setLocale("en");
+  expect(popularity(354_205, 4_000)).toBe("354.2K views · 4K likes");
+  expect(popularity(1, 1)).toBe("1 view · 1 like");
+  setLocale("zh-Hans");
 });

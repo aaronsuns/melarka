@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { YTPlaylist, YTVideo } from "../api/types";
-import { duration, isSafeThumbnailUrl } from "../format";
+import { duration, isSafeThumbnailUrl, popularity } from "../format";
 import { searchErrorText } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { Cover } from "./Cover";
@@ -141,7 +141,7 @@ export function YouTubeResults({ query, auto }: { query: string; auto: boolean }
                   {rowErr(v.id) ? (
                     <RowErrorLine error={rowErr(v.id)} />
                   ) : (
-                    <span className="ellipsis muted small">{v.channel} · {duration(v.duration_s * 1000)}</span>
+                    <span className="ellipsis muted small">{[v.channel, duration(v.duration_s * 1000), popularity(v.view_count, v.like_count)].filter(Boolean).join(" · ")}</span>
                   )}
                 </span>
                 <span className="job-actions row-actions">

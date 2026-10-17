@@ -121,3 +121,33 @@ func TestSeedVideoPrefersPopularVersion(t *testing.T) {
 		t.Fatalf("seed video %q %v", v, err)
 	}
 }
+
+// The list shows each video's YouTube counts when they are known.
+func TestListCarriesCounts(t *testing.T) {
+	e := newEnv(t)
+	u := e.user("alice")
+	tr := e.track("流年", "王菲", 263)
+	e.fav(u, tr, t0)
+	e.download(u, "seedvideo01", "done", tr)
+	e.yt.mix["seedvideo01"] = []ytdlp.Video{vid("knownstats1", "A", "c", 200), vid("nostats0001", "B", "c", 200)}
+	e.yt.stats = map[string][2]int64{"knownstats1": {354_205, 4_000}}
+	if err := e.svc.Refresh(context.Background(), u); err != nil {
+		t.Fatal(err)
+	}
+	res, err := e.svc.List(context.Background(), u)
+	if err != nil || len(res.Items) != 2 {
+		t.Fatalf("%+v %v", res, err)
+	}
+	for _, it := range res.Items {
+		switch it.VideoID {
+		case "knownstats1":
+			if it.ViewCount != 354_205 || it.LikeCount != 4_000 {
+				t.Fatalf("%+v", it)
+			}
+		case "nostats0001":
+			if it.ViewCount != 0 || it.LikeCount != 0 {
+				t.Fatalf("%+v", it)
+			}
+		}
+	}
+}

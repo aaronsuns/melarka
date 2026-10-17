@@ -25,6 +25,9 @@ type Item struct {
 	URL       string  `json:"url"`
 	Reason    *Reason `json:"reason"` // nil when the seed track is gone
 	Score     float64 `json:"score"`
+	// YouTube's counts when known (video_stats; 0 = unknown).
+	ViewCount int64 `json:"view_count,omitempty"`
+	LikeCount int64 `json:"like_count,omitempty"`
 }
 
 type Result struct {
@@ -41,7 +44,8 @@ const pendingWhere = `requested_at > MAX(COALESCE(refreshed_at,0), COALESCE(atte
 func (s *Service) List(ctx context.Context, userID int64) (Result, error) {
 	res := Result{Items: []Item{}}
 	rows, err := s.DB.QueryContext(ctx, `SELECT r.video_id, r.title, r.channel, r.duration_s, r.thumbnail, r.score,
-		r.reason_track_id, r.reason_kind FROM recommendations r
+		r.reason_track_id, r.reason_kind, COALESCE(vs.view_count,0), COALESCE(vs.like_count,0) FROM recommendations r
+		LEFT JOIN video_stats vs ON vs.video_id=r.video_id
 		WHERE r.user_id=?
 		  AND NOT EXISTS (SELECT 1 FROM downloads d WHERE d.video_id=r.video_id AND d.status='done')
 		  AND NOT EXISTS (SELECT 1 FROM recommendation_dismissals x WHERE x.user_id=r.user_id AND x.video_id=r.video_id)
@@ -56,7 +60,7 @@ func (s *Service) List(ctx context.Context, userID int64) (Result, error) {
 		var it Item
 		var reason sql.NullInt64
 		var kind string
-		if err := rows.Scan(&it.VideoID, &it.Title, &it.Channel, &it.DurationS, &it.Thumbnail, &it.Score, &reason, &kind); err != nil {
+		if err := rows.Scan(&it.VideoID, &it.Title, &it.Channel, &it.DurationS, &it.Thumbnail, &it.Score, &reason, &kind, &it.ViewCount, &it.LikeCount); err != nil {
 			rows.Close()
 			return res, err
 		}

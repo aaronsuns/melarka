@@ -602,13 +602,16 @@ func TestYouTubeSearchesRankByViews(t *testing.T) {
 			{"id":"few_0000000","title":"流年 (fan upload)","view_count":2000},
 			{"id":"many_000000","title":"王菲-流年","view_count":3000000}]}`), nil
 	}}}
+	if _, err := s.Library.DB.Exec(`INSERT INTO video_stats(video_id,view_count,like_count,fetched_at) VALUES ('many_000000',3100000,42000,1)`); err != nil {
+		t.Fatal(err)
+	}
 	for _, path := range []string{"/api/v1/youtube/search?q=liunian", "/api/v1/videos/search?q=liunian"} {
 		r, b := do(t, ts, tok, "GET", path, nil)
 		var res struct{ Videos []ytdlp.Video }
 		if r.StatusCode != 200 || json.Unmarshal(b, &res) != nil || len(res.Videos) != 2 {
 			t.Fatalf("%s: %d %s", path, r.StatusCode, b)
 		}
-		if res.Videos[0].ID != "many_000000" || res.Videos[0].Views != 3000000 {
+		if res.Videos[0].ID != "many_000000" || res.Videos[0].Views != 3000000 || res.Videos[0].Likes != 42000 || res.Videos[1].Likes != 0 {
 			t.Fatalf("%s: %+v", path, res.Videos)
 		}
 	}

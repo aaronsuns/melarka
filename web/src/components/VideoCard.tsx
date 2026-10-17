@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { YTVideo } from "../api/types";
-import { duration } from "../format";
+import { duration, popularity } from "../format";
 import { Cover } from "./Cover";
 
 /** Melarka's thumbnail proxy for a video: the browser never asks YouTube directly (some networks block i.ytimg.com). */
@@ -33,7 +33,7 @@ export function VideoCard({ v, reason }: { v: YTVideo; reason?: string }) {
           {v.duration_s > 0 && <span className="video-duration">{duration(v.duration_s * 1000)}</span>}
         </div>
         <span className="video-title">{v.title}</span>
-        <span className="muted small ellipsis">{v.channel}</span>
+        <span className="muted small ellipsis">{[v.channel, popularity(v.view_count, v.like_count)].filter(Boolean).join(" · ")}</span>
         {reason && <span className="muted small video-reason">{reason}</span>}
       </Link>
     </div>

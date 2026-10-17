@@ -26,6 +26,7 @@
   "common.notForMe": "Not for me", "common.play": "Play", "common.pause": "Pause",
   "common.next": "Next", "common.previous": "Previous",
   "common.songCount_one": "{count} song", "common.songCount_other": "{count} songs",
+  "yt.views_one": "{n} view", "yt.views_other": "{n} views", "yt.likes_one": "{n} like", "yt.likes_other": "{n} likes",
 
   "home.continuePlaying": "Continue playing",
   "home.downloadingCount_one": "Downloading {count} song", "home.downloadingCount_other": "Downloading {count} songs",
