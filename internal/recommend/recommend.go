@@ -27,6 +27,8 @@ import (
 type YouTube interface {
 	SearchTop(ctx context.Context, q string, n int) ([]ytdlp.Video, error)
 	Mix(ctx context.Context, videoID string, max int) ([]ytdlp.Video, error)
+	// Stats: a video's view and like counts (a full extraction; see boost).
+	Stats(ctx context.Context, videoID string) (views, likes int64, err error)
 }
 
 // Similar is the Last.fm surface recommendations use (*lastfm.Client).

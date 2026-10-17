@@ -206,6 +206,10 @@ type Video struct {
 	ChannelID string `json:"channel_id,omitempty"`
 	// Live: YouTube reports it as live or upcoming (a stream, not a song).
 	Live bool `json:"-"`
+	// Views and Likes: YouTube's counts, 0 when unknown. A flat search has
+	// views but no likes; a flat Mix has neither (see Stats).
+	Views int64 `json:"view_count,omitempty"`
+	Likes int64 `json:"like_count,omitempty"`
 }
 
 // ErrBadURL is returned by ValidURL for anything not on the allow-list.
@@ -528,6 +532,8 @@ type ytEntry struct {
 	UploaderID  string `json:"uploader_id"`
 	Description string `json:"description"`
 	Followers   int    `json:"channel_follower_count"`
+	ViewCount   int64  `json:"view_count"`
+	LikeCount   int64  `json:"like_count"`
 }
 
 // ytTop is the top-level shape yt-dlp -J prints: either {"_type":"playlist",
@@ -603,5 +609,7 @@ func entryToVideo(e ytEntry) (Video, bool) {
 		DurationS: int(e.Duration),
 		ChannelID: channelIDOf(e),
 		Live:      e.LiveStatus == "is_live" || e.LiveStatus == "is_upcoming",
+		Views:     e.ViewCount,
+		Likes:     e.LikeCount,
 	}, true
 }

@@ -63,7 +63,7 @@ func (s *Server) videoSearch(w http.ResponseWriter, r *http.Request) {
 		s.searchFail(w, r, clean, err)
 		return
 	}
-	videos := forBrowser(res.Videos, "")
+	videos := forBrowser(ytdlp.Popular(res.Videos), "") // YouTube's order blended with the view counts
 	// record=1 is a submitted search (not typing): it seeds 为你推荐 with the first result.
 	if r.URL.Query().Get("record") == "1" {
 		first := ""

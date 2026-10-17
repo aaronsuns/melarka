@@ -29,6 +29,20 @@ type fakeYT struct {
 	searches []string
 	mixes    []string
 	at       []time.Time
+	// stats: views and likes per video id (absent: an error); statsAsked records each Stats call.
+	stats      map[string][2]int64
+	statsAsked []string
+}
+
+func (f *fakeYT) Stats(ctx context.Context, id string) (int64, int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.statsAsked = append(f.statsAsked, id)
+	st, ok := f.stats[id]
+	if !ok {
+		return 0, 0, errBoom
+	}
+	return st[0], st[1], nil
 }
 
 func (f *fakeYT) SearchTop(ctx context.Context, q string, n int) ([]ytdlp.Video, error) {

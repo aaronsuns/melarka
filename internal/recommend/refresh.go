@@ -82,7 +82,7 @@ func (s *Service) Refresh(ctx context.Context, userID int64) error {
 			kept = append(kept, sg)
 		}
 	}
-	top := rank(seeds, kept)
+	top := s.boost(ctx, userID, rank(seeds, kept))
 	if len(top) > keepTop {
 		top = top[:keepTop]
 	}
@@ -178,7 +178,7 @@ func (s *Service) searchVideo(ctx context.Context, userID int64, q string) (ytdl
 	}
 	var pick ytdlp.Video
 	found := false
-	for _, r := range results {
+	for _, r := range ytdlp.Popular(results) {
 		if playable(r) {
 			pick, found = r, true
 			break

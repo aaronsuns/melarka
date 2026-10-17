@@ -125,6 +125,7 @@ func (s *Server) youtubeSearch(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return ytdlp.SearchResult{}, false, err
 			}
+			videos = ytdlp.Popular(videos)
 			if videos == nil {
 				videos = []ytdlp.Video{}
 			}
@@ -147,6 +148,7 @@ func (s *Server) youtubeSearch(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return ytdlp.SearchResult{}, false, err
 		}
+		videos = ytdlp.Popular(videos) // YouTube's order blended with the view counts
 		if plErr != nil {
 			s.Log.Warn("youtube playlist search", "query", clean, "err", plErr)
 			pls = nil

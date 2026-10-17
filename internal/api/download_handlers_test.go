@@ -587,3 +587,28 @@ func TestCreateDownloadAcceptsVideoWithChannelID(t *testing.T) {
 		t.Fatalf("%d %s", resp.StatusCode, body)
 	}
 }
+
+// Both YouTube searches put a far more watched version above YouTube's first hit.
+func TestYouTubeSearchesRankByViews(t *testing.T) {
+	s, ts := newTestServer(t)
+	withChannels(t, s) // /videos/search is part of 视频
+	tok := loginAs(t, s, "alice", "member")
+	s.YT = &ytdlp.Client{Runner: &fakeYTRunner{outFor: func(args []string) ([]byte, error) {
+		if strings.Contains(args[len(args)-1], "results?search_query") {
+			return []byte(`{"entries":[]}`), nil
+		}
+		return []byte(`{"_type":"playlist","entries":[
+			{"id":"few_0000000","title":"流年 (fan upload)","view_count":2000},
+			{"id":"many_000000","title":"王菲-流年","view_count":3000000}]}`), nil
+	}}}
+	for _, path := range []string{"/api/v1/youtube/search?q=liunian", "/api/v1/videos/search?q=liunian"} {
+		r, b := do(t, ts, tok, "GET", path, nil)
+		var res struct{ Videos []ytdlp.Video }
+		if r.StatusCode != 200 || json.Unmarshal(b, &res) != nil || len(res.Videos) != 2 {
+			t.Fatalf("%s: %d %s", path, r.StatusCode, b)
+		}
+		if res.Videos[0].ID != "many_000000" || res.Videos[0].Views != 3000000 {
+			t.Fatalf("%s: %+v", path, res.Videos)
+		}
+	}
+}

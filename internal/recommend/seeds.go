@@ -254,7 +254,7 @@ func (s *Service) seedVideo(ctx context.Context, userID int64, sd Seed) (string,
 		return "", err
 	}
 	var pick sql.NullString
-	for _, v := range results {
+	for _, v := range ytdlp.Popular(results) { // the most watched upload of the right length
 		if !ytdlp.IsVideoID(v.ID) {
 			continue
 		}
@@ -294,12 +294,13 @@ func (s *Service) spend(ctx context.Context, userID int64, counter string, limit
 	if _, err := s.DB.ExecContext(ctx, `INSERT INTO recommendation_users(user_id) VALUES (?) ON CONFLICT(user_id) DO NOTHING`, userID); err != nil {
 		return false, err
 	}
-	// counter is one of two fixed column names, never user input.
+	// counter is one of three fixed column names, never user input.
 	if _, err := s.DB.ExecContext(ctx, `UPDATE recommendation_users SET
 		seed_searches = CASE WHEN search_day=? THEN seed_searches ELSE 0 END,
 		other_searches = CASE WHEN search_day=? THEN other_searches ELSE 0 END,
+		stats_lookups = CASE WHEN search_day=? THEN stats_lookups ELSE 0 END,
 		search_day = ?
-		WHERE user_id=?`, day, day, day, userID); err != nil {
+		WHERE user_id=?`, day, day, day, day, userID); err != nil {
 		return false, err
 	}
 	res, err := s.DB.ExecContext(ctx, `UPDATE recommendation_users SET `+counter+`=`+counter+`+1 WHERE user_id=? AND `+counter+`<?`, userID, limit)

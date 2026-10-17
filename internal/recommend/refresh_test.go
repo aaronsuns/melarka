@@ -234,7 +234,7 @@ func TestLastFMCandidates(t *testing.T) {
 	if got := ids(res.Items); got != "sharedsugg1,mixonlyaaaa,lastfms2aaa,somebodyaaa" {
 		t.Fatalf("items %s", got)
 	}
-	if res.Items[0].Score != 2 { // the best seed (1.5) + agreement (0.5)
+	if res.Items[0].Score != 2*neutralQuality { // (the best seed 1.5 + agreement 0.5) × unknown YouTube counts
 		t.Fatalf("agreement score %v", res.Items[0].Score)
 	}
 	searches, _ := e.yt.calls()
