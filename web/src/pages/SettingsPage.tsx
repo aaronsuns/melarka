@@ -58,6 +58,7 @@ export default function SettingsPage() {
         {t("settings.signedInAs", { name: user?.username ?? "" })}
         {user?.role === "admin" ? t("settings.adminSuffix") : ""}
       </p>
+      <div className="settings-group">
       <label className="field">
         {t("settings.quality")}
         <select aria-label={t("settings.quality")} value={p.quality} onChange={(e) => p.setQuality(e.target.value as Quality)}>
@@ -93,6 +94,8 @@ export default function SettingsPage() {
           <option value="nothing">{t("settings.onOpen.nothing")}</option>
         </select>
       </label>
+      </div>
+      <div className="settings-group">
       <div className="field field-check">
         <label className="field-check-row">
           <input
@@ -119,6 +122,7 @@ export default function SettingsPage() {
         </label>
         <span id={loudnessHint} className="small">{t("settings.loudnessHint")}</span>
       </div>
+      </div>
       {isIOSSafari && !native && <p className="muted small">{t("settings.iosTip")}</p>}
       {native ? (
         <div className="field">
@@ -130,9 +134,11 @@ export default function SettingsPage() {
       ) : (
         <OfflineSettings />
       )}
-      {user?.role === "admin" && <Link to="/admin" className="settings-link">{t("settings.admin")}</Link>}
-      <Link to="/change-password" className="settings-link">{t("settings.changePassword")}</Link>
-      <Link to="/downloads" className="settings-link">{t("settings.myDownloads")}</Link>
+      <nav className="settings-group settings-links">
+        {user?.role === "admin" && <Link to="/admin" className="settings-link">{t("settings.admin")}</Link>}
+        <Link to="/change-password" className="settings-link">{t("settings.changePassword")}</Link>
+        <Link to="/downloads" className="settings-link">{t("settings.myDownloads")}</Link>
+      </nav>
       <button className="secondary" onClick={() => void handleLogout()}>{t("settings.logout")}</button>
       {/* The source offer (AGPL §13) is always shown; the version only when the server reports one. */}
       <p className="muted small">

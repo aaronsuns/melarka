@@ -216,3 +216,26 @@ export function ProgressRing({ pct }: { pct: number | null }) {
     </svg>
   );
 }
+
+// Tab bar: one line icon per section, above (phone) or beside (wide window) its label.
+export const HomeIcon = ({ size = 24 }: { size?: number }) => (
+  <Svg size={size} stroke={1.9}><path d="M3.5 10.6 12 3.8l8.5 6.8V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-5.8H9.2v5.8H5A1.5 1.5 0 0 1 3.5 19z" /></Svg>
+);
+export const SearchIcon = ({ size = 24 }: { size?: number }) => (
+  <Svg size={size} stroke={1.9}><circle cx="10.8" cy="10.8" r="6.6" /><path d="m15.8 15.8 4.6 4.6" /></Svg>
+);
+export const LibraryIcon = ({ size = 24 }: { size?: number }) => (
+  <Svg size={size} stroke={1.9}><path d="M4.5 4v16M9 4v16" /><path d="m13.2 4.6 4.3-1.2 3.4 15.9-4.3 1.2z" /></Svg>
+);
+export const ChannelsIcon = ({ size = 24 }: { size?: number }) => (
+  <Svg size={size} stroke={1.9}><circle cx="12" cy="12" r="1.8" /><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.3 5.3a9.5 9.5 0 0 0 0 13.4M18.7 5.3a9.5 9.5 0 0 1 0 13.4" /></Svg>
+);
+export const VideoIcon = ({ size = 24 }: { size?: number }) => (
+  <Svg size={size} stroke={1.9}><rect x="3" y="5" width="18" height="14" rx="3" /><path d="m10.2 9.2 4.6 2.8-4.6 2.8z" /></Svg>
+);
+export const PersonIcon = ({ size = 24 }: { size?: number }) => (
+  <Svg size={size} stroke={1.9}><circle cx="12" cy="8.2" r="3.9" /><path d="M4.6 20.2c.9-3.7 3.8-5.7 7.4-5.7s6.5 2 7.4 5.7" /></Svg>
+);
+export const RadioIcon = ({ size = 22 }: { size?: number }) => (
+  <Svg size={size} stroke={1.9}><rect x="3" y="8" width="18" height="12" rx="2.5" /><path d="m7 8 9-4.5" /><circle cx="15.5" cy="14" r="2.6" /><path d="M6.5 12.2h3.5M6.5 15.8h3.5" /></Svg>
+);

@@ -65,7 +65,7 @@ test("YouTube search → download → play, admin console, shuffle", async ({ pa
   // the button's own error message, a real check that shuffle worked, not
   // a trivially-true one (".mini" is already visible from the 播放 step).
   await page.getByRole("link", { name: "首页" }).click();
-  await verifyPlaybackStarted(page, info, () => page.getByRole("button", { name: /^🔀 随机播放(?!收藏)/ }).click());
+  await verifyPlaybackStarted(page, info, () => page.getByRole("button", { name: /^随机播放(?!收藏)/ }).click());
   await expect(page.locator(".mini").getByRole("button", { name: "暂停" })).toBeVisible();
   await expect(page.locator(".error.small", { hasText: "随机播放" })).toHaveCount(0);
 });

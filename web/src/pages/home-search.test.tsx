@@ -58,7 +58,7 @@ test("home shuffle button primes synchronously and plays random tracks", async (
   const { audio } = renderWithApp(<HomePage />, {
     routes: { "GET /api/v1/tracks": () => page([]), "GET /api/v1/tracks/random": () => ({ body: [tr(5), tr(6)] }) },
   });
-  const btn = await screen.findByRole("button", { name: /^🔀 随机播放(?!收藏)/ });
+  const btn = await screen.findByRole("button", { name: /^随机播放(?!收藏)/ });
   act(() => btn.click());
   expect(audio.play).toHaveBeenCalledTimes(1); // primed before the fetch resolved
   await vi.waitFor(() => expect(audio.src).toContain("/tracks/5/stream"));
@@ -68,7 +68,7 @@ test("home shuffle button shows an inline error on failure", async () => {
   renderWithApp(<HomePage />, {
     routes: { "GET /api/v1/tracks": () => page([]), "GET /api/v1/tracks/random": () => ({ status: 500, body: { error: "随机播放失败" } }) },
   });
-  await userEvent.click(await screen.findByRole("button", { name: /^🔀 随机播放(?!收藏)/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /^随机播放(?!收藏)/ }));
   expect(await screen.findByText("随机播放失败")).toBeInTheDocument();
 });
 

@@ -6,6 +6,7 @@ import { errorMessage } from "../i18n/errors";
 import { t as translate, useT } from "../i18n/i18n";
 import { usePlayer } from "../player/PlayerProvider";
 import { shuffled } from "../player/queue";
+import { ShuffleIcon } from "../components/icons";
 
 // usePlayDownloads plays a user's "My downloads" (default: the caller's)
 // straight from a tap: prime() runs inside the gesture, before the fetch.
@@ -42,7 +43,7 @@ export default function MyDownloadsPage() {
       {error && <p className="error">{error}</p>}
       <div className="actions">
         <button className="primary" disabled={!playable.length} onClick={() => player.playList(playable, 0)}>{t("playlist.playAll")}</button>
-        <button className="secondary" disabled={!playable.length} onClick={() => player.playList(shuffled(playable), 0)}>🔀 {t("library.shuffle")}</button>
+        <button className="secondary with-icon" disabled={!playable.length} onClick={() => player.playList(shuffled(playable), 0)}><ShuffleIcon /> {t("library.shuffle")}</button>
       </div>
       {tracks?.length === 0 && <p className="muted">{t("myDownloads.empty")}</p>}
       <TrackList

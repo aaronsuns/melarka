@@ -10,6 +10,7 @@ import { TrackList } from "../components/TrackList";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { usePlayer } from "../player/PlayerProvider";
+import { HeartIcon, RadioIcon, ShuffleIcon } from "../components/icons";
 
 export default function HomePage() {
   const t = useT();
@@ -68,14 +69,13 @@ export default function HomePage() {
       <h1 className="page-title">{BRAND}</h1>
       {/* One row of equal quick-play buttons. */}
       <div className="quick-actions">
-        <button className="secondary quick" onClick={shuffleFavs.go}><span className="quick-icon">🔀</span>{" "}<span>{t("home.shuffleFavorites")}</span></button>
-        <button className="secondary quick" onClick={shuffleAll} title={t("home.shuffleHint")}><span className="quick-icon">🔀</span>{" "}<span>{t("home.shuffle")}</span></button>
-        <button className="secondary quick" onClick={startRadio} title={t("home.radioHint")}><span className="quick-icon">📻</span>{" "}<span>{t("home.radio")}</span></button>
+        <button className="secondary quick" onClick={shuffleFavs.go}><HeartIcon /><span>{t("home.shuffleFavorites")}</span></button>
+        <button className="secondary quick" onClick={shuffleAll} title={t("home.shuffleHint")}><ShuffleIcon size={20} /><span>{t("home.shuffle")}</span></button>
+        <button className="secondary quick" onClick={startRadio} title={t("home.radioHint")}><RadioIcon /><span>{t("home.radio")}</span></button>
       </div>
       {shuffleFavs.msg && <p className="error small">{shuffleFavs.msg}</p>}
       {shuffleMsg && <p className="error small">{shuffleMsg}</p>}
       {radioMsg && <p className="muted">{radioMsg}</p>}
-      <RecommendationsSection />
       {player.current && (
         <section className="resume">
           <div className="ellipsis">
@@ -86,6 +86,7 @@ export default function HomePage() {
           <button className="primary" onClick={player.toggle}>{player.playing ? t("common.pause") : t("common.play")}</button>
         </section>
       )}
+      <RecommendationsSection />
       {activeDownloads > 0 && (
         <Link to="/downloads" className="chip">{t("home.downloadingCount", { count: activeDownloads })}</Link>
       )}

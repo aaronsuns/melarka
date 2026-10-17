@@ -2,6 +2,7 @@ import { useState } from "react";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { usePlayer } from "../player/PlayerProvider";
+import { ShuffleIcon } from "./icons";
 
 /** The favorites shuffle action and its error line (player.shuffleFavorites primes in the tap). */
 export function useShuffleFavorites() {
@@ -24,7 +25,7 @@ export function ShuffleFavoritesButton() {
   const { go, msg } = useShuffleFavorites();
   return (
     <div className="tab-actions">
-      <button className="secondary" onClick={go}>🔀 {t("home.shuffleFavorites")}</button>
+      <button className="secondary with-icon" onClick={go}><ShuffleIcon /> {t("home.shuffleFavorites")}</button>
       {msg && <p className="error small">{msg}</p>}
     </div>
   );

@@ -90,7 +90,8 @@ export function TrackList({ tracks, showAlbum = true, onChange, onRemoved, extra
                   </span>
                 </span>
                 <span className="muted track-meta">
-                  <span className="badge">{qualityLabel(track)}</span>
+                  {/* Only lossless is worth a badge in a list; Now Playing shows every quality. */}
+                  {track.lossless && <span className="badge">{qualityLabel(track)}</span>}
                   {duration(track.duration_ms)}
                 </span>
               </button>

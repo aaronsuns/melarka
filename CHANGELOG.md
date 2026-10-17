@@ -8,6 +8,16 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-10-17
+
+### Changed
+
+- **A tidier, easier app**: the tab bar has an icon over each label; on a wide window it becomes a
+  sidebar and the page a centred column instead of stretching across the screen. The home quick
+  actions and every shuffle button use the app's own icons instead of emoji, Continue playing
+  comes before For you, song lists show a quality badge only for lossless songs, and 我的 groups
+  its settings into cards.
+
 ## [0.2.8] - 2026-10-17
 
 ### Added
@@ -255,7 +265,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.8...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.9...HEAD
+[0.2.9]: https://github.com/aaronsuns/melarka/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/aaronsuns/melarka/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/aaronsuns/melarka/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/aaronsuns/melarka/compare/v0.2.5...v0.2.6

@@ -27,14 +27,14 @@ test("songs tab shuffle button plays random tracks", async () => {
     path: "/library?tab=songs",
     routes: { "GET /api/v1/tracks": () => ({ body: { items: [], next_cursor: "" } }), "GET /api/v1/tracks/random": () => ({ body: [tr(4)] }) },
   });
-  await userEvent.click(await screen.findByRole("button", { name: /^🔀 随机播放$/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /^\s*随机播放$/ }));
   await vi.waitFor(() => expect(audio.src).toContain("/tracks/4/stream"));
 });
 
 test("favorites tab has no global shuffle button", async () => {
   renderWithApp(<LibraryPage />, { path: "/library?tab=favorites", routes: { "GET /api/v1/tracks": () => ({ body: { items: [], next_cursor: "" } }) } });
   await screen.findByRole("tablist");
-  expect(screen.queryByRole("button", { name: /^🔀 随机播放$/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^\s*随机播放$/ })).toBeNull();
 });
 
 test("favorites tab asks for favorite=1", async () => {

@@ -29,7 +29,7 @@ test("home: the favorites shuffle is the first button, primes in the tap, and qu
   // One row of same-style quick-play buttons: favorites, global shuffle, radio.
   const row = btn.closest(".quick-actions")!;
   const quick = [...row.querySelectorAll("button")];
-  expect(quick.map((b) => b.textContent)).toEqual(["🔀 随机播放收藏", "🔀 随机播放", "📻 私人电台"]);
+  expect(quick.map((b) => b.textContent)).toEqual(["随机播放收藏", "随机播放", "私人电台"]);
   for (const b of quick) expect(b.className).toBe("secondary quick");
 });
 

@@ -584,3 +584,47 @@ input.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2
 @media (prefers-reduced-transparency: reduce) {
   .tabs, .shell-player::before { background: var(--material-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* Tab bar with icons (2026-10): a line icon over a small label on a phone; on a wide window the
+   tabs become a sidebar and the content a centred column. */
+.tabs a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; letter-spacing: .01em; }
+.tabs.tabs-6 a { font-size: 10.5px; }
+.tabs a .svg-icon { width: 24px; height: 24px; }
+.tabs .tab-label { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tab-badge, .tabs.tabs-6 .tab-badge { top: 4px; left: calc(50% + 6px); right: auto; }
+
+@media (min-width: 900px) {
+  .shell { grid-template-columns: 232px minmax(0, 1fr); grid-template-rows: 1fr auto; }
+  .shell > .tabs, .tabs.tabs-6 {
+    grid-column: 1; grid-row: 1 / 3; display: flex; flex-direction: column; gap: 2px; height: auto;
+    padding: calc(24px + env(safe-area-inset-top)) 12px 16px; border-right: .5px solid var(--separator);
+    background: var(--material-solid); -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .tabs a, .tabs.tabs-6 a { position: relative; flex-direction: row; justify-content: flex-start; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; font-size: var(--fs-body); }
+  .tabs a.active { background: rgba(255, 255, 255, .08); color: var(--text); }
+  .tabs a.active .svg-icon { color: var(--accent); }
+  .tab-badge, .tabs.tabs-6 .tab-badge { position: static; margin-left: auto; }
+  .shell > .content {
+    grid-column: 2; grid-row: 1 / 3;
+    padding-left: max(28px, calc((100% - 1080px) / 2)); padding-right: max(28px, calc((100% - 1080px) / 2));
+    padding-bottom: calc(24px + var(--player-h, 0px));
+  }
+  .shell > .shell-player { grid-column: 2; grid-row: 2; padding-left: max(20px, calc((100% - 1096px) / 2)); padding-right: max(20px, calc((100% - 1096px) / 2)); }
+}
+@media (min-width: 900px) and (hover: hover) {
+  .tabs a:hover:not(.active) { background: rgba(255, 255, 255, .05); color: var(--text); }
+}
+/* A text button led by an icon (随机播放 …), and the home quick actions' icons. */
+.secondary.with-icon { display: inline-flex; align-items: center; gap: 6px; }
+.secondary.quick { gap: 5px; }
+.secondary.quick .svg-icon { width: 22px; height: 22px; color: var(--accent); }
+/* 我的: settings in grouped cards (iOS grouped list), each row split by a hairline. */
+.settings-group { margin: 14px 0; padding: 2px 16px; border-radius: var(--radius); background: var(--surface); }
+.settings-group > .field { margin: 0; padding: 12px 0; }
+.settings-group > .field + .field, .settings-links > .settings-link + .settings-link { border-top: .5px solid var(--separator); }
+.settings-links { display: grid; padding: 0 16px; }
+.settings-links > .settings-link { margin: 0; border-bottom: 0; }
+.tabs-brand { display: none; }
+@media (min-width: 900px) {
+  .tabs-brand { display: block; padding: 0 12px 18px; font-size: var(--fs-title); font-weight: 700; letter-spacing: -.01em; }
+}

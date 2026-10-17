@@ -43,6 +43,7 @@ import EpisodePage from "./pages/channels/EpisodePage";
 import VideoPage from "./pages/video/VideoPage";
 import WatchPage from "./pages/video/WatchPage";
 
+import { ChannelsIcon, HomeIcon, LibraryIcon, PersonIcon, SearchIcon, VideoIcon } from "./components/icons";
 function NotFound() {
   const t = useT();
   return <h1 className="page-title">{t("app.notFound")}</h1>;
@@ -58,13 +59,15 @@ function Shell() {
       <main className="content"><Outlet /></main>
       <ShellPlayer />
       <nav className={channelsOn ? "tabs tabs-6" : "tabs"}>
-        <NavLink to="/" end>{t("nav.home")}</NavLink>
-        <NavLink to="/search">{t("nav.search")}</NavLink>
-        <NavLink to="/library">{t("nav.library")}</NavLink>
+        <div className="tabs-brand" aria-hidden="true">{BRAND}</div>
+        <NavLink to="/" end><HomeIcon /><span className="tab-label">{t("nav.home")}</span></NavLink>
+        <NavLink to="/search"><SearchIcon /><span className="tab-label">{t("nav.search")}</span></NavLink>
+        <NavLink to="/library"><LibraryIcon /><span className="tab-label">{t("nav.library")}</span></NavLink>
         {/* The count is the tab's description, not its name: the tab stays "频道" to find. */}
         {channelsOn && (
           <NavLink to="/channels" aria-describedby={unplayed > 0 ? "channels-unplayed" : undefined}>
-            {t("nav.channels")}
+            <ChannelsIcon />
+            <span className="tab-label">{t("nav.channels")}</span>
             {unplayed > 0 && (
               <>
                 <span className="tab-badge" aria-hidden="true">{unplayed > 99 ? "99+" : unplayed}</span>
@@ -73,8 +76,8 @@ function Shell() {
             )}
           </NavLink>
         )}
-        {channelsOn && <NavLink to="/video">{t("nav.video")}</NavLink>}
-        <NavLink to="/settings">{t("nav.me")}</NavLink>
+        {channelsOn && <NavLink to="/video"><VideoIcon /><span className="tab-label">{t("nav.video")}</span></NavLink>}
+        <NavLink to="/settings"><PersonIcon /><span className="tab-label">{t("nav.me")}</span></NavLink>
       </nav>
     </div>
   );

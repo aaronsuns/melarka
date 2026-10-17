@@ -11,6 +11,7 @@ import { useInfinite } from "../components/useInfinite";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { usePlayer } from "../player/PlayerProvider";
+import { ShuffleIcon } from "../components/icons";
 
 function tabs(t: ReturnType<typeof useT>) {
   return [
@@ -123,7 +124,7 @@ export default function LibraryPage() {
       {tab === "songs" && (
         <>
           <div className="tab-actions">
-            <button className="secondary" onClick={shuffleAll}>🔀 {t("library.shuffle")}</button>
+            <button className="secondary with-icon" onClick={shuffleAll}><ShuffleIcon /> {t("library.shuffle")}</button>
             {shuffleMsg && <p className="error small">{shuffleMsg}</p>}
           </div>
         </>

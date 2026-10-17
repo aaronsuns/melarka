@@ -6,6 +6,7 @@ import { errorMessage } from "../../i18n/errors";
 import { useT } from "../../i18n/i18n";
 import { usePlayer } from "../../player/PlayerProvider";
 import { usePlayDownloads } from "../MyDownloadsPage";
+import { ShuffleIcon } from "../../components/icons";
 
 const ACTIVE_POLL_MS = 2000;
 const IDLE_POLL_MS = 15_000;
@@ -118,7 +119,7 @@ export default function AllDownloadsPage() {
           {users.map((u) => <option key={u.id} value={u.id}>{u.username}</option>)}
         </select>
         <button className="secondary" onClick={() => void downloads.play({ user: who })}>{t("playlist.playAll")}</button>
-        <button className="secondary" onClick={() => void downloads.play({ user: who, shuffle: true })}>🔀 {t("library.shuffle")}</button>
+        <button className="secondary with-icon" onClick={() => void downloads.play({ user: who, shuffle: true })}><ShuffleIcon /> {t("library.shuffle")}</button>
       </div>
       {downloads.msg && <p className="muted small">{downloads.msg}</p>}
       {loadError && <p className="error">{loadError}</p>}

@@ -6,6 +6,7 @@ import { Cover } from "../components/Cover";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { usePlayDownloads } from "./MyDownloadsPage";
+import { ShuffleIcon } from "../components/icons";
 
 export default function PlaylistsPage() {
   const t = useT();
@@ -53,7 +54,7 @@ export default function PlaylistsPage() {
             <span className="ellipsis">{t("myDownloads.title")}</span>
           </Link>
           <button className="icon" aria-label={t("myDownloads.playAria")} onClick={() => void downloads.play()}>▶</button>
-          <button className="icon" aria-label={t("myDownloads.shuffleAria")} onClick={() => void downloads.play({ shuffle: true })}>🔀</button>
+          <button className="icon" aria-label={t("myDownloads.shuffleAria")} onClick={() => void downloads.play({ shuffle: true })}><ShuffleIcon /></button>
         </li>
         {downloads.msg && <li className="muted small">{downloads.msg}</li>}
         {lists?.map((p) => (
