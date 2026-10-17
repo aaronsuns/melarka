@@ -48,6 +48,7 @@
   "search.history": "Recent searches", "search.clearHistory": "Clear",
 
   "library.title": "Library", "library.tabSongs": "Songs", "library.tabAlbums": "Albums",
+  "library.searchFavorites": "Search favorites", "library.noFavoritesMatch": "No favorites match",
   "library.tabArtists": "Artists", "library.tabFavorites": "Favorites", "library.tabPlaylists": "Playlists",
   "library.shuffle": "Shuffle", "library.shuffleUnavailable": "Shuffle is temporarily unavailable",
   "library.noFavorites": "No favorites yet. Tap the ⋯ next to a song to favorite it.",

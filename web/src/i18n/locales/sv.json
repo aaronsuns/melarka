@@ -48,6 +48,7 @@
   "search.history": "Senaste sökningar", "search.clearHistory": "Rensa",
 
   "library.title": "Bibliotek", "library.tabSongs": "Låtar", "library.tabAlbums": "Album",
+  "library.searchFavorites": "Sök bland favoriter", "library.noFavoritesMatch": "Inga favoriter matchar",
   "library.tabArtists": "Artister", "library.tabFavorites": "Favoriter", "library.tabPlaylists": "Spellistor",
   "library.shuffle": "Blanda", "library.shuffleUnavailable": "Blanda är tillfälligt otillgängligt",
   "library.noFavorites": "Inga favoriter än. Tryck på ⋯ bredvid en låt för att favoritmarkera den.",

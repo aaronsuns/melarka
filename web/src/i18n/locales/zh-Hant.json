@@ -48,6 +48,7 @@
   "search.history": "最近搜尋", "search.clearHistory": "清除",
 
   "library.title": "音樂庫", "library.tabSongs": "歌曲", "library.tabAlbums": "專輯",
+  "library.searchFavorites": "搜尋收藏", "library.noFavoritesMatch": "收藏裡沒有找到",
   "library.tabArtists": "歌手", "library.tabFavorites": "收藏", "library.tabPlaylists": "歌單",
   "library.shuffle": "隨機播放", "library.shuffleUnavailable": "隨機播放暫時無法使用",
   "library.noFavorites": "還沒有收藏的歌。點歌曲右邊的 ⋯ 收藏。",

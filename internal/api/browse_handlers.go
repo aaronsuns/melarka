@@ -58,7 +58,7 @@ func (s *Server) listTracks(w http.ResponseWriter, r *http.Request) {
 		Tag: q.Get("tag"), Status: q.Get("status"),
 		FavoritesOnly: q.Get("favorite") == "1", DislikedOnly: q.Get("disliked") == "1",
 		Broken: q.Get("broken") == "1",
-		Sort:   q.Get("sort"), Limit: int(qInt(r, "limit")), Cursor: q.Get("cursor"),
+		Sort:   q.Get("sort"), Limit: int(qInt(r, "limit")), Cursor: q.Get("cursor"), Q: q.Get("q"),
 	})
 	if err != nil {
 		s.fail(w, err)

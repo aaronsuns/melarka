@@ -70,6 +70,7 @@ type TrackFilter struct {
 	Broken                       bool   // only broken tracks (admin console "损坏文件")
 	WithDisliked                 bool   // keep the user's disliked tracks too (the admin's broken list shows every one)
 	Sort                         string // "added" (default) | "title" | "album" | "favorited" (newest favorite first)
+	Q                            string // only tracks the search finds for this (title, artist, album, folder, tags, keywords, pinyin)
 	Limit                        int
 	Cursor                       string
 }
@@ -167,6 +168,14 @@ func (s *Store) Tracks(ctx context.Context, userID int64, f TrackFilter) (Page[T
 	}
 	if f.FavoritesOnly {
 		add("EXISTS(SELECT 1 FROM favorites f WHERE f.user_id=? AND f.track_id=t.id)", userID)
+	}
+	if strings.TrimSpace(f.Q) != "" {
+		expr := FTSQuery(f.Q)
+		if expr == "" {
+			add("0") // nothing searchable in q: nothing matches
+		} else {
+			add("t.id IN (SELECT rowid FROM track_fts WHERE track_fts MATCH ?)", expr)
+		}
 	}
 	if f.DislikedOnly {
 		add("EXISTS(SELECT 1 FROM dislikes d WHERE d.user_id=? AND d.track_id=t.id)", userID)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"testing"
 )
 
@@ -249,5 +250,58 @@ func TestFavoritesSortedByWhenFavorited(t *testing.T) {
 	}
 	if fmt.Sprint(got) != "[1.mp3 3.mp3 2.mp3]" {
 		t.Fatalf("order %v", got)
+	}
+}
+
+// q narrows a list with the search index (pinyin included): here, searching the user's favorites.
+func TestTracksSearchWithinFavorites(t *testing.T) {
+	e := newEnv(t, fakeProber{})
+	for i := 1; i <= 3; i++ {
+		writeRandom(t, filepath.Join(e.root, fmt.Sprintf("%d.mp3", i)))
+	}
+	e.scan(t)
+	d := e.st.DB
+	d.Exec(`INSERT INTO users(id,username,password_hash,role,created_at) VALUES (1,'u','h','member',0)`)
+	ids := map[string]int64{}
+	rows, _ := d.Query(`SELECT rel_path, id FROM tracks`)
+	for rows.Next() {
+		var p string
+		var i int64
+		rows.Scan(&p, &i)
+		ids[p] = i
+	}
+	rows.Close()
+	ctx := context.Background()
+	for p, title := range map[string]string{"1.mp3": "甜蜜蜜", "2.mp3": "月亮代表我的心", "3.mp3": "甜蜜的家"} {
+		tt := title
+		if err := e.st.SetOverrides(ctx, ids[p], Overrides{Title: &tt}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	d.Exec(`INSERT INTO favorites VALUES (1,?,1),(1,?,2)`, ids["1.mp3"], ids["2.mp3"]) // 3.mp3 is not a favorite
+	titles := func(q string) []string {
+		t.Helper()
+		p, err := e.st.Tracks(ctx, 1, TrackFilter{FavoritesOnly: true, Q: q})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, tr := range p.Items {
+			out = append(out, tr.Title)
+		}
+		sort.Strings(out)
+		return out
+	}
+	if got := titles("甜蜜"); fmt.Sprint(got) != "[甜蜜蜜]" {
+		t.Fatalf("甜蜜: %v", got)
+	}
+	if got := titles("yldb"); fmt.Sprint(got) != "[月亮代表我的心]" { // pinyin initials
+		t.Fatalf("yldb: %v", got)
+	}
+	if got := titles(""); len(got) != 2 {
+		t.Fatalf("no q: %v", got)
+	}
+	if got := titles("nothing-like-this"); len(got) != 0 {
+		t.Fatalf("no match: %v", got)
 	}
 }

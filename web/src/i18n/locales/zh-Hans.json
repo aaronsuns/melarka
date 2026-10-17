@@ -48,6 +48,7 @@
   "search.history": "最近搜索", "search.clearHistory": "清除",
 
   "library.title": "音乐库", "library.tabSongs": "歌曲", "library.tabAlbums": "专辑",
+  "library.searchFavorites": "搜索收藏", "library.noFavoritesMatch": "收藏里没有找到",
   "library.tabArtists": "歌手", "library.tabFavorites": "收藏", "library.tabPlaylists": "歌单",
   "library.shuffle": "随机播放", "library.shuffleUnavailable": "随机播放暂时不可用",
   "library.noFavorites": "还没有收藏的歌。点歌曲右边的 ⋯ 收藏。",

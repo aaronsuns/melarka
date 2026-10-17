@@ -19,9 +19,11 @@ interface Props {
   onChange?: (t: Track) => void;
   onRemoved?: (id: number) => void;
   extraActions?: (t: Track) => { label: string; run: () => void }[];
+  // A tap on a row; default: play the list from that row.
+  onPlay?: (t: Track) => void;
 }
 
-export function TrackList({ tracks, showAlbum = true, onChange, onRemoved, extraActions }: Props) {
+export function TrackList({ tracks, showAlbum = true, onChange, onRemoved, extraActions, onPlay }: Props) {
   const t = useT();
   const player = usePlayer();
   const offline = useOffline();
@@ -78,7 +80,7 @@ export function TrackList({ tracks, showAlbum = true, onChange, onRemoved, extra
               <button
                 className="track-main"
                 disabled={track.broken}
-                onClick={() => player.playList(playable, playable.findIndex((p) => p.id === track.id))}
+                onClick={() => (onPlay ? onPlay(track) : player.playList(playable, playable.findIndex((p) => p.id === track.id)))}
               >
                 <Cover seed={track.album || track.title} label={track.title} size={44} src={coverUrl("track", track.id)} />
                 <span className="track-text">

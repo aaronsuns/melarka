@@ -8,6 +8,13 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.13] - 2026-10-17
+
+### Added
+
+- **Search your favorites**: Library → 收藏 has a search box (title, artist, album, tags,
+  keywords, pinyin). Tapping a favorite plays it, then the queue goes on as 随机播放收藏.
+
 ## [0.2.12] - 2026-10-17
 
 ### Added
@@ -291,7 +298,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.12...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.13...HEAD
+[0.2.13]: https://github.com/aaronsuns/melarka/compare/v0.2.12...v0.2.13
 [0.2.12]: https://github.com/aaronsuns/melarka/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/aaronsuns/melarka/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/aaronsuns/melarka/compare/v0.2.9...v0.2.10

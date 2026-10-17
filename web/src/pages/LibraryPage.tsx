@@ -26,12 +26,37 @@ function tabs(t: ReturnType<typeof useT>) {
 
 function Songs({ favorites }: { favorites: boolean }) {
   const t = useT();
-  const s = useInfinite<Track>((cursor) => api.tracks({ sort: favorites ? "added" : "title", favorite: favorites ? 1 : undefined, limit: 100, cursor }), [favorites]);
+  const player = usePlayer();
+  // 收藏's search box: typed text, then (after a pause) the server-side query.
+  const [typed, setTyped] = useState("");
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    const id = setTimeout(() => setQ(typed.trim()), 300);
+    return () => clearTimeout(id);
+  }, [typed]);
+  const s = useInfinite<Track>(
+    (cursor) => api.tracks({ sort: favorites ? "added" : "title", favorite: favorites ? 1 : undefined, q: favorites && q ? q : undefined, limit: 100, cursor }),
+    [favorites, q],
+  );
   return (
     <>
-      {s.done && s.items.length === 0 && <p className="muted">{favorites ? t("library.noFavorites") : t("library.empty")}</p>}
+      {favorites && (
+        <input
+          type="search"
+          className="search-input favorites-search"
+          aria-label={t("library.searchFavorites")}
+          placeholder={t("library.searchFavorites")}
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+        />
+      )}
+      {s.done && s.items.length === 0 && (
+        <p className="muted">{favorites ? (q ? t("library.noFavoritesMatch") : t("library.noFavorites")) : t("library.empty")}</p>
+      )}
       <TrackList
         tracks={s.items}
+        // A favorite plays, then the queue goes on as 随机播放收藏 (topped up with random favorites).
+        onPlay={favorites ? (track) => player.playList([track], 0, { source: "favorites" }) : undefined}
         onRemoved={(id) => s.setItems((ts) => ts.filter((track) => track.id !== id))}
         onChange={(track) => s.setItems((ts) => (favorites && !track.favorite ? ts.filter((x) => x.id !== track.id) : ts.map((x) => (x.id === track.id ? track : x))))}
       />

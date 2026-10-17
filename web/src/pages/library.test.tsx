@@ -5,10 +5,13 @@ import LibraryPage from "./LibraryPage";
 import AlbumPage from "./AlbumPage";
 import ArtistPage from "./ArtistPage";
 import { renderWithApp } from "../test/render";
+import { usePlayer, type Player } from "../player/PlayerProvider";
 import type { Track } from "../api/types";
 
 const tr = (id: number, extra: Partial<Track> = {}) =>
   ({ id, title: `歌${id}`, artist: "邓丽君", album: "精选", duration_ms: 1000, codec: "mp3", bitrate: 320, lossless: false, ...extra }) as Track;
+let player!: Player;
+function Grab() { player = usePlayer(); return null; }
 const album = { id: 3, name: "精选", artist: "邓丽君", artist_id: 4, year: 1983, track_count: 2, library_id: 1 };
 
 test("songs tab pages through the cursor", async () => {
@@ -173,4 +176,28 @@ test("artist page shows empty albums state and disables play-all with no tracks"
   });
   expect(await screen.findByText("没有专辑")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "播放全部" })).toBeDisabled();
+});
+
+// 收藏: a search box narrows the favorites (on the server, pinyin too); tapping a song plays it,
+// then the queue goes on as 随机播放收藏 (topped up with random favorites).
+test("favorites: search, tap a song, and the queue continues as shuffled favorites", async () => {
+  const urls: string[] = [];
+  const { audio } = renderWithApp(<><LibraryPage /><Grab /></>, {
+    path: "/library?tab=favorites",
+    routes: {
+      "GET /api/v1/tracks": (_i, url) => {
+        urls.push(url);
+        return { body: { items: url.includes("q=") ? [tr(7, { title: "月亮代表我的心" })] : [tr(1), tr(2), tr(7, { title: "月亮代表我的心" })], next_cursor: "" } };
+      },
+      "GET /api/v1/tracks/random": () => ({ body: { tracks: [tr(1), tr(2)], source: "favorites" } }),
+    },
+  });
+  expect(await screen.findByText("歌1")).toBeInTheDocument();
+  await userEvent.type(screen.getByRole("searchbox", { name: "搜索收藏" }), "yldb");
+  await vi.waitFor(() => expect(urls.some((u) => u.includes("q=yldb") && u.includes("favorite=1"))).toBe(true));
+  await vi.waitFor(() => expect(screen.queryByText("歌1")).toBeNull());
+  await userEvent.click(screen.getByText("月亮代表我的心"));
+  expect(audio.src).toContain("/tracks/7/stream");
+  expect(player.queue.tracks[0].id).toBe(7);
+  expect(player.queue.source).toBe("favorites");
 });
