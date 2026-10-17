@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type Tag struct {
@@ -202,4 +203,67 @@ func (s *Store) MarkAgentDone(ctx context.Context, ids []int64) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// maxKeywords caps a track's search keywords per source; maxKeywordRunes caps one keyword.
+const (
+	maxKeywords     = 20
+	maxKeywordRunes = 40
+)
+
+// ReplaceKeywords sets the free-form search words a source gives a track
+// (trimmed; empty, overlong and repeated ones, in any case, dropped; at most
+// maxKeywords) and notifies OnChange so search finds them. They are not tags:
+// the Tags tab never lists them.
+func (s *Store) ReplaceKeywords(ctx context.Context, trackID int64, source string, words []string) error {
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `DELETE FROM track_keywords WHERE track_id=? AND source=?`, trackID, source); err != nil {
+		return err
+	}
+	seen := map[string]bool{}
+	n := 0
+	for _, w := range words {
+		w = strings.TrimSpace(w)
+		key := strings.ToLower(w)
+		if w == "" || utf8.RuneCountInString(w) > maxKeywordRunes || seen[key] {
+			continue
+		}
+		seen[key] = true
+		if _, err := tx.ExecContext(ctx, `INSERT INTO track_keywords(track_id, word, source) VALUES (?,?,?)
+			ON CONFLICT(track_id, word) DO NOTHING`, trackID, w, source); err != nil {
+			return err
+		}
+		if n++; n == maxKeywords {
+			break
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if s.OnChange != nil {
+		return s.OnChange(ctx, trackID)
+	}
+	return nil
+}
+
+// Keywords lists a track's search keywords, every source, sorted.
+func (s *Store) Keywords(ctx context.Context, trackID int64) ([]string, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT DISTINCT word FROM track_keywords WHERE track_id=? ORDER BY word`, trackID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var w string
+		if err := rows.Scan(&w); err != nil {
+			return nil, err
+		}
+		out = append(out, w)
+	}
+	return out, rows.Err()
 }

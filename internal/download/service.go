@@ -66,6 +66,10 @@ type Service struct {
 	// of this process without its cancel func.
 	mu      sync.Mutex
 	running map[int64]*runningJob
+
+	// metaFailed: videos whose Meta the backfill could not read (until restart).
+	metaMu     sync.Mutex
+	metaFailed map[string]bool
 }
 
 type runningJob struct {
@@ -411,7 +415,7 @@ func (s *Service) process(runCtx, jctx context.Context, j Job) {
 		}
 	}
 	v := ytdlp.Video{ID: j.VideoID, Title: j.Title, Channel: j.Channel, URL: j.URL, Thumbnail: j.Thumbnail, DurationS: j.DurationS}
-	finalPath, err := s.download(jctx, v, destNoExt, onProgress)
+	finalPath, meta, err := s.download(jctx, v, destNoExt, onProgress)
 	if err != nil {
 		switch {
 		case runCtx.Err() != nil:
@@ -435,23 +439,29 @@ func (s *Service) process(runCtx, jctx context.Context, j Job) {
 		return
 	}
 	final, trackID, filePath = StatusDone, id, finalPath
+	// What YouTube says about it, for tagging (a run that printed none: the backfill reads it later).
+	if meta.Tags != nil || meta.Categories != nil || meta.Description != "" {
+		if err := s.storeMeta(runCtx, j.VideoID, meta, false); err != nil {
+			s.Log.Warn("download: store video meta", "job", j.ID, "err", err)
+		}
+	}
 }
 
 // download runs yt-dlp, re-trying a 403 after each of the forbidden waits.
-func (s *Service) download(ctx context.Context, v ytdlp.Video, destNoExt string, onProgress func(float64)) (string, error) {
+func (s *Service) download(ctx context.Context, v ytdlp.Video, destNoExt string, onProgress func(float64)) (string, ytdlp.Meta, error) {
 	waits := s.forbiddenWaits
 	if waits == nil {
 		waits = defaultForbiddenWaits
 	}
 	for i := 0; ; i++ {
-		path, err := s.YT.Download(ctx, v, destNoExt, onProgress)
+		path, meta, err := s.YT.DownloadMeta(ctx, v, destNoExt, onProgress)
 		if err == nil || !ytdlp.Forbidden(err) || i == len(waits) {
-			return path, err
+			return path, meta, err
 		}
 		s.Log.Info("download: YouTube refused (403), trying again", "video", v.ID, "attempt", i+2)
 		select {
 		case <-ctx.Done():
-			return path, err
+			return path, meta, err
 		case <-time.After(waits[i]):
 		}
 	}

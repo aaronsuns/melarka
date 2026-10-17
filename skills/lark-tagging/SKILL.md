@@ -60,12 +60,18 @@ first), so the list shrinks as you write; there is no cursor to keep.
 W=$HOME/.cache/lark-tagging
 curl -sS -H @"$W/auth" "$LARK_URL/api/v1/admin/tagging/pending?limit=100" > "$W/pending.json"
 jq length "$W/pending.json"      # 0 means everything is reviewed: go to step 4
-jq -c '.[] | {id, title, artist, album, folder, tags: [.tags[].name]}' "$W/pending.json"
+jq -c '.[] | {id, title, artist, album, folder, tags: [.tags[].name], keywords, yt_title, yt_channel, yt_tags, yt_categories, yt_description}' "$W/pending.json"
 ```
 
-Each item has `id, title, artist, album, folder, path, status, tags`; `tags` is a list of
-`{name, kind}` already present (from folder rules, Last.fm or a person). For every item choose
-**0 to 5 slugs** from the vocabulary:
+Each item has `id, title, artist, album, folder, path, status, tags, keywords`; `tags` is a list of
+`{name, kind}` already present (from folder rules, Last.fm or a person), `keywords` the search words
+an agent gave it before. A song downloaded from YouTube also has what YouTube says about the video:
+`video_id`, `yt_title` (the title as uploaded: often "歌手 - 歌名 (电视剧《X》主题曲) [MV]"),
+`yt_channel`, `yt_tags` (the uploader's own tags), `yt_categories` and `yt_description` (its first
+500 characters). Those are the best evidence you get: read them before deciding. A track comes back
+here when YouTube's details arrive after you reviewed it, so this pass may be a second one.
+
+For every item choose **0 to 5 slugs** from the vocabulary, and **0 to 10 keywords**:
 
 - **language** when title/artist make it clear: Chinese characters usually `mandarin`; Cantonese
   artists or titles `cantonese`; Mongolian folk `mongolian`; Swedish words `swedish`.
@@ -80,6 +86,17 @@ Each item has `id, title, artist, album, folder, path, status, tags`; `tags` is 
   evidence (a folder tagged `80s` + `mandopop` suggests the neighbours).
 - Tracks in the same folder or by the same artist usually share language, genre and era; decide
   per artist/folder, then apply, instead of re-deriving every row.
+- **YouTube's tags** are free text: map the ones that mean a vocabulary tag onto its slug (粤语 /
+  Cantonese → `cantonese`, 怀旧 / oldies → `classic`, 钢琴 / piano → `piano`, 儿歌 → `kids`); the
+  vocabulary's aliases cover many spellings. Ignore spam tags (lyrics, MV, HD, 抖音, 热门, channel
+  names).
+- **Your own knowledge of the song and singer** counts: a well-known song's language, genre and
+  era, and the film or drama it is from, are fine to use when you are sure.
+- **Keywords** are free-form search words for what the vocabulary can't say, so the song is found by
+  them later: the film or TV drama it is from (倚天屠龙记), the original singer of a cover, the song's
+  other names (an English title, the traditional/simplified spelling), a show it was sung on (中国好声音),
+  a famous lyric line people search for. Short words, not sentences; nothing already in the title or
+  artist; no spam tags. They never show as tags.
 - Unsure? Write fewer tags. An **empty `tags` list is valid and marks the track reviewed**, so it
   will not come back. A wrong tag is worse than a missing one.
 
@@ -89,14 +106,16 @@ for each track and never touches manual tags.
 
 ```bash
 W=$HOME/.cache/lark-tagging
-# $W/batch.json: [{"track_id": 812, "tags": ["mandopop", "mandarin", "80s"]}, {"track_id": 813, "tags": []}, ...]
+# $W/batch.json: [{"track_id": 812, "tags": ["mandopop", "mandarin", "80s"], "keywords": ["倚天屠龙记", "Fleeting Time"]}, {"track_id": 813, "tags": []}, ...]
 curl -sS -X PUT -H @"$W/auth" -H 'Content-Type: application/json' \
   "$LARK_URL/api/v1/admin/tagging/batch" -d @"$W/batch.json"
 # -> {"updated": 100, "skipped": []}
 ```
 
-`PUT /api/v1/admin/tagging/batch` takes a JSON array of `{track_id, tags}` where `tags` is an array
-of vocabulary slugs. Include **every** item from the fetched list (empty `tags` for the ones you
+`PUT /api/v1/admin/tagging/batch` takes a JSON array of `{track_id, tags, keywords?}` where `tags` is
+an array of vocabulary slugs and `keywords` (optional) an array of free-form words that replaces the
+agent's keywords for the track (omit it to leave them as they are; at most 20 are kept, each up to 40
+characters). Include **every** item from the fetched list (empty `tags` for the ones you
 leave untagged). Before sending, confirm the batch covers exactly the fetched ids (an omitted item
 would stay pending forever and loop); this must print nothing:
 

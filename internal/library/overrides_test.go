@@ -50,3 +50,28 @@ func TestSetOverridesRefusesTrashedTrack(t *testing.T) {
 		t.Fatalf("SetOverrides on trashed track: got %v, want ErrNotFound", err)
 	}
 }
+
+// A track's search keywords (the agent's: a drama, the original singer) are searched like its tags.
+func TestKeywordsAreSearchable(t *testing.T) {
+	e := newEnv(t, fakeProber{})
+	writeRandom(t, filepath.Join(e.root, "misc", "track01.mp3"))
+	e.scan(t)
+	ctx := context.Background()
+	var id int64
+	e.st.DB.QueryRow(`SELECT id FROM tracks`).Scan(&id)
+	if r, _ := e.st.Search(ctx, 1, "倚天屠龙记", 10); len(r.Tracks) != 0 {
+		t.Fatal("found before the keyword")
+	}
+	if _, err := e.st.DB.Exec(`INSERT INTO track_keywords(track_id,word,source) VALUES (?,'倚天屠龙记','agent')`, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.st.Reindex(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if r, _ := e.st.Search(ctx, 1, "倚天屠龙记", 10); len(r.Tracks) != 1 {
+		t.Fatal("keyword not searchable")
+	}
+	if r, _ := e.st.Search(ctx, 1, "ytt", 10); len(r.Tracks) != 1 { // pinyin initials, like every search word
+		t.Fatal("keyword's pinyin not searchable")
+	}
+}

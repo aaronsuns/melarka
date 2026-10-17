@@ -242,13 +242,21 @@ them in **Library → Tags** or on Home, and shuffle a tag. Four sources fill th
 
 - **Folder rules** (`tagging.folder_rules`): for example a folder called `Piano` or `钢琴` tags its
   songs `piano`, and only a folder called `Instrumental` or `纯音乐` tags them `instrumental`
-  (which skips lyrics lookups). Rules apply at every scan, and to existing songs at startup.
+  (which skips lyrics lookups; Last.fm's `instrumental` does not, since it often describes the
+  singer rather than the song). Rules apply at every scan, and to existing songs at startup.
 - **Last.fm**: set `LARK_LASTFM_API_KEY` to a free key from
   <https://www.last.fm/api/account/create>. Melarka then reads each song's Last.fm tags (at most 4
   requests a second) and keeps those that map into the vocabulary with a count of at least
   `tagging.lastfm_min_count`.
 - **The [tagging agent skill](agent-skills.md)**, on your own AI subscription. Melarka itself
-  calls no paid AI service and never analyses audio.
+  calls no paid AI service and never analyses audio. For a song downloaded from YouTube the agent
+  also sees the video as uploaded: its title, channel, the uploader's tags, YouTube's categories and
+  the start of its description. Melarka keeps those when the song downloads, and reads them in the
+  background (one every 15 seconds, at low priority) for songs downloaded before; a song whose
+  details arrive later goes back to the agent for another look.
+- **Search keywords**: besides tags, the agent can give a song free-form keywords (the film or
+  drama it is from, the original singer, another name). Search finds songs by them; the Tags tab
+  never shows them.
 - **By hand**: admins edit a song's tags from its ⋯ menu or from Now Playing. Manual edits win
   over every other source.
 

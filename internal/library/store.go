@@ -197,6 +197,11 @@ func (s *Store) reindex(ctx context.Context, trackID int64, relinkAlbum bool) er
 	// Tag words are read before the transaction opens, so the transaction
 	// stays short and doesn't hold the write lock across this extra query.
 	tagWords, err := s.tagSearchWords(ctx, trackID)
+	if err == nil {
+		var kw []string
+		kw, err = s.keywordSearchWords(ctx, trackID)
+		tagWords = append(tagWords, kw...)
+	}
 	if err != nil {
 		return err
 	}
@@ -262,6 +267,24 @@ func (s *Store) tagSearchWords(ctx context.Context, trackID int64) ([]string, er
 			return nil, err
 		}
 		out = append(out, tags.SearchWords(n)...)
+	}
+	return out, rows.Err()
+}
+
+// keywordSearchWords returns the track's search keywords (track_keywords).
+func (s *Store) keywordSearchWords(ctx context.Context, trackID int64) ([]string, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT word FROM track_keywords WHERE track_id=? ORDER BY word`, trackID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var w string
+		if err := rows.Scan(&w); err != nil {
+			return nil, err
+		}
+		out = append(out, w)
 	}
 	return out, rows.Err()
 }

@@ -8,6 +8,17 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.11] - 2026-10-17
+
+### Added
+
+- **Better tagging from YouTube**: a downloaded song keeps what YouTube says about it (the
+  uploader's tags, YouTube's categories, the description), read in the same yt-dlp run; songs
+  downloaded earlier get it in the background. The tagging agent now sees it, with the video's
+  original title and channel, and a song whose details arrive later goes back to the agent.
+- **Search keywords**: the agent can give a song free-form keywords (the film or drama it is from,
+  the original singer, another name). Search finds songs by them; the Tags tab doesn't list them.
+
 ## [0.2.10] - 2026-10-17
 
 ### Added
@@ -271,7 +282,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.10...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.11...HEAD
+[0.2.11]: https://github.com/aaronsuns/melarka/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/aaronsuns/melarka/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/aaronsuns/melarka/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/aaronsuns/melarka/compare/v0.2.7...v0.2.8

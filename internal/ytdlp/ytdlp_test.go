@@ -199,7 +199,7 @@ func TestClientDownload(t *testing.T) {
 		"-f", "bestaudio[ext=m4a]/bestaudio/best",
 		"-x", "--audio-format", "m4a",
 		"--embed-thumbnail", "--convert-thumbnails", "jpg",
-		"--embed-metadata",
+		"--embed-metadata", "--print", "before_dl:LARKMETA %(.{tags,categories,description})j",
 		"--progress-template", "download:LARKPROG %(progress._percent_str)s",
 		"--print", "after_move:filepath",
 		"-o", "/music/youtube/Chan/Song.%(ext)s",

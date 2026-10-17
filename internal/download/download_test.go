@@ -39,7 +39,8 @@ type fakeRunner struct {
 	forbid    map[string]int  // video id → this many 403s before it downloads
 	block     map[string]bool // video id → blocks until ctx done or release closed
 	release   chan struct{}
-	started   chan string // receives a video id when a blocking download starts
+	started   chan string       // receives a video id when a blocking download starts
+	meta      map[string]string // video id → the LARKMETA JSON its download prints (and VideoMeta answers)
 
 	// outputGate, when set, makes every Output (a Resolve) wait until it is
 	// closed or ctx is done; outputStarted receives once per Output entered.
@@ -70,6 +71,17 @@ func (f *fakeRunner) Output(ctx context.Context, args []string) ([]byte, error) 
 		case <-ctx.Done():
 			return nil, fmt.Errorf("yt-dlp: %w", ctx.Err())
 		}
+	}
+	if last := args[len(args)-1]; slices.Contains(args, "-O") && strings.Contains(last, "watch?v=") {
+		u, _ := url.Parse(last)
+		id := u.Query().Get("v")
+		f.mu.Lock()
+		m, ok := f.meta[id]
+		f.mu.Unlock()
+		if !ok {
+			return nil, errors.New("yt-dlp: exit status 1: ERROR: Video unavailable")
+		}
+		return []byte(`{"id":"` + id + `",` + strings.TrimPrefix(m, "{")), nil
 	}
 	type e struct {
 		ID      string `json:"id"`
@@ -155,6 +167,12 @@ func (f *fakeRunner) Stream(ctx context.Context, args []string, onLine func(stri
 		case <-f.release:
 			os.Remove(destNoExt + ".webm.part")
 		}
+	}
+	f.mu.Lock()
+	meta, hasMeta := f.meta[id]
+	f.mu.Unlock()
+	if hasMeta {
+		onLine("LARKMETA " + meta)
 	}
 	onLine("LARKPROG  42.0%")
 	b, err := os.ReadFile(f.sample)

@@ -198,6 +198,9 @@ func run(log *slog.Logger) error {
 		Tags:  tagStore, Vocab: vocab, Lyrics: lyricsSvc, Artwork: artworkSvc, Trash: trashSvc, Scans: scans, MusicRoot: cfg.MusicRoot, Log: log,
 		Downloads: downloads, YT: ytClient, YtDlpBin: ytdlpBin, YtDlpPath: cfg.YtDlpPath,
 	}
+	// YouTube's tags for songs downloaded before they were kept (for tagging), at low priority.
+	metaDone := make(chan struct{})
+	go func() { defer close(metaDone); downloads.RunMetaBackfill(ctx, srv.SearchGate()) }()
 	recsDone := make(chan struct{})
 	if cfg.Recommendations.Enabled {
 		recs := &recommend.Service{DB: d, Library: libStore, Gate: srv.SearchGate(), Log: log, RefreshAt: cfg.Recommendations.RefreshAt,
@@ -272,6 +275,7 @@ func run(log *slog.Logger) error {
 	<-backfillDone
 	<-scanDone
 	<-downloadsDone
+	<-metaDone
 	<-artistFixDone
 	<-lastfmDone
 	<-recsDone

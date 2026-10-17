@@ -13,7 +13,7 @@ overrides, and your audio files are never touched.
 
 | Skill | Ask for example | What it does |
 |---|---|---|
-| [`lark-tagging`](../skills/lark-tagging/SKILL.md) | *tag my Melarka library* | reads songs nobody has tagged yet and writes tags from Melarka's vocabulary, in batches of 100 |
+| [`lark-tagging`](../skills/lark-tagging/SKILL.md) | *tag my Melarka library* | reads songs nobody has tagged yet (with the YouTube video's title, tags and description for downloads) and writes tags from Melarka's vocabulary plus free-form search keywords, in batches of 100 |
 | [`lark-lyrics`](../skills/lark-lyrics/SKILL.md) | *find the missing lyrics in Melarka* | reads songs without lyrics (favorites first), works out the real title and singer, and has Melarka search again with them; also tags clear instrumentals |
 | [`lark-names`](../skills/lark-names/SKILL.md) | *fix the song names in Melarka* | reads favorites and downloads nobody has reviewed, fixes swapped title and singer, junk words, a channel name as album or an upload date as year, and marks each song reviewed |
 

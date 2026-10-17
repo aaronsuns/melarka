@@ -396,12 +396,64 @@ func (c *Client) ResolveList(ctx context.Context, rawURL string, max int) (List,
 // progress (0..100) to onProgress as it goes, and returns the final path
 // yt-dlp reports after moving the file into place.
 func (c *Client) Download(ctx context.Context, v Video, destNoExt string, onProgress func(pct float64)) (string, error) {
-	return c.fetch(ctx, v, destNoExt, []string{
+	path, _, err := c.DownloadMeta(ctx, v, destNoExt, onProgress)
+	return path, err
+}
+
+// Meta is what YouTube says about a video beyond its title: the uploader's
+// tags, YouTube's categories and the description. Tagging reads it.
+type Meta struct {
+	Tags        []string `json:"tags"`
+	Categories  []string `json:"categories"`
+	Description string   `json:"description"`
+}
+
+// metaTemplate prints Meta's fields as one JSON object.
+const metaTemplate = "%(.{tags,categories,description})j"
+
+// DownloadMeta is Download that also returns the video's Meta, printed by the
+// same yt-dlp run before the download (no extra request). A run that printed
+// none returns an empty Meta.
+func (c *Client) DownloadMeta(ctx context.Context, v Video, destNoExt string, onProgress func(pct float64)) (string, Meta, error) {
+	var meta Meta
+	path, err := c.fetch(ctx, v, destNoExt, []string{
 		"-f", "bestaudio[ext=m4a]/bestaudio/best",
 		"-x", "--audio-format", "m4a",
 		"--embed-thumbnail", "--convert-thumbnails", "jpg",
 		"--embed-metadata",
-	}, onProgress, nil)
+		"--print", "before_dl:LARKMETA " + metaTemplate,
+	}, onProgress, func(line string) {
+		if rest, ok := strings.CutPrefix(line, "LARKMETA "); ok {
+			_ = json.Unmarshal([]byte(rest), &meta) // a garbled line only loses the tags
+		}
+	})
+	return path, meta, err
+}
+
+// VideoMeta reads one video's Meta without downloading it (songs downloaded
+// before Meta was kept).
+func (c *Client) VideoMeta(ctx context.Context, id string) (Meta, error) {
+	if !IsVideoID(id) {
+		return Meta{}, ErrBadURL
+	}
+	args := append(c.baseArgs(), "--no-warnings", "--no-playlist", "--skip-download", "--ignore-no-formats-error",
+		"-O", "%(.{id,tags,categories,description})j", WatchURL(id))
+	out, err := c.Runner.Output(ctx, args)
+	if err != nil {
+		return Meta{}, err
+	}
+	line, _, _ := strings.Cut(strings.TrimSpace(string(out)), "\n")
+	var m struct {
+		ID string `json:"id"`
+		Meta
+	}
+	if err := json.Unmarshal([]byte(line), &m); err != nil {
+		return Meta{}, fmt.Errorf("ytdlp: parse meta: %w", err)
+	}
+	if m.ID != id {
+		return Meta{}, fmt.Errorf("ytdlp: meta for %s answered %q", id, m.ID)
+	}
+	return m.Meta, nil
 }
 
 // fetch runs one single-video download into destNoExt.<ext>: format holds

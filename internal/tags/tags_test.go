@@ -2,6 +2,9 @@ package tags
 
 import (
 	"context"
+	"fmt"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/aaronsuns/lark-server/internal/testutil"
@@ -79,5 +82,39 @@ func TestOnChangeAndVocabularyKindWins(t *testing.T) {
 	got, _ := s.ForTrack(ctx, 1)
 	if len(got) != 1 || got[0].Kind != "mood" {
 		t.Fatalf("kind not fixed: %v", got)
+	}
+}
+
+// An agent's search keywords: trimmed, deduplicated (any case), capped, replaced per source, and
+// they reindex the track like tags do.
+func TestKeywords(t *testing.T) {
+	d := testutil.DB(t)
+	d.Exec(`INSERT INTO libraries(id,name,root) VALUES (1,'m','/m')`)
+	d.Exec(`INSERT INTO tracks(id,library_id,rel_path,size,mtime,fingerprint,status,added_at) VALUES (1,1,'a',1,1,'f','kept',0)`)
+	var changed []int64
+	s := &Store{DB: d, OnChange: func(_ context.Context, id int64) error { changed = append(changed, id); return nil }}
+	ctx := context.Background()
+	long := strings.Repeat("长", 50)
+	if err := s.ReplaceKeywords(ctx, 1, "agent", []string{" 倚天屠龙记 ", "Faye Wong", "faye wong", "", long}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Keywords(ctx, 1)
+	if err != nil || !slices.Equal(got, []string{"Faye Wong", "倚天屠龙记"}) {
+		t.Fatalf("%q %v", got, err)
+	}
+	if len(changed) != 1 {
+		t.Fatalf("reindexed %v", changed)
+	}
+	var many []string
+	for i := range 40 {
+		many = append(many, fmt.Sprintf("词%d", i))
+	}
+	s.ReplaceKeywords(ctx, 1, "agent", many)
+	if got, _ := s.Keywords(ctx, 1); len(got) != maxKeywords {
+		t.Fatalf("kept %d", len(got))
+	}
+	s.ReplaceKeywords(ctx, 1, "agent", nil)
+	if got, _ := s.Keywords(ctx, 1); len(got) != 0 {
+		t.Fatalf("cleared: %q", got)
 	}
 }
