@@ -8,6 +8,8 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-10-17
+
 ### Changed
 
 - **YouTube search results weigh in view counts**: YouTube's order stays the main signal, but a
@@ -228,7 +230,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/aaronsuns/melarka/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/aaronsuns/melarka/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/aaronsuns/melarka/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/aaronsuns/melarka/compare/v0.2.1...v0.2.2
