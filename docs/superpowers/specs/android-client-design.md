@@ -100,11 +100,13 @@ pages (they come from the server), the same reliable playback.
 
 - **Language and stack**: Kotlin; AndroidX; Media3 (ExoPlayer, MediaSessionService,
   MediaSession); Android WebView (AndroidX WebKit for `addWebMessageListener` and
-  `addDocumentStartJavaScript`); WorkManager; OkHttp for API calls (or Media3's
-  DefaultHttpDataSource for streams); kotlinx.serialization for JSON; JUnit + Robolectric for unit
+  `addDocumentStartJavaScript`); WorkManager; OkHttp for API calls and (through Media3's
+  `datasource-okhttp`) for streams; kotlinx.serialization for JSON; JUnit + Robolectric for unit
   tests; an instrumented smoke test on the emulator.
 - **minSdk 26 (Android 8.0), targetSdk/compileSdk 35.** Covers practically every phone in use and
-  keeps foreground-service and notification-channel code single-path.
+  keeps foreground-service and notification-channel code single-path. Media3 is pinned to 1.9.4,
+  the newest release that compiles against SDK 35 (1.10 and later need compileSdk 36 and a newer
+  AGP); raise both together when the build moves to SDK 36.
 - **Package name** `io.github.aaronsuns.melarka` (matches the iOS bundle id); app name "Melarka";
   the icon from `docs/brand`.
 - **Project location**: `android/` at the repo root, Gradle (Kotlin DSL) with a version catalog.
@@ -202,9 +204,10 @@ behaviour; the builder works through it as a checklist.
 | iOS mechanism | Android mechanism |
 |---|---|
 | AVQueuePlayer + preload | ExoPlayer playlist (current + next MediaItem; gapless built in) |
-| AVAudioMix per-item gain | per-item volume via a custom `AudioProcessor` (or `player.volume` set on transitions); master volume reserved for the sleep fade |
-| Bearer header | `DefaultHttpDataSource.Factory.setDefaultRequestProperties` (token from AuthStore, refreshed on change) |
-| Pitch-preserving rate (episodes) | `PlaybackParameters(speed)` (Sonic keeps pitch) |
+| AVAudioMix per-item gain | decided: a custom `AudioProcessor` (`GainProcessor`, first in the sink's chain). Each `MediaItem` carries its factor as a `GainCell` tag; a custom audio renderer resolves the item of each stream from the timeline and switches the processor in `onOutputStreamOffsetUsChanged`, i.e. on the audio timeline at the item boundary (after the last buffer of the old item, before the first of the new), not on the main-thread transition callback. Nothing to wait for: an item never sounds before its gain is on. `player.volume` is the master volume, reserved for the sleep fade |
+| Bearer header | decided: `OkHttpDataSource.Factory(client).setDefaultRequestProperties` built per item from `MediaSource.Remote(uri, token)`; the token is in no URL, `MediaItem`, tag or log, and a stream's `MediaSource` is built when the item is loaded or preloaded, with the token current then |
+| Pitch-preserving rate (episodes) | `PlaybackParameters(speed, 1f)` (Sonic keeps pitch) |
+| `rebuild()` after a media services reset | none: Android has no such reset; a dead audio output surfaces as a playback error (`backendFailed`) and the engine's retry loads again |
 | AVAudioSession interruptions | audio focus via `AudioAttributes` + `handleAudioFocus=true`; transient loss pauses and resumes |
 | route `oldDeviceUnavailable` | `setHandleAudioBecomingNoisy(true)` |
 | MPNowPlayingInfo + remote commands | MediaSession metadata/state + commands; custom commands for skip ±, shuffle, repeat |
@@ -264,8 +267,7 @@ setup and test, about). Jetpack Compose, Material 3, dark theme matching the web
 ## What's left to the builder
 
 Module boundaries inside `android/`, exact library versions, whether per-item gain is an
-`AudioProcessor` or volume switching (behaviour must match: attenuated items never sound
-unattenuated), the Compose structure of the native screens, the emulator test's exact steps, and
+`AudioProcessor` or volume switching (decided in Task 6: `AudioProcessor`), the Compose structure of the native screens, the emulator test's exact steps, and
 the CI emulator action.
 
 ## Questions settled with the owner (2026-10-17)
