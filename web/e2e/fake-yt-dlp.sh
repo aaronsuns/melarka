@@ -90,7 +90,11 @@ if has "-o"; then
   esac
   # A preview (and 高清) asks for its details (size, channel, the format
   # picked) before the first byte, in exactly this shape.
-  if [[ -n "$meta_tpl" && "$meta_tpl" != "before_dl:LARKMETA %(.{filesize,channel_id,channel,title,duration,description,format_id})j" ]]; then
+  # A song download asks for YouTube's tags, categories and description (tagging) the same way.
+  song_meta=false
+  if [[ "$meta_tpl" == "before_dl:LARKMETA %(.{tags,categories,description})j" ]]; then
+    song_meta=true
+  elif [[ -n "$meta_tpl" && "$meta_tpl" != "before_dl:LARKMETA %(.{filesize,channel_id,channel,title,duration,description,format_id})j" ]]; then
     fail
   fi
   # A preview (served while it grows: --no-part) reads its size and
@@ -116,7 +120,9 @@ if has "-o"; then
       fakevideo11) merged=true format_id="134+140" ;;
     esac
   fi
-  if [[ -n "$meta_tpl" ]]; then
+  if $song_meta; then
+    echo 'LARKMETA {"tags": ["假标签", "Fake Tag"], "categories": ["Music"], "description": "假视频的简介"}'
+  elif [[ -n "$meta_tpl" ]]; then
     echo 'LARKMETA {"filesize": null, "channel_id": "UCfakechannel00000000001", "channel": "假频道", "title": null, "duration": '"${secs}"', "description": "假视频的简介\n<b>第二行</b>", "format_id": "'"${format_id}"'"}'
   fi
 
