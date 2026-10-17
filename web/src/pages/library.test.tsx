@@ -195,7 +195,11 @@ test("favorites: search, tap a song, and the queue continues as shuffled favorit
   expect(await screen.findByText("歌1")).toBeInTheDocument();
   await userEvent.type(screen.getByRole("searchbox", { name: "搜索收藏" }), "yldb");
   await vi.waitFor(() => expect(urls.some((u) => u.includes("q=yldb") && u.includes("favorite=1"))).toBe(true));
-  await vi.waitFor(() => expect(screen.queryByText("歌1")).toBeNull());
+  // The list reloads for the query: wait for its answer, not just for the old rows to go.
+  await vi.waitFor(() => {
+    expect(screen.queryByText("歌1")).toBeNull();
+    expect(screen.getByText("月亮代表我的心")).toBeInTheDocument();
+  });
   await userEvent.click(screen.getByText("月亮代表我的心"));
   expect(audio.src).toContain("/tracks/7/stream");
   expect(player.queue.tracks[0].id).toBe(7);
