@@ -1,0 +1,1 @@
+window.dispatchEvent(new CustomEvent("lark-native",{detail:{"type":"notice","text":"a\u2028b\u2029c<\/script>\"\\\n"}}))
