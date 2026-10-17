@@ -93,8 +93,8 @@ pages (they come from the server), the same reliable playback.
 - **Signing key backups**: the keystore is generated on the private Mac (never on the work Mac, which
   is the owner's employer's machine and holds nothing private). The keystore file lives in the
   GitHub Actions secret, on the private Mac (outside the repo) and in the owner's email; its
-  passwords in the GitHub secret, Apple's Passwords app (entered on the private Mac) and Bitwarden —
-  never the file and the password in the same place outside GitHub.
+  passwords in the GitHub secret and Apple's Passwords app (entered on the private Mac) — never the
+  file and the password in the same place outside GitHub.
 
 ## The builder's calls (made here; the owner can override)
 
@@ -265,4 +265,4 @@ the CI emulator action.
 2. Phones: standard Android first, outside China; vendor workarounds as in-app guidance and docs,
    no vendor-specific builds.
 3. Signing key backups: GitHub secret, the private Mac, the owner's email (file); passwords in the
-   GitHub secret, Apple Passwords (on the private Mac) and Bitwarden. Generated on the private Mac.
+   GitHub secret and Apple Passwords (on the private Mac). Generated on the private Mac.
