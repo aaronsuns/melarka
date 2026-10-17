@@ -440,6 +440,72 @@ class PlayerEngine(
     }
 
     /**
+     * The car's play with nothing loaded, and the Resume shortcut: the saved queue from disk (the current item
+     * from the cache when it is there, before any network call); with no music queue, shuffled favorites.
+     */
+    suspend fun resumeOrShuffleFavorites() {
+        if (resumeFromDisk()) return
+        shuffleFavorites()
+    }
+
+    /**
+     * The part of [resumeOrShuffleFavorites] that needs no network and no await: the saved queue, else cached
+     * favorites. True when it started playback; false when only the server's favorites are left to try.
+     * The car's play command runs this inside its handler, so sound starts at once.
+     */
+    fun resumeFromDisk(): Boolean {
+        // Episodes always stream: with no network the car gets music (from the cache) instead of silence.
+        if (active == Kind.episode && network.isOnline && episodes.current != null) { play(); return true }
+        if (music.current != null) {
+            playLocalInsteadOfStream()?.let { return it }
+            if (active == Kind.track) play() else play(Kind.track)
+            return true
+        }
+        if (startCachedFavorites() || offlineWithNothingCached()) return true
+        if (!network.answered) {
+            // A cold start before the network monitor's first answer, with nothing on the phone: no audio focus
+            // is taken (the car's own source keeps playing) and the server is asked once the network is known.
+            stoppedOffline = true; offlineResume = OfflineResume.shuffle
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Offline, or before the network monitor's first answer (a cold launch), a saved current track that is not
+     * on the phone is not tried as a stream first: the next cached item in the queue plays, else a cached
+     * favorite, and the streamed track is queued right after it for later. Null: play the current item as usual
+     * (it is cached, the network is known to be up, or nothing local exists and the network may be up).
+     */
+    private fun playLocalInsteadOfStream(): Boolean? {
+        val cur = music.current ?: return null
+        if ((network.isOnline && network.answered) || isLocal(cur)) return null
+        val choice = chooseNext(mustBeLocal = true)
+        if (choice == NextChooser.Choice.None) return if (network.isOnline) null else offlineWithNothingCached()
+        if (active != Kind.track) { leaveActive(); active = Kind.track; emitState(Kind.episode) }
+        if (choice is NextChooser.Choice.Insert && !network.isOnline) onEvent?.invoke(NativeEvent.Notice(texts.offlineNotice))
+        apply(choice, requeue = cur)
+        afterMusicMove()
+        return true
+    }
+
+    /**
+     * The intents ask before they take audio focus: why nothing can start (`resume`: the saved queue counts
+     * too), or null when something may play. Signed out there is no token and no cache; offline, only what is
+     * on the phone can play.
+     */
+    fun intentBlocker(resume: Boolean): IntentBlocker? {
+        if (api.token == null) return IntentBlocker.notSignedIn
+        if (network.isOnline) return null
+        if (cache.cachedFavorites().isNotEmpty()) return null
+        if (resume && music.items.any { isLocal(it) }) return null
+        return IntentBlocker.offlineNothingCached
+    }
+
+    /** Why the last attempt to play did not start (the state's `error`), for the intents' failure text. */
+    val failureText: String? get() = error
+
+    /**
      * The Shuffle Favorites shortcut, `onOpen: shuffle_favorites`: a shuffled favorites queue that refills itself.
      * Cached favorites first (they start at once, with or without a network); with none, the server's
      * random favorites; with no favorites at all, a shuffle of the whole library, and a notice says so.
@@ -769,6 +835,7 @@ class PlayerEngine(
             loaded = null; playing = false; error = texts.cannotPlay
             saveOutgoingEpisode(item.id, pos)
             emitState(Kind.episode); persist()
+            if (wanted) fallBackToMusic()
             return
         }
         finishListen(ListenEnd.switched)
@@ -822,11 +889,43 @@ class PlayerEngine(
     }
 
     private fun armStall() {
+        if (stallTimer != null || !playing || active != Kind.track) return
+        val l = loaded ?: return
+        val cur = music.current ?: return
+        if (l.kind != Kind.track || isLocal(cur)) return
+        stallTimer = scheduler.after(STALL_SECONDS) { stallSwitch() }
     }
 
     private fun disarmStall() {
         stallTimer?.cancel()
         stallTimer = null
+    }
+
+    /**
+     * The web's stall switch: a remote track that is not moving gives way to one on the phone (only a local
+     * choice is taken), and the interrupted track is requeued right after it.
+     */
+    private fun stallSwitch() {
+        stallTimer = null
+        if (!playing || !buffering) return
+        val l = loaded ?: return
+        val cur = music.current ?: return
+        if (l.kind != Kind.track || isLocal(cur)) return
+        val c = chooseNext(mustBeLocal = true)
+        if (c == NextChooser.Choice.None) return
+        finishListen(ListenEnd.switched)
+        apply(c, requeue = cur)
+        onEvent?.invoke(NativeEvent.Notice(texts.stallNotice))
+        afterMusicMove()
+    }
+
+    /**
+     * An episode that cannot play while it was meant to: music plays instead (the queue, else cached
+     * favorites), and the page is told why.
+     */
+    private fun fallBackToMusic() {
+        onEvent?.invoke(NativeEvent.Notice(texts.episodeFallbackNotice))
+        if (music.current != null) play(Kind.track) else tasks.run { shuffleFavorites() }
     }
 
     // MARK: - Internals
