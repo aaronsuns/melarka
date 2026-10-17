@@ -80,8 +80,7 @@ func (s *Service) nextPrefetch(ctx context.Context) (trackID int64, ok bool, err
 		WHERE t.status!='trashed' AND t.missing_since IS NULL AND t.broken=0
 		  AND NOT EXISTS (SELECT 1 FROM lyrics y WHERE y.track_id=t.id)
 		  AND (l.track_id IS NULL OR (l.found=0 AND l.manual=0 AND l.attempted_at < ?))
-		  AND NOT EXISTS (SELECT 1 FROM track_tags tt JOIN tags g ON g.id=tt.tag_id
-		                  WHERE tt.track_id=t.id AND tt.removed=0 AND g.name='instrumental')`+skip+`
+		  AND NOT `+instrumentalTagged+skip+`
 		ORDER BY t.id IN (SELECT track_id FROM favorites) DESC, (t.status='kept') DESC, t.added_at DESC, t.id DESC
 		LIMIT 1`, args...).Scan(&trackID)
 	if errors.Is(err, sql.ErrNoRows) {

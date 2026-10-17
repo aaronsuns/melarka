@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/aaronsuns/lark-server/internal/library"
-	"github.com/aaronsuns/lark-server/internal/tags"
 )
 
 // Result is what the lyrics endpoint answers for a track.
@@ -246,17 +245,19 @@ func (s *Service) resolve(ctx context.Context, trackID int64, force, explicit bo
 	return s.lookup(ctx, q, qs, o.Broad, explicit)
 }
 
+// instrumentalTagged is true for track t tagged instrumental by anything but
+// Last.fm: its tags often describe the artist, not the song (劉珂矣's 半壺紗 has
+// words), so they never stop a lyrics lookup.
+const instrumentalTagged = `EXISTS (SELECT 1 FROM track_tags tt JOIN tags g ON g.id=tt.tag_id
+	WHERE tt.track_id=t.id AND tt.removed=0 AND g.name='instrumental' AND tt.source!='lastfm')`
+
 func (s *Service) instrumental(ctx context.Context, trackID int64) (bool, error) {
-	ts, err := (&tags.Store{DB: s.DB}).ForTrack(ctx, trackID)
-	if err != nil {
-		return false, err
+	var yes bool
+	err := s.DB.QueryRowContext(ctx, `SELECT `+instrumentalTagged+` FROM tracks t WHERE t.id=?`, trackID).Scan(&yes)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
 	}
-	for _, t := range ts {
-		if strings.EqualFold(t.Name, "instrumental") {
-			return true, nil
-		}
-	}
-	return false, nil
+	return yes, err
 }
 
 type answer struct {

@@ -83,8 +83,7 @@ const missingBase = `WITH m AS (SELECT t.id AS id, ` + missingGroup + ` AS grp
 	WHERE t.status!='trashed' AND t.missing_since IS NULL
 	AND NOT EXISTS (SELECT 1 FROM lyrics y WHERE y.track_id=t.id AND y.selected=1)
 	AND NOT EXISTS (SELECT 1 FROM lyrics_lookup lk WHERE lk.track_id=t.id AND lk.found=0 AND lk.manual=1)
-	AND NOT EXISTS (SELECT 1 FROM track_tags tt JOIN tags g ON g.id=tt.tag_id
-		WHERE tt.track_id=t.id AND tt.removed=0 AND g.name='instrumental'))`
+	AND NOT ` + instrumentalTagged + `)`
 
 // MissingList pages through tracks with no selected lyrics: favorites, then
 // downloads, then the rest, each by id; group MissingAll serves all three,

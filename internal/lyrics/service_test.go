@@ -556,3 +556,22 @@ func TestLookupSearchesTheVideoTitleBracket(t *testing.T) {
 		t.Fatalf("display changed: %q", tr.Title)
 	}
 }
+
+// Last.fm tags often describe the artist, not the song: its "instrumental" does not stop lyrics
+// lookups (半壺紗 has words), while a folder rule's, an agent's or a person's does.
+func TestLastFMInstrumentalTagDoesNotStopLyrics(t *testing.T) {
+	e := newLyricsEnv(t, &fakeProv{name: "netease", cands: []Candidate{
+		{Source: "netease", ExternalID: "7", Title: "甜蜜蜜", Artist: "邓丽君", DurationS: 211, Synced: true, Text: "[00:01.00]a\n[00:02.00]b\n[00:03.00]c"}}})
+	if _, err := e.db.Exec(`INSERT INTO tags(name,kind) VALUES ('instrumental','genre') ON CONFLICT(name) DO NOTHING`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.db.Exec(`INSERT INTO track_tags(track_id,tag_id,source) SELECT ?, id, 'lastfm' FROM tags WHERE name='instrumental'`, e.track); err != nil {
+		t.Fatal(err)
+	}
+	if id, ok, err := e.svc.nextPrefetch(e.ctx); err != nil || !ok || id != e.track {
+		t.Fatalf("prefetch skipped a Last.fm-only instrumental: %d %v %v", id, ok, err)
+	}
+	if r, err := e.svc.Get(e.ctx, e.track); err != nil || r.Instrumental || !r.Found {
+		t.Fatalf("%+v %v", r, err)
+	}
+}
