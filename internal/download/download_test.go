@@ -294,7 +294,8 @@ func TestSingleVideoDone(t *testing.T) {
 	e.fake.entries = []entry{{"v1_0000000x", "邓丽君 - 甜蜜蜜【MV】", "Teresa Teng Official"}}
 	e.start(t)
 	jobs, err := e.svc.Enqueue(context.Background(), e.alice, watchURL("v1_0000000x"))
-	if err != nil || len(jobs) != 1 || jobs[0].Status != StatusQueued || jobs[0].Username != "alice" {
+	// The workers already run: one may claim the job before Enqueue reads it back.
+	if err != nil || len(jobs) != 1 || (jobs[0].Status != StatusQueued && jobs[0].Status != StatusDownloading) || jobs[0].Username != "alice" {
 		t.Fatalf("enqueue: %+v %v", jobs, err)
 	}
 	j := e.waitStatus(t, jobs[0].ID, StatusDone)
