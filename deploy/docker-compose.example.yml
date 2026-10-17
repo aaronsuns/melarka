@@ -14,7 +14,7 @@ services:
     volumes:
       - ./data:/data                                   # database, caches, the updated yt-dlp copy
       - ./config.yaml:/data/config.yaml:ro
-      - ${MUSIC_DIR:-/srv/melarka/music}:/music/main   # your music: set MUSIC_DIR in .env, or edit this line
+      - ${MUSIC_DIR:-./music}:/music/main               # your music: MUSIC_DIR in .env, else ./music
       - ./youtube:/music/youtube                       # YouTube downloads
       - ./channels:/data/channels                      # followed channels' episodes (can grow large)
       - ./previews:/data/previews                      # temporary previews and video thumbnails

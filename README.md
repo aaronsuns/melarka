@@ -12,21 +12,32 @@ from the native iPhone app.
 
 ## TL;DR: install in one command
 
-On a Linux server with Docker, run this with the path to your music folder:
+On a Linux server with Docker, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh
+```
+
+That's it. Melarka runs as a Docker Compose service; the installer sets it up in `~/melarka`
+(or `/srv/melarka` when run as root), starts it, and prints the address and the admin password.
+
+Already have a music folder? Put its path at the end, and Melarka plays it from there (it only
+reads it, never changes it):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music
 ```
 
-That's it. The installer sets everything up in `~/melarka` (or `/srv/melarka` when run as root),
-starts Melarka, and prints the address and the admin password. Then:
+Without a path, your music lives in `~/melarka/music`: copy songs there any time, or download
+them from YouTube in the app (those go to `~/melarka/youtube`). Then:
 
 1. Open `http://127.0.0.1:4600` on the server and sign in as `admin`.
 2. Add your family under **Admin → Users**.
 3. To use it from phones, put [HTTPS in front of it](#reverse-proxy-and-https), then add it to
    the home screen or install [the iPhone app](#the-iphone-app-sidestore).
 
-Run the same command again whenever you want to upgrade; your settings and data are kept.
+Run the same command again whenever you want to upgrade; your settings and data are kept. Run it
+with a path to switch to another music folder.
 Want to see each step instead? Read the [step-by-step quick start](#quick-start-step-by-step) below.
 Installing with an AI coding agent? Point it at [AGENTS.md](AGENTS.md): the same steps, each
 followed by a command that checks it worked.
@@ -112,7 +123,7 @@ services:
     volumes:
       - ./data:/data                                   # database, caches, the updated yt-dlp copy
       - ./config.yaml:/data/config.yaml:ro
-      - ${MUSIC_DIR:-/srv/melarka/music}:/music/main   # your music: set MUSIC_DIR in .env, or edit this line
+      - ${MUSIC_DIR:-./music}:/music/main               # your music: MUSIC_DIR in .env, else ./music
       - ./youtube:/music/youtube                       # YouTube downloads
       - ./channels:/data/channels                      # followed channels' episodes (can grow large)
       - ./previews:/data/previews                      # temporary previews and video thumbnails

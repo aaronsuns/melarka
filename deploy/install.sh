@@ -1,9 +1,13 @@
 #!/bin/sh
 # Melarka one-command installer (and upgrader). On a Linux host with Docker:
 #
+#   curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh
+#
+# or, to use a music folder you already have (Melarka only reads it):
+#
 #   curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music
 #
-# It makes an install directory, downloads docker-compose.yml and config.yaml next to a new .env,
+# Without a path, the music folder is "music" inside the install directory. It makes an install directory, downloads docker-compose.yml and config.yaml next to a new .env,
 # creates the writable directories for the container user (uid 1000), starts Melarka and prints
 # how to sign in. Run it again later to upgrade: existing files and the database are kept.
 #
@@ -30,21 +34,21 @@ if [ -z "${MELARKA_DIR:-}" ]; then
 	if [ "$(id -u)" -eq 0 ]; then MELARKA_DIR=/srv/melarka; else MELARKA_DIR=$HOME/melarka; fi
 fi
 
-# The music directory: the first argument, or the one an earlier install saved in .env.
-MUSIC_DIR=${1:-}
+# The music directory: the first argument, else the one an earlier install saved in .env, else
+# "music" inside the install directory (created below).
+MUSIC_ARG=${1:-}
+MUSIC_DIR=$MUSIC_ARG
 if [ -z "$MUSIC_DIR" ] && [ -f "$MELARKA_DIR/.env" ]; then
 	MUSIC_DIR=$(sed -n 's/^MUSIC_DIR=//p' "$MELARKA_DIR/.env")
 fi
+DEFAULT_MUSIC=
 if [ -z "$MUSIC_DIR" ]; then
-	cat >&2 <<'EOF'
-Usage: install.sh /path/to/your/music
-
-  curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music
-EOF
-	exit 2
+	DEFAULT_MUSIC=1
+	MUSIC_DIR=$MELARKA_DIR/music
+else
+	[ -d "$MUSIC_DIR" ] || die "music directory not found: $MUSIC_DIR"
+	MUSIC_DIR=$(cd "$MUSIC_DIR" && pwd)
 fi
-[ -d "$MUSIC_DIR" ] || die "music directory not found: $MUSIC_DIR"
-MUSIC_DIR=$(cd "$MUSIC_DIR" && pwd)
 
 # --- prerequisites -------------------------------------------------------------------------------
 
@@ -84,6 +88,12 @@ fetch config.example.yaml config.yaml
 NEW_ENV=
 if [ -e .env ]; then
 	echo "    keeping your .env"
+	# A music folder given on the command line replaces the one saved by an earlier install.
+	if [ -n "$MUSIC_ARG" ] && [ "$(sed -n 's/^MUSIC_DIR=//p' .env)" != "$MUSIC_DIR" ]; then
+		(umask 077; grep -v '^MUSIC_DIR=' .env >.env.new || true; echo "MUSIC_DIR=$MUSIC_DIR" >>.env.new)
+		mv .env.new .env
+		echo "    music folder is now $MUSIC_DIR"
+	fi
 else
 	if command -v openssl >/dev/null 2>&1; then
 		PASSWORD=$(openssl rand -base64 18)
@@ -102,9 +112,18 @@ else
 	echo "    created .env with a new admin password"
 fi
 
-mkdir -p data youtube channels previews
+WRITABLE="data youtube channels previews"
+if [ -n "$DEFAULT_MUSIC" ] && [ ! -d "$MUSIC_DIR" ]; then
+	# Melarka only reads it; as root, give it to the container user, otherwise keep it yours so
+	# you can copy music in without sudo.
+	if [ "$(id -u)" -eq 0 ]; then WRITABLE="$WRITABLE music"; else (umask 022; mkdir -p music); fi
+	echo "    no music folder given: created $MUSIC_DIR"
+fi
+# shellcheck disable=SC2086 # WRITABLE is a list of plain directory names
+mkdir -p $WRITABLE
 if [ "$(id -u)" -ne "$UID_IN_CONTAINER" ]; then
-	as_root chown "$UID_IN_CONTAINER:$UID_IN_CONTAINER" data youtube channels previews
+	# shellcheck disable=SC2086
+	as_root chown "$UID_IN_CONTAINER:$UID_IN_CONTAINER" $WRITABLE
 fi
 
 # --- start ---------------------------------------------------------------------------------------
@@ -146,7 +165,9 @@ $(printf '\033[32m')Melarka is running.$(printf '\033[0m')
   User      admin
   Password  $PASSWORD
 
-  Your music library is being scanned now; large libraries take a few minutes.
+  Music     $MUSIC_DIR
+            Copy music there any time, or download songs from YouTube in the app.
+            To use another folder, run this installer again with its path at the end.
 
 Next steps:
   - Change the admin password in Me -> Change password, and add your family in Admin -> Users.

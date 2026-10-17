@@ -40,7 +40,7 @@ version.
    curl -fsSL -o docker-compose.yml https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/docker-compose.example.yml
    ```
 
-   It mounts your music from `MUSIC_DIR` in `.env` (or `/srv/melarka/music` if unset). You can
+   It mounts your music from `MUSIC_DIR` in `.env` (or `./music` next to it if unset). You can
    also edit the music line directly.
 
 3. **Save the config file** as `config.yaml`. It works unchanged:

@@ -5,7 +5,7 @@ Instructions for coding agents. Humans: see README.md and docs/install.md (same 
 ## Install Melarka unattended
 
 Run each step, then its **Verify** command; stop and report if a verify fails.
-Inputs you need: `MUSIC_DIR` (an existing directory of audio files) and a host with Docker.
+Inputs you need: `MUSIC_DIR` (an existing directory of audio files; with none, use `MUSIC_DIR="$DIR/music"` and run `mkdir -p "$MUSIC_DIR" && sudo chown 1000:1000 "$MUSIC_DIR"` after step 1) and a host with Docker.
 Humans usually run `deploy/install.sh` instead, which does steps 2–4 in one command; these steps
 are the same with a check after each one.
 Melarka runs from the published image `ghcr.io/aaronsuns/melarka`; no clone or build is needed.
