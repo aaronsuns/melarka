@@ -8,6 +8,8 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-17
+
 ### Added
 
 - **One-command install**: `deploy/install.sh` sets up and starts Melarka with Docker Compose
@@ -20,6 +22,7 @@ the iPhone app share one version number.
 
 - **Lyrics can be shifted by up to 5 minutes** either way (was 30 seconds), for songs with a long
   intro or lyrics timed for another version.
+- **Newer image base**: Alpine 3.24 with ffmpeg 8.1; Go and web dependencies updated.
 
 ### Fixed
 
@@ -190,7 +193,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/aaronsuns/melarka/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/aaronsuns/melarka/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/aaronsuns/melarka/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/aaronsuns/melarka/compare/v0.1.1...v0.2.0
