@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"errors"
+	"github.com/aaronsuns/lark-server/internal/library"
+	"github.com/aaronsuns/lark-server/internal/samesong"
 	"net/http"
 	"strconv"
 	"strings"
@@ -20,6 +22,7 @@ func (s *Server) downloadRoutes(a chi.Router) {
 	a.Get("/youtube/search", s.youtubeSearch)
 	a.Get("/youtube/playlist", s.youtubePlaylist)
 	a.Get("/youtube/playlist/entries", s.youtubePlaylistEntries)
+	a.Get("/youtube/in-library", s.youtubeInLibrary)
 	a.Post("/downloads", s.createDownload)
 	a.Get("/downloads", s.listDownloads)
 	a.Get("/downloads/tracks", s.downloadTracks)
@@ -424,6 +427,47 @@ func (s *Server) withStats(ctx context.Context, vs []ytdlp.Video) []ytdlp.Video 
 		}
 	}
 	return vs
+}
+
+// youtubeInLibrary lists, before a download, up to 3 visible library songs
+// that look like the video's song (samesong: cleaned title and singer) —
+// another upload of a song the user has. The song downloaded from video_id
+// itself is left out: a download of it is deduplicated anyway.
+func (s *Server) youtubeInLibrary(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	sv := samesong.FromVideo(q.Get("title"), q.Get("channel"))
+	out := []library.Track{}
+	if strings.TrimSpace(sv.CleanTitle) != "" {
+		res, err := s.Library.Search(r.Context(), auth.UserFrom(r.Context()).ID, sv.CleanTitle, 30)
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		own := map[int64]bool{}
+		if vid := q.Get("video_id"); vid != "" {
+			rows, err := s.Library.DB.QueryContext(r.Context(), `SELECT track_id FROM downloads WHERE video_id=? AND track_id IS NOT NULL`, vid)
+			if err != nil {
+				s.fail(w, err)
+				return
+			}
+			for rows.Next() {
+				var id int64
+				if rows.Scan(&id) == nil {
+					own[id] = true
+				}
+			}
+			rows.Close()
+		}
+		for _, tr := range res.Tracks {
+			if !own[tr.ID] && sv.Same(tr.Title, tr.Artist) {
+				out = append(out, tr)
+				if len(out) == 3 {
+					break
+				}
+			}
+		}
+	}
+	writeJSON(w, 200, map[string]any{"tracks": out})
 }
 
 func (s *Server) downloadFail(w http.ResponseWriter, err error) {

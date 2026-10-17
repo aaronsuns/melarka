@@ -27,6 +27,7 @@
   "common.next": "Nästa", "common.previous": "Föregående",
   "common.songCount_one": "{count} låt", "common.songCount_other": "{count} låtar",
   "yt.playAll": "Spela alla i {title}", "yt.views_one": "{n} visning", "yt.views_other": "{n} visningar", "yt.likes_one": "{n} gillning", "yt.likes_other": "{n} gillningar",
+  "yt.sameSongTitle": "Låten kan redan finnas i biblioteket", "yt.sameSongHint": "Det ser ut som samma låt (en annan uppladdning eller version). Ladda ner den här också?", "yt.downloadAnyway": "Ladda ner ändå",
 
   "home.continuePlaying": "Fortsätt spela",
   "home.downloadingCount_one": "Laddar ner {count} låt", "home.downloadingCount_other": "Laddar ner {count} låtar",

@@ -27,6 +27,7 @@
   "common.next": "Next", "common.previous": "Previous",
   "common.songCount_one": "{count} song", "common.songCount_other": "{count} songs",
   "yt.playAll": "Play all of {title}", "yt.views_one": "{n} view", "yt.views_other": "{n} views", "yt.likes_one": "{n} like", "yt.likes_other": "{n} likes",
+  "yt.sameSongTitle": "A copy may already be in your library", "yt.sameSongHint": "It looks like the same song (another upload or version). Download this one too?", "yt.downloadAnyway": "Download anyway",
 
   "home.continuePlaying": "Continue playing",
   "home.downloadingCount_one": "Downloading {count} song", "home.downloadingCount_other": "Downloading {count} songs",

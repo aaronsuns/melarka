@@ -155,3 +155,34 @@ test("播放全部 on a YouTube playlist plays its songs from their previews, wi
   await new Promise((r) => setTimeout(r, 1300)); // past the queue save's 1 s debounce
   expect(forbidden).toEqual([]);
 });
+
+test("下载 asks first when the library seems to have the song already; 仍然下载 goes on, 取消 doesn't", async () => {
+  const posted: string[] = [];
+  renderWithApp(<YouTubeResults query="流年" auto />, {
+    routes: {
+      "GET /api/v1/youtube/search": () => ({ body: { videos: [{ ...vid("liunian0001"), title: "王菲 - 流年 (Live)", channel: "某频道" }, vid("other000001")], playlists: [] } }),
+      "GET /api/v1/youtube/in-library": (_i, url) =>
+        url.includes("video_id=liunian0001")
+          ? { body: { tracks: [{ id: 3, title: "流年", artist: "王菲", album: "王菲" }] } }
+          : { body: { tracks: [] } },
+      "POST /api/v1/downloads": (init) => {
+        posted.push(JSON.parse(String(init.body)).video.id);
+        return { status: 201, body: { jobs: [{ ...job, id: posted.length, video_id: posted[posted.length - 1] }] } };
+      },
+    },
+  });
+  const rows = await screen.findAllByRole("button", { name: "下载" });
+  await userEvent.click(rows[0]);
+  let sheet = await screen.findByRole("dialog", { name: "库里可能已有这首歌" });
+  expect(within(sheet).getByText(/流年/)).toBeInTheDocument();
+  await userEvent.click(within(sheet).getByRole("button", { name: "取消" }));
+  expect(posted).toEqual([]);
+  await userEvent.click(screen.getAllByRole("button", { name: "下载" })[0]);
+  sheet = await screen.findByRole("dialog", { name: "库里可能已有这首歌" });
+  await userEvent.click(within(sheet).getByRole("button", { name: "仍然下载" }));
+  await vi.waitFor(() => expect(posted).toEqual(["liunian0001"]));
+  // No match: downloads straight away.
+  await userEvent.click(screen.getAllByRole("button", { name: "下载" })[0]);
+  await vi.waitFor(() => expect(posted).toEqual(["liunian0001", "other000001"]));
+  expect(screen.queryByRole("dialog", { name: "库里可能已有这首歌" })).toBeNull();
+});

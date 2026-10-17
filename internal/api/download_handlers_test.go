@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -614,5 +615,35 @@ func TestYouTubeSearchesRankByViews(t *testing.T) {
 		if res.Videos[0].ID != "many_000000" || res.Videos[0].Views != 3000000 || res.Videos[0].Likes != 42000 || res.Videos[1].Likes != 0 {
 			t.Fatalf("%s: %+v", path, res.Videos)
 		}
+	}
+}
+
+// Before a download: library songs that look like the same song (another upload of it).
+func TestYouTubeInLibrary(t *testing.T) {
+	s, ts := newTestServer(t)
+	tok := loginAs(t, s, "alice", "member")
+	a := seedTrack(t, s, "x/流年.m4a", "流年", "王菲", "")
+	seedTrack(t, s, "y/流年.m4a", "流年", "李荣浩", "")
+	b := seedTrack(t, s, "z/甜蜜蜜.m4a", "甜蜜蜜", "鄧麗君", "")
+	q := func(title, channel, video string) string {
+		return "/api/v1/youtube/in-library?" + url.Values{"title": {title}, "channel": {channel}, "video_id": {video}}.Encode()
+	}
+	r, body := do(t, ts, tok, "GET", q("王菲 Faye Wong -《流年》(Official Music Video) [HD]", "FayeWongVEVO", "aaaaaaaaaaa"), nil)
+	if r.StatusCode != 200 || !strings.Contains(string(body), fmt.Sprintf(`"id":%d`, a)) || strings.Contains(string(body), "李荣浩") {
+		t.Fatalf("%d %s", r.StatusCode, body)
+	}
+	if _, body := do(t, ts, tok, "GET", q("邓丽君 - 甜蜜蜜", "", ""), nil); !strings.Contains(string(body), fmt.Sprintf(`"id":%d`, b)) {
+		t.Fatalf("simplified vs traditional: %s", body)
+	}
+	if _, body := do(t, ts, tok, "GET", q("周杰伦 - 晴天", "", ""), nil); strings.TrimSpace(string(body)) != `{"tracks":[]}` {
+		t.Fatalf("no match: %s", body)
+	}
+	// The very video a song was downloaded from is not "another copy": 下载 says 已在库中 for it.
+	if _, err := s.Library.DB.Exec(`INSERT INTO downloads(user_id,url,video_id,title,channel,status,track_id,created_at,updated_at)
+		SELECT id,'u','vvvvvvvvvvv','x','x','done',?,1,1 FROM users WHERE username='alice'`, a); err != nil {
+		t.Fatal(err)
+	}
+	if _, body := do(t, ts, tok, "GET", q("王菲 - 流年", "", "vvvvvvvvvvv"), nil); strings.Contains(string(body), fmt.Sprintf(`"id":%d`, a)) {
+		t.Fatalf("its own download counted: %s", body)
 	}
 }

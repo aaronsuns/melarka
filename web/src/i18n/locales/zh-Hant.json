@@ -27,6 +27,7 @@
   "common.next": "下一首", "common.previous": "上一首",
   "common.songCount_other": "{count} 首",
   "yt.playAll": "播放全部 {title}", "yt.views_other": "{n}次播放", "yt.likes_other": "{n}讚",
+  "yt.sameSongTitle": "庫裡可能已有這首歌", "yt.sameSongHint": "看起來是同一首歌（另一個上傳或版本）。還要下載這個嗎？", "yt.downloadAnyway": "仍然下載",
 
   "home.continuePlaying": "繼續播放",
   "home.downloadingCount_other": "下載中 {count} 首",

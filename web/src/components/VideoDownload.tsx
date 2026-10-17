@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api/client";
-import type { DownloadJob, YTVideo } from "../api/types";
+import type { DownloadJob, Track, YTVideo } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { useDownloads } from "../downloads/DownloadsProvider";
 import { errorMessage } from "../i18n/errors";
@@ -11,6 +11,7 @@ import { useReportRowError, type OnRowError } from "./rowError";
 
 type RowState =
   | { kind: "idle" }
+  | { kind: "confirm"; tracks: Track[] } // the library seems to have this song already: ask
   | { kind: "posting" }
   | { kind: "queued"; jobId?: number } // this user's own job, queued or downloading
   | { kind: "queued-elsewhere" } // deduped onto someone else's in-flight job
@@ -39,10 +40,22 @@ export function VideoDownload({ video, onError }: { video: YTVideo; onError?: On
   const dl = useDownloads();
   const [state, setState] = useState<RowState>({ kind: "idle" });
 
+  // 下载: first, does the library seem to have this song already (another
+  // upload of it)? Then ask; a failed check doesn't stand in the way.
   async function download() {
     // Re-entrancy guard: only an idle row starts a download; retrying an
     // errored row resets it to idle first.
     if (state.kind !== "idle") return;
+    setState({ kind: "posting" });
+    const same = await api.youtubeInLibrary(video).catch(() => []);
+    if (same.length) {
+      setState({ kind: "confirm", tracks: same });
+      return;
+    }
+    await post();
+  }
+
+  async function post() {
     setState({ kind: "posting" });
     try {
       const jobs = await api.createDownload({ video });
@@ -63,6 +76,27 @@ export function VideoDownload({ video, onError }: { video: YTVideo; onError?: On
   switch (row.kind) {
     case "idle":
       return <button className="icon-btn filled" aria-label={t("yt.download")} title={t("yt.download")} onClick={download}><DownloadIcon /></button>;
+    case "confirm":
+      return (
+        <>
+          <button className="icon-btn filled busy" disabled aria-label={t("yt.download")} title={t("yt.download")}><DownloadIcon /></button>
+          <div className="sheet-backdrop" onClick={() => setState({ kind: "idle" })}>
+            <div className="sheet" role="dialog" aria-label={t("yt.sameSongTitle")} onClick={(e) => e.stopPropagation()}>
+              <h2>{t("yt.sameSongTitle")}</h2>
+              <p className="muted small">{t("yt.sameSongHint")}</p>
+              <ul className="rows">
+                {row.tracks.map((tr) => (
+                  <li key={tr.id} className="sheet-row"><span className="ellipsis">《{tr.title}》</span><span className="muted ellipsis">{tr.artist}</span></li>
+                ))}
+              </ul>
+              <div className="lyrics-maker-actions">
+                <button className="secondary" onClick={() => setState({ kind: "idle" })}>{t("common.cancel")}</button>
+                <button className="primary" onClick={() => void post()}>{t("yt.downloadAnyway")}</button>
+              </div>
+            </div>
+          </div>
+        </>
+      );
     case "posting":
       return <button className="icon-btn filled busy" disabled aria-label={t("yt.download")} title={t("yt.download")}><ProgressRing pct={null} /></button>;
     case "queued":

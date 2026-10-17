@@ -237,6 +237,9 @@ export const api = {
   videoRecommendations: () => req<VideoRecs>("GET", "/me/video-recommendations"),
 
   youtubeSearch: (q: string, n?: number) => req<YTSearchResult>("GET", `/youtube/search${qs({ q, n })}`),
+  // Library songs that look like this video's song (another upload of it), before a download.
+  youtubeInLibrary: (v: YTVideo) =>
+    req<{ tracks: Track[] }>("GET", `/youtube/in-library${qs({ title: v.title, channel: v.channel, video_id: v.id })}`).then((r) => r.tracks),
   youtubePlaylistEntries: (list: string, n?: number) => req<YTPlaylistEntries>("GET", `/youtube/playlist/entries${qs({ list, n })}`),
   youtubePlaylist: (list: string) => req<YTPlaylist>("GET", `/youtube/playlist${qs({ list })}`),
   enqueue: (input: { url: string } | { video: YTVideo }) => req<Enqueued>("POST", "/downloads", input),

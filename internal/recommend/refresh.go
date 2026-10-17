@@ -10,6 +10,7 @@ import (
 
 	"github.com/aaronsuns/lark-server/internal/lastfm"
 	"github.com/aaronsuns/lark-server/internal/lyrics"
+	"github.com/aaronsuns/lark-server/internal/samesong"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
 
@@ -246,15 +247,9 @@ func (s *Service) exclusions(ctx context.Context, userID int64) (exclusion, erro
 // anywhere in the raw title and channel. Comparison is lyrics.Norm
 // (pinyin), so 邓丽君 and 鄧麗君 agree.
 func (ex exclusion) inLibrary(v ytdlp.Video) bool {
-	title, artist := ytdlp.CleanTitle(v.Title, v.Channel)
-	arts, ok := ex.library[lyrics.Norm(title)]
-	if !ok {
-		return false
-	}
-	na := lyrics.Norm(artist)
-	raw := lyrics.Norm(v.Title + " " + v.Channel)
-	for _, a := range arts {
-		if a == na || (a != "" && strings.Contains(raw, a)) {
+	sv := samesong.FromVideo(v.Title, v.Channel)
+	for _, a := range ex.library[sv.Title] {
+		if sv.ArtistMatches(a) {
 			return true
 		}
 	}

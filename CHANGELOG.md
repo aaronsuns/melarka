@@ -8,6 +8,15 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.14] - 2026-10-17
+
+### Added
+
+- **下载 asks when the library seems to have the song already**: another upload or version of a
+  song you have (same title and singer, simplified or traditional) brings up 库里可能已有这首歌
+  with the matching songs, and 仍然下载 or 取消. Downloading the very same video again was
+  already recognised (renamed songs and moved files included).
+
 ## [0.2.13] - 2026-10-17
 
 ### Added
@@ -298,7 +307,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.13...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.14...HEAD
+[0.2.14]: https://github.com/aaronsuns/melarka/compare/v0.2.13...v0.2.14
 [0.2.13]: https://github.com/aaronsuns/melarka/compare/v0.2.12...v0.2.13
 [0.2.12]: https://github.com/aaronsuns/melarka/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/aaronsuns/melarka/compare/v0.2.10...v0.2.11
