@@ -184,6 +184,12 @@ behaviour; the builder works through it as a checklist.
   copied. **The builder's call:** accept the cookie by name for the server URL, never re-adopt the
   last revoked value, and verify the token with `GET /api/v1/me` (or an equivalent authenticated
   call) before storing it.
+- Harvesting is a suspend call (`AuthStore.harvest(serverUrl, userId)`): a cookie that is new and not the
+  revoked value is sent to `GET /api/v1/me` as a Bearer token; only a 200 stores it (the user id comes from the
+  answer), a 401, an error or an unreadable answer stores nothing. With the name twice in the jar, the last
+  (shortest Path, the server's `Path=/`) wins. A missing or empty cookie never signs out.
+- Server URL: https only; plain http for `localhost`, `*.local`, and `10.0.2.2` (the emulator's host) in debug
+  builds only; no user info; normalised to `scheme://host[:port]/`.
 - Store the token and user id with the Android Keystore (an AES key in the Keystore encrypting a
   small file in credential-encrypted storage), not in plain SharedPreferences.
 - Sign-out, user switching, server change and 401 handling exactly as `AppServices.swift`.
