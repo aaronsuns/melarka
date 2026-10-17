@@ -304,6 +304,7 @@ func TestCreateDownloadFromVideoSkipsResolve(t *testing.T) {
 	body := map[string]any{"video": map[string]any{
 		"id": "v9_0000000x", "title": "T", "channel": "C",
 		"url": "https://www.youtube.com/watch?v=v9_0000000x", "thumbnail": "", "duration_s": 100,
+		"view_count": 354205, "like_count": 4000, // a search result as the web posts it back
 	}}
 	r, b := do(t, ts, tok, "POST", "/api/v1/downloads", body)
 	if r.StatusCode != 201 {

@@ -8,6 +8,13 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-10-17
+
+### Fixed
+
+- **Downloading a YouTube search result works again**: 0.2.5's search results carry view counts,
+  which the download request refused ("invalid JSON body").
+
 ## [0.2.5] - 2026-10-17
 
 ### Changed
@@ -230,7 +237,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/aaronsuns/melarka/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/aaronsuns/melarka/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/aaronsuns/melarka/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/aaronsuns/melarka/compare/v0.2.2...v0.2.3

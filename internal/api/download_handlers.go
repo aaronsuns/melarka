@@ -277,6 +277,9 @@ type videoInput struct {
 	Thumbnail string `json:"thumbnail"`
 	DurationS int    `json:"duration_s"`
 	ChannelID string `json:"channel_id"`
+	// Accepted (the body is decoded strictly) and unused.
+	ViewCount int64 `json:"view_count"`
+	LikeCount int64 `json:"like_count"`
 }
 
 func (s *Server) createDownload(w http.ResponseWriter, r *http.Request) {
