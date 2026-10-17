@@ -1,6 +1,6 @@
 # Melarka for Android: design
 
-Status: draft for review (2026-10-17). Once built, this document describes the Android app as it
+Status: approved by the owner (2026-10-18). Once built, this document describes the Android app as it
 is; a change to its behaviour updates it in the same commit. Its specification is the iPhone
 design, [ios-client-design.md](ios-client-design.md).
 
@@ -90,9 +90,11 @@ pages (they come from the server), the same reliable playback.
   screen is off…") with a button that opens the battery-optimisation exemption request and the
   vendor's own settings where Android allows it, and `docs/android.md` explains the per-vendor
   steps (linking dontkillmyapp.com).
-- **Signing key backups**: the keystore file in the GitHub Actions secret, on the private Mac (outside
-  the repo) and in the owner's email; its passwords in the GitHub secret and in Apple's Passwords
-  app — never the file and the password in the same place outside GitHub.
+- **Signing key backups**: the keystore is generated on the private Mac (never on the work Mac, which
+  is the owner's employer's machine and holds nothing private). The keystore file lives in the
+  GitHub Actions secret, on the private Mac (outside the repo) and in the owner's email; its
+  passwords in the GitHub secret, Apple's Passwords app (entered on the private Mac) and Bitwarden —
+  never the file and the password in the same place outside GitHub.
 
 ## The builder's calls (made here; the owner can override)
 
@@ -263,4 +265,4 @@ the CI emulator action.
 2. Phones: standard Android first, outside China; vendor workarounds as in-app guidance and docs,
    no vendor-specific builds.
 3. Signing key backups: GitHub secret, the private Mac, the owner's email (file); passwords in the
-   GitHub secret and Apple Passwords.
+   GitHub secret, Apple Passwords (on the private Mac) and Bitwarden. Generated on the private Mac.
