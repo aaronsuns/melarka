@@ -5,6 +5,7 @@ import { MiniPlayer } from "../player/MiniPlayer";
 import { usePlayer, type Player } from "../player/PlayerProvider";
 import { renderWithApp } from "../test/render";
 import type { Track } from "../api/types";
+import { youtubeTrack } from "../player/youtubeTrack";
 
 const tr = (id: number, extra: Partial<Track> = {}) =>
   ({
@@ -125,4 +126,17 @@ test("member doesn't see the edit button in NowPlaying", async () => {
   await userEvent.click(await screen.findByText("歌1"));
   await screen.findByRole("dialog", { name: "正在播放" });
   expect(screen.queryByRole("button", { name: "编辑信息" })).toBeNull();
+});
+
+test("a YouTube track in NowPlaying: its thumbnail, no library actions, 下载 keeps it", async () => {
+  const { f } = renderWithApp(<><Grab /><MiniPlayer /></>, { role: "admin" });
+  p.playList([youtubeTrack({ id: "mjuS9shGYhE", title: "流年", channel: "王菲", url: "", thumbnail: "", duration_s: 263 })], 0);
+  await userEvent.click(await screen.findByText("流年"));
+  const now = await screen.findByRole("dialog", { name: "正在播放" });
+  for (const name of ["收藏", "不感兴趣", "编辑信息", "编辑标签", "删除这首歌"]) {
+    expect(within(now).queryByRole("button", { name })).toBeNull();
+  }
+  expect(within(now).getByRole("button", { name: /下载/ })).toBeInTheDocument();
+  expect(now.querySelector(".now-art img, .cover img")?.getAttribute("src") ?? "").toContain("/api/v1/videos/mjuS9shGYhE/thumbnail");
+  expect(f.mock.calls.some((c) => String(c[0]).includes("/lyrics"))).toBe(false);
 });

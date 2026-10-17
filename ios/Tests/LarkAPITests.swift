@@ -263,6 +263,14 @@ import XCTest
         XCTAssertEqual(u.absoluteString, "https://lark.test/api/v1/tracks/7/stream?quality=high")
         XCTAssertEqual(api.streamURL(episodeItem("abcdefghijk"), quality: "high").absoluteString,
                        "https://lark.test/api/v1/episodes/abcdefghijk/stream?kind=audio")
+        // A YouTube track (a playlist played from search): its audio preview, by video id.
+        let yt = Item(kind: .track, id: "yt:mjuS9shGYhE", title: "流年", artist: "王菲", album: "YouTube", durationMs: 263_000, meta: .null)
+        XCTAssertEqual(yt.youtubeVideoID, "mjuS9shGYhE")
+        XCTAssertNil(yt.trackID)
+        XCTAssertEqual(api.streamURL(yt, quality: "high").absoluteString,
+                       "https://lark.test/api/v1/previews/by-video/mjuS9shGYhE/stream?title=%E6%B5%81%E5%B9%B4&channel=%E7%8E%8B%E8%8F%B2&duration_s=263")
+        XCTAssertNil(Item(kind: .track, id: "yt:short", title: "", artist: "", album: "", durationMs: 0, meta: .null).youtubeVideoID)
+        XCTAssertNil(trackItem(7).youtubeVideoID)
         XCTAssertEqual(api.token, "T1")
     }
 

@@ -201,7 +201,9 @@ import os
             let ids = music.items.compactMap(\.trackID)
             return .init(trackIDs: ids, index: ids.isEmpty ? 0 : min(music.index, ids.count - 1), positionMs: max(0, position(.track)))
         }
-        sync.online = { [network] in network.isOnline }
+        // A queue holding YouTube tracks (a playlist played from search) is not sent: the server keeps the last
+        // library queue, which the web and the other devices restore.
+        sync.online = { [unowned self] in network.isOnline && !music.items.contains { $0.youtubeVideoID != nil } }
         events.online = { [network] in network.isOnline }
         sync.onOwnDevice = { [weak self] device in
             guard let self, self.ownDevice != device else { return }

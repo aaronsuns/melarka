@@ -22,4 +22,11 @@ extension Item {
 
     /// The track id, for a music item.
     var trackID: Int? { kind == .track ? Int(id) : nil }
+    /// A YouTube track played from a YouTube playlist (id "yt:<video id>"): streamed from its preview, never
+    /// cached, without lyrics, play events or a place in the server's queue (it has no `trackID`).
+    var youtubeVideoID: String? {
+        guard kind == .track, id.hasPrefix("yt:") else { return nil }
+        let v = String(id.dropFirst(3))
+        return v.range(of: "^[A-Za-z0-9_-]{11}$", options: .regularExpression) != nil ? v : nil
+    }
 }

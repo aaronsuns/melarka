@@ -3,8 +3,12 @@ import type { Episode, Track } from "../api/types";
 import { t } from "../i18n/i18n";
 import type { NativeItem } from "./bridge";
 
+// A YouTube track's id is "yt:<video id>": native streams it from the preview by
+// video id and, having no library track id for it, keeps it out of the cache,
+// lyrics, play events and the server queue.
 export function trackItem(tr: Track): NativeItem {
-  return { kind: "track", id: String(tr.id), title: tr.title, artist: tr.artist, album: tr.album, durationMs: tr.duration_ms, meta: tr };
+  const id = tr.youtube_id ? `yt:${tr.youtube_id}` : String(tr.id);
+  return { kind: "track", id, title: tr.title, artist: tr.artist, album: tr.album, durationMs: tr.duration_ms, meta: tr };
 }
 
 export function episodeItem(ep: Episode): NativeItem {

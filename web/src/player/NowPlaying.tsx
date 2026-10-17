@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthProvider";
-import { Cover, coverUrl } from "../components/Cover";
+import { Cover } from "../components/Cover";
+import { VideoDownload } from "../components/VideoDownload";
+import { isYouTube, trackCoverUrl, WatchURL } from "./youtubeTrack";
 import { EditTags } from "../components/EditTags";
 import { EditTrack } from "../components/EditTrack";
 import { LyricsPicker } from "../components/LyricsPicker";
@@ -156,8 +158,11 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
   }, []);
 
   if (!track) return null;
+  // A YouTube track (played from a YouTube playlist): no lyrics, no library actions; 下载 keeps it.
+  const yt = isYouTube(track);
   let showLyrics: boolean;
-  if (forcedLyricsId === track.id) showLyrics = true;
+  if (yt) showLyrics = false;
+  else if (forcedLyricsId === track.id) showLyrics = true;
   else if (!lyrics) showLyrics = lastShowLyrics.current;
   else showLyrics = view !== "cover" && hasLyrics(lyrics);
   lastShowLyrics.current = showLyrics;
@@ -195,7 +200,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
 
   return (
     <div className="now" role="dialog" aria-label={t("now.ariaLabel")} ref={swipeRef}>
-      <NowBackground seed={track.album || track.title} src={coverUrl("track", track.id)} />
+      <NowBackground seed={track.album || track.title} src={trackCoverUrl(track)} />
       <div className="now-top">
         <button className="icon" aria-label={t("now.close")} onClick={onClose}><ChevronDownIcon /></button>
         <span className="badge">{qualityLabel(track)} · {p.quality === "lossless" ? t("now.lossless") : p.quality === "high" ? t("now.high") : t("now.saver")}</span>
@@ -213,7 +218,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
         <LyricsView key={track.id} lyrics={lyrics} trackId={track.id} onEmptied={() => setForcedLyricsId(track.id)} />
       ) : (
         <button className="now-art" data-swipe-surface="" aria-label={t("now.lyrics")} onClick={() => openLyrics(track.id)}>
-          <Cover seed={track.album || track.title} label={track.title} size={320} src={coverUrl("track", track.id, 1000)} />
+          <Cover seed={track.album || track.title} label={track.title} size={320} src={trackCoverUrl(track, 1000)} />
         </button>
       )}
       <div className="now-meta">
@@ -260,6 +265,11 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
           </button>
         )}
       </div>
+      {yt ? (
+        <div className="now-actions">
+          <VideoDownload video={{ id: track.youtube_id!, title: track.title, channel: track.artist, url: WatchURL(track.youtube_id!), thumbnail: "", duration_s: Math.round(track.duration_ms / 1000) }} />
+        </div>
+      ) : (
       <div className="now-actions">
         <button
           className={fav ? "icon on" : "icon"}
@@ -285,6 +295,7 @@ export function NowPlaying({ onClose, lyrics, reloadLyrics }: { onClose: () => v
             <button className="icon" aria-label={t("now.deleteSong")} onClick={armDelete}><TrashIcon /></button>
           ))}
       </div>
+      )}
       {editingTags && <EditTags track={track} onClose={() => setEditingTags(false)} />}
       {pickingLyrics && <LyricsPicker track={track} onClose={() => setPickingLyrics(false)} onChanged={reloadLyrics} />}
       {editing && (

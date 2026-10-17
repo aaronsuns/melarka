@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { api, streamUrl } from "../api/client";
-import { coverUrl } from "../components/Cover";
+import { isYouTube, libraryIds, trackCoverUrl, trackStreamUrl } from "./youtubeTrack";
 import type { Lyrics, OnOpen, Quality, Track } from "../api/types";
 import { t } from "../i18n/i18n";
 import {
@@ -358,6 +358,7 @@ function WebPlayerProvider({
   const listen = useRef<Listen | null>(null);
   const errors = useRef(0);
   const refilling = useRef(false);
+  const warmedPreview = useRef<string | null>(null); // the YouTube video whose preview the lookahead last started
   const radioExhausted = useRef(false);
   const radioRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [radioTick, setRadioTick] = useState(0);
@@ -453,7 +454,7 @@ function WebPlayerProvider({
       if (blob) return blob;
       const kind = localKind(track.id);
       if (kind === "lookahead" || (kind !== null && isHidden())) return streamUrl(track.id, OFFLINE_QUALITY);
-      return streamUrl(track.id, qualityRef.current);
+      return trackStreamUrl(track, qualityRef.current);
     },
     [preloader],
   );
@@ -511,7 +512,8 @@ function WebPlayerProvider({
       loadedIndex.current = index;
       pendingSeek.current = startAt;
       knownPos.current = startAt;
-      listen.current = { trackId: track.id, startedAt: Math.floor(Date.now() / 1000), seconds: 0, lastTime: startAt };
+      // A YouTube track is no library track: no play event.
+      listen.current = isYouTube(track) ? null : { trackId: track.id, startedAt: Math.floor(Date.now() / 1000), seconds: 0, lastTime: startAt };
       setPosition(startAt);
       setDuration(track.duration_ms / 1000);
       // A track merely loaded (restored, paused) isn't fetched by every
@@ -781,7 +783,7 @@ function WebPlayerProvider({
       // listen, so each loop is a new play event. The sleep timer wins.
       if (!stopHere && modesRef.current.repeat === "one" && done && loadedId.current === done.id) {
         notePlayed(done, true);
-        listen.current = { trackId: done.id, startedAt: Math.floor(Date.now() / 1000), seconds: 0, lastTime: 0 };
+        listen.current = isYouTube(done) ? null : { trackId: done.id, startedAt: Math.floor(Date.now() / 1000), seconds: 0, lastTime: 0 };
         pendingSeek.current = 0;
         knownPos.current = 0;
         audio.currentTime = 0;
@@ -1308,7 +1310,7 @@ function WebPlayerProvider({
         const pos = audio.currentTime;
         const wasPlaying = !audio.paused;
         pendingSeek.current = pos;
-        audio.src = streamUrl(track.id, q);
+        audio.src = trackStreamUrl(track, q);
         if (wasPlaying) {
           primeBlip.current = false;
           void audio.play()?.catch(() => {});
@@ -1335,7 +1337,7 @@ function WebPlayerProvider({
     refilling.current = true;
     // Only the most recent ids: enough to avoid near repeats, and the
     // request URL stays bounded however long the session's queue grows.
-    const ids = queue.tracks.slice(-REFILL_EXCLUDE_MAX).map((t) => t.id);
+    const ids = libraryIds(queue.tracks.slice(-REFILL_EXCLUDE_MAX));
     const fetchMore: Promise<{ ts: Track[]; source: "radio" | "shuffle" | "favorites" }> =
       queue.source === "favorites"
         ? api.randomFavorites(20, ids).then((r) => ({ ts: r.tracks, source: favoritesSource(r.source) }))
@@ -1369,9 +1371,19 @@ function WebPlayerProvider({
   // change never waits on the network.
   useEffect(() => {
     if (!cur) return;
-    const ahead = upcoming(queue)
+    const next = upcoming(queue)
       .filter((t) => !isFailed(t.id))
       .slice(0, LOOKAHEAD);
+    // The next one a YouTube track: its preview is started now, so the change
+    // finds it downloading. YouTube tracks are never cached or prepared.
+    const yt = next[0] && isYouTube(next[0]) ? next[0] : null;
+    if (yt && sounding && warmedPreview.current !== yt.youtube_id) {
+      warmedPreview.current = yt.youtube_id!;
+      void api
+        .startPreview({ video_id: yt.youtube_id!, media: "audio", title: yt.title, channel: yt.artist, duration_s: Math.round(yt.duration_ms / 1000) })
+        .catch(() => {});
+    }
+    const ahead = next.filter((t) => !isYouTube(t));
     const n = ahead[0];
     if (!n) return;
     prefetchLyrics(n.id); // found lyrics are cached per track; a miss is asked again next change
@@ -1385,7 +1397,7 @@ function WebPlayerProvider({
     // paused queue) spends no data.
     if (!sounding) return;
     const before = queue.tracks[queue.index - 1];
-    const accepted = requestLookahead(ahead, before ? [cur.id, before.id] : [cur.id]);
+    const accepted = requestLookahead(ahead, libraryIds(before ? [cur, before] : [cur]));
     if (preloader && !accepted.includes(n.id) && localKind(n.id) === null && estimateHighBytes(n) <= BLOB_MAX_BYTES) {
       preloader.request(n.id, streamUrl(n.id, OFFLINE_QUALITY));
     }
@@ -1455,6 +1467,9 @@ function WebPlayerProvider({
       // Until metadata arrives, a pending seek (restore, quality switch,
       // network retry) is the real position; audio.currentTime still says 0.
       const pos = pendingSeek.current > 0 ? pendingSeek.current : audio.currentTime;
+      // A queue holding YouTube tracks stays on this device: the server's
+      // queue (and other devices') keeps the last library one.
+      if (q.tracks.some(isYouTube)) return;
       const empty = q.tracks.length === 0;
       void api
         .saveQueue(
@@ -1568,8 +1583,9 @@ function WebPlayerProvider({
     if (!ms || curId === undefined || typeof MediaMetadata === "undefined") return;
     // Lock screen / Control Center art: absolute same-origin URLs, so the
     // session cookie authenticates them like the audio stream.
+    const shownTrack = curRef.current!;
     const art = ([300, 1000] as const).map((size) => ({
-      src: new URL(coverUrl("track", curId, size), location.href).href,
+      src: new URL(trackCoverUrl(shownTrack, size), location.href).href,
       sizes: `${size}x${size}`,
       type: "image/jpeg",
     }));
@@ -1594,7 +1610,7 @@ function WebPlayerProvider({
     };
     renderMeta.current = render;
     render();
-    if (!carLyrics) {
+    if (!carLyrics || isYouTube(shownTrack)) {
       return () => {
         if (renderMeta.current === render) renderMeta.current = null;
       };

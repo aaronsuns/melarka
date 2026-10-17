@@ -58,7 +58,11 @@ import Foundation
 
     func streamURL(_ item: Item, quality: String) -> URL {
         switch item.kind {
-        case .track: return url("/tracks/\(item.id)/stream", [("quality", quality)])
+        case .track:
+            if let v = item.youtubeVideoID {
+                return url("/previews/by-video/\(v)/stream", [("title", item.title), ("channel", item.artist), ("duration_s", String(item.durationMs / 1000))])
+            }
+            return url("/tracks/\(item.id)/stream", [("quality", quality)])
         case .episode: return url("/episodes/\(item.id)/stream", [("kind", "audio")])
         }
     }
@@ -205,7 +209,9 @@ import Foundation
 
     func artwork(_ item: Item) async throws -> Data {
         switch item.kind {
-        case .track: return try await send(try request("GET", url("/tracks/\(item.id)/cover", [("size", "300")]))).0
+        case .track:
+            if let v = item.youtubeVideoID { return try await send(try request("GET", url("/videos/\(v)/thumbnail"))).0 }
+            return try await send(try request("GET", url("/tracks/\(item.id)/cover", [("size", "300")]))).0
         case .episode: return try await send(try request("GET", url(try episodePath(item.id, "/thumbnail")))).0
         }
     }

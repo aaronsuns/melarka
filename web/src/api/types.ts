@@ -34,6 +34,9 @@ export interface Track {
   // this track to a common level; null until measured, absent from an older
   // server (or an older offline copy) — both play at unity.
   gain_db?: number | null;
+  // A YouTube video played from a YouTube playlist without downloading it
+  // (player/youtubeTrack.ts): its id is negative and not a library track's.
+  youtube_id?: string;
 }
 
 export interface Album {

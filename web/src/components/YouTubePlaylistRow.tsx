@@ -6,6 +6,9 @@ import { searchErrorText } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { Cover } from "./Cover";
 import { ListDownloadButton } from "./ListDownloadButton";
+import { usePlayer } from "../player/PlayerProvider";
+import { youtubeTrack } from "../player/youtubeTrack";
+import { PlayFillIcon } from "./icons";
 import { PreviewButton } from "./PreviewButton";
 import { RowErrorLine, useRowErrors } from "./rowError";
 import { VideoDownload } from "./VideoDownload";
@@ -30,6 +33,32 @@ export function YouTubePlaylistRow({ playlist: p }: { playlist: YTPlaylist }) {
   const busy = useRef(false);
   const [errs, setRowError] = useRowErrors();
   const label = t("yt.playlistTracks", { title: p.title });
+  const player = usePlayer();
+  const [starting, setStarting] = useState(false);
+
+  // 播放全部: the songs play straight from YouTube (each from its preview,
+  // the next one started ahead), nothing is downloaded. The tracks already
+  // listed, else the first page.
+  async function playAll() {
+    if (starting) return;
+    setError("");
+    let vs = entries?.videos;
+    if (!vs?.length) {
+      setStarting(true);
+      try {
+        const res = await api.youtubePlaylistEntries(p.id);
+        vs = res.videos;
+        setEntries((cur) => cur ?? { videos: res.videos, more: res.more, n: ENTRIES_PAGE });
+      } catch (e) {
+        setError(searchErrorText(e));
+        setOpen(true);
+        return;
+      } finally {
+        setStarting(false);
+      }
+    }
+    if (vs.length) player.playList(vs.map(youtubeTrack), 0, { source: "list" });
+  }
 
   function load(n: number) {
     if (busy.current) return;
@@ -71,6 +100,7 @@ export function YouTubePlaylistRow({ playlist: p }: { playlist: YTPlaylist }) {
             <span className="ellipsis muted small">{p.channel}</span>
           </span>
         </button>
+        <button className="icon" aria-label={t("yt.playAll", { title: p.title })} disabled={starting} onClick={() => void playAll()}><PlayFillIcon /></button>
         <ListDownloadButton listId={p.id} title={p.title} />
       </div>
       <div id={panelId} role="region" aria-label={label} className="pl-tracks" hidden={!open}>

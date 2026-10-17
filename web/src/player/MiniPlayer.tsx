@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Cover, coverUrl } from "../components/Cover";
+import { Cover } from "../components/Cover";
+import { isYouTube, trackCoverUrl } from "./youtubeTrack";
 import { BackwardFillIcon, ForwardFillIcon, PauseFillIcon, PlayFillIcon } from "../components/icons";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
@@ -19,7 +20,7 @@ export function MiniPlayer() {
   const swipeRef = useTrackSwipe(".mini-info", { next: p.next, prev: p.prev });
   // Fetched here, not in Now Playing: the mini player shows the current line
   // too, and Now Playing opens straight onto lyrics it already has.
-  const { lyrics, reload } = useLyrics(track?.id);
+  const { lyrics, reload } = useLyrics(isYouTube(track) ? undefined : track?.id); // a YouTube track has none
   // The queue can empty out from under an open NowPlaying (e.g. removing
   // the last track) — without this the overlay would linger, dialog-shaped
   // but with nothing to show.
@@ -51,7 +52,7 @@ export function MiniPlayer() {
           <button type="button" className="mini-tap">{t("player.tapToPlayFavorites")}</button>
         )}
         <button className="mini-info" data-swipe-surface="" onClick={() => setOpen(true)}>
-          <Cover seed={track.album || track.title} label={track.title} size={44} src={coverUrl("track", track.id)} />
+          <Cover seed={track.album || track.title} label={track.title} size={44} src={trackCoverUrl(track)} />
           <span className="track-text">
             <span className="ellipsis">{track.title}</span>
             <span className="ellipsis muted small">{p.error ?? <CurrentLine lines={syncedLines(lyrics)} offset={lyrics?.offset_ms ?? 0} fallback={track.artist || t("common.unknownArtist")} />}</span>

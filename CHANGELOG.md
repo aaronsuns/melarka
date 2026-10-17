@@ -8,6 +8,14 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+### Added
+
+- **Play a whole YouTube playlist without downloading it**: a playlist in the search results has a
+  ▶ button that plays its songs straight away, each from its preview, the next one started
+  ahead; in the iPhone app it keeps playing in the background, on the lock screen and in the car.
+  Now Playing shows the video's thumbnail and a 下载 button that keeps the song; favorites,
+  lyrics and the server's queue are for library songs only, so a YouTube queue is not synced.
+
 ## [0.2.7] - 2026-10-17
 
 ### Added

@@ -1,4 +1,5 @@
 import { screen, within } from "@testing-library/react";
+import { vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { DownloadJob, YTPlaylist, YTVideo } from "../api/types";
 import { renderWithApp } from "../test/render";
@@ -133,4 +134,24 @@ test("a video row shows YouTube's view and like counts when known", async () => 
   });
   expect(await screen.findByText(/35\.4万次播放 · 4000赞/)).toBeInTheDocument();
   expect(screen.getAllByText(/次播放/)).toHaveLength(1); // b has no counts: nothing shown
+});
+
+test("播放全部 on a YouTube playlist plays its songs from their previews, without a server queue or play events", async () => {
+  const posted: string[] = [];
+  const forbidden: string[] = [];
+  const { audio } = renderWithApp(<YouTubeResults query="歌" auto />, {
+    routes: {
+      "GET /api/v1/youtube/search": () => ({ body: { videos: [], playlists: [pl] } }),
+      "GET /api/v1/youtube/playlist/entries": () => ({ body: { videos: [vid("first000001"), vid("second00002")], count: 2, more: false } }),
+      "POST /api/v1/previews": (init) => { posted.push(String(init.body)); return { status: 201, body: { id: 9 } }; },
+      "PUT /api/v1/queue": () => { forbidden.push("queue"); return { status: 204 }; }, // a YouTube queue must not replace the server's
+      "POST /api/v1/events/play": () => { forbidden.push("events"); return { body: { accepted: 0 } }; },
+    },
+  });
+  await userEvent.click(await screen.findByRole("button", { name: "播放全部 假歌单" }));
+  await vi.waitFor(() => expect(audio.src).toContain("/api/v1/previews/by-video/first000001/stream"));
+  audio.dispatchEvent(new Event("playing"));
+  await vi.waitFor(() => expect(posted.some((b) => b.includes("second00002"))).toBe(true)); // the next one starts ahead
+  await new Promise((r) => setTimeout(r, 1300)); // past the queue save's 1 s debounce
+  expect(forbidden).toEqual([]);
 });

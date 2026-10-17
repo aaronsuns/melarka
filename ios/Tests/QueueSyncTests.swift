@@ -45,6 +45,20 @@ final class QueueSyncTests: EngineTestCase {
         XCTAssertTrue(api.saveCalls.isEmpty)
     }
 
+    /// A YouTube playlist played from search ("yt:" items) stays on the phone: the server keeps the last
+    /// library queue, which the web and the other devices restore.
+    func testAQueueWithYouTubeTracksIsNotSent() async {
+        let yt = Item(kind: .track, id: "yt:mjuS9shGYhE", title: "流年", artist: "王菲", album: "YouTube", durationMs: 263_000, meta: .null)
+        engine.handle(.setQueue(.init(kind: .track, items: [yt], index: 0, positionMs: 0, play: true, source: .list)))
+        backend.start()
+        advanceClock(30); backend.play(to: 30_000); engine.tick()
+        scheduler.advance(5); await engine.idle()
+        XCTAssertTrue(api.saveCalls.isEmpty)
+        engine.handle(.setQueue(q([7, 8], index: 0, pos: 0, play: false)))   // a library queue again: sent
+        scheduler.advance(1); await engine.idle()
+        XCTAssertEqual(api.saveCalls, [.init(trackIDs: [7, 8], index: 0, positionMs: 0)])
+    }
+
     func testColdStartWithAnEmptyLocalQueueAdoptsTheServers() async {
         api.queueAnswer = serverQueue([4, 5, 6], index: 1, pos: 7_000, by: "device:2", at: nowS - 3600)
         engine.handle(.hello(onOpen: "resume"))
