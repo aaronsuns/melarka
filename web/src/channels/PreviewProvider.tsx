@@ -7,6 +7,7 @@ import { failedPreviewText, isTransient, previewErrorText } from "../i18n/errors
 import { useT } from "../i18n/i18n";
 import { SILENT_WAV } from "../player/PlayerProvider";
 import { claimSession, onSessionClaim, ownsSession } from "../player/sessionOwner";
+import { usePlayer } from "../player/PlayerProvider";
 
 export interface PreviewTarget {
   videoId: string;
@@ -98,6 +99,12 @@ export function PreviewProvider({ children, audio: injected }: { children: React
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
   const video = useRef<HTMLVideoElement>(null);
   const targetRef = useRef(target);
+  const player = usePlayer();
+  const playerRef = useRef(player);
+  playerRef.current = player;
+  // Music was playing when this preview (or the first of a run of them) opened:
+  // closing it without 保留 brings that music back.
+  const resumeMusic = useRef(false);
   targetRef.current = target;
   const infoRef = useRef(info);
   infoRef.current = info;
@@ -228,6 +235,7 @@ export function PreviewProvider({ children, audio: injected }: { children: React
     (p: PreviewTarget) => {
       const mine = ++seq.current;
       stopPoll();
+      if (!targetRef.current) resumeMusic.current = playerRef.current.playing;
       setTarget(p);
       targetRef.current = p;
       setInfo(null);
@@ -280,14 +288,20 @@ export function PreviewProvider({ children, audio: injected }: { children: React
     video.current?.pause();
   }, [audio]);
 
-  const close = useCallback(() => {
+  // opts.resume false: whatever comes next (an episode, the kept song) plays instead of the music before.
+  const close = useCallback((opts: { resume?: boolean } = {}) => {
     stop();
     setTarget(null);
+    targetRef.current = null;
     setInfo(null);
     setProblem(null);
     setKept(null);
     setKeepErr("");
     releaseSession();
+    const resume = resumeMusic.current && opts.resume !== false;
+    resumeMusic.current = false;
+    // Only when music has the session back: if an episode or a video took over meanwhile, it stays.
+    if (resume && ownsSession("music")) playerRef.current.play();
   }, [stop]);
 
   useEffect(() => {
@@ -345,11 +359,27 @@ export function PreviewProvider({ children, audio: injected }: { children: React
     if (!i || !tg) return;
     setKeepErr("");
     try {
+      const wasPlaying = !audio.paused;
+      const at = audio.currentTime;
       const res = await api.keepPreview(i.id, tg.keepTo);
       if (targetRef.current !== tg) return;
+      const trackId = res.job?.track_id ?? undefined;
+      // Kept while it plays: the song goes on in the music player from the same
+      // second, and after it 随机播放收藏 (keeping it made it a favorite).
+      if (tg.keepTo === "music" && wasPlaying && trackId !== undefined) {
+        const track = await api.track(trackId);
+        if (targetRef.current !== tg) return;
+        close({ resume: false });
+        const pl = playerRef.current;
+        pl.playList([track], 0, { source: "favorites" });
+        if (at > 1) pl.seek(at);
+        pl.showNotice(t("preview.keptMusic"));
+        return;
+      }
       stop();
       releaseSession();
-      setKept({ to: tg.keepTo, trackId: res.job?.track_id ?? undefined });
+      resumeMusic.current = false;
+      setKept({ to: tg.keepTo, trackId });
     } catch (e) {
       if (targetRef.current === tg) setKeepErr(previewErrorText(e));
     }
@@ -369,7 +399,7 @@ export function PreviewProvider({ children, audio: injected }: { children: React
               <span className="ellipsis">{target.title}</span>
               <span className="ellipsis muted small">{target.channel}</span>
             </span>
-            <button className="icon" aria-label={t("preview.close")} onClick={close}>✕</button>
+            <button className="icon" aria-label={t("preview.close")} onClick={() => close()}>✕</button>
           </div>
           {problem && (
             <div className="preview-problem">
@@ -382,7 +412,7 @@ export function PreviewProvider({ children, audio: injected }: { children: React
                   className="secondary"
                   onClick={() => {
                     const listen = target.listenInstead!;
-                    close();
+                    close({ resume: false });
                     listen();
                   }}
                 >

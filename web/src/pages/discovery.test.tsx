@@ -153,7 +153,7 @@ test("▶ 试听 on a music recommendation keeps into music, then ▶ 播放 pla
   const user = userEvent.setup();
   const rec: Recommendation = { video_id: "recvideo001", title: "推荐歌曲", channel: "歌手", duration_s: 200, thumbnail: "",
     url: "https://www.youtube.com/watch?v=recvideo001", reason: null, score: 1 };
-  const { f } = renderWithApp(<RecommendationList items={[rec]} onChange={() => {}} />, {
+  const { f, previewAudio } = renderWithApp(<RecommendationList items={[rec]} onChange={() => {}} />, {
     routes: {
       "GET /api/v1/downloads": () => ({ body: [] }),
       "POST /api/v1/previews": () => ({ status: 201, body: pv({ id: 2, video_id: "recvideo001", title: "推荐歌曲", stream_url: "/api/v1/previews/2/stream", status: "done" }) }),
@@ -163,7 +163,10 @@ test("▶ 试听 on a music recommendation keeps into music, then ▶ 播放 pla
   });
   fireEvent.click(screen.getByRole("button", { name: "试听" }));
   const sheet = await screen.findByRole("dialog", { name: "推荐歌曲" });
-  await user.click(await within(sheet).findByRole("button", { name: "保留到音乐" }));
+  // Kept while paused: the sheet says so and offers ▶ 播放 (kept while playing, the music player takes over).
+  await within(sheet).findByRole("button", { name: "保留到音乐" });
+  act(() => previewAudio.pause());
+  await user.click(within(sheet).getByRole("button", { name: "保留到音乐" }));
   expect(await within(sheet).findByText("已保留——在“我的下载”里")).toBeInTheDocument();
   expect(body(f, "/previews/2/keep")).toEqual({ to: "music" });
   expect(within(sheet).getByRole("button", { name: /播放/ })).toBeInTheDocument();
