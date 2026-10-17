@@ -5,6 +5,7 @@ import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { activeLine, clampOffset, forgetLyrics, formatOffset, getLyrics, onLyrics, setLyrics } from "./lyricsCache";
 import { usePlayer, usePlayerProgress } from "./PlayerProvider";
+import { LyricsMaker } from "./LyricsMaker";
 
 type Line = { t_ms: number; text: string };
 
@@ -69,6 +70,7 @@ export function LyricsView({ lyrics: l, trackId, onEmptied }: { lyrics: Lyrics |
   const t = useT();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [confirmWrong, setConfirmWrong] = useState(false);
+  const [making, setMaking] = useState(false);
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<{ id: number; ms: number; lyricsId: number } | null>(null);
@@ -179,13 +181,24 @@ export function LyricsView({ lyrics: l, trackId, onEmptied }: { lyrics: Lyrics |
   const synced = !!(l?.found && l.synced && l.lines?.length);
   if (!l) body = <p className="muted lyrics-note">{t("lyrics.loading")}</p>;
   else if (l.instrumental) body = <p className="muted lyrics-note">{t("lyrics.instrumental")}</p>;
-  else if (!l.found) body = <p className="muted lyrics-note">{t("lyrics.none")}</p>;
+  else if (!l.found)
+    body = (
+      <div className="lyrics-note">
+        <p className="muted">{t("lyrics.none")}</p>
+        {trackId !== undefined && <button className="secondary" onClick={() => setMaking(true)}>{t("lyrics.make")}</button>}
+      </div>
+    );
   else if (synced) body = <SyncedLyrics lines={l.lines!} offset={offset} onAlign={trackId === undefined ? undefined : align} />;
   else body = <div className="lyrics-plain">{(l.text ?? "").split("\n").map((line, i) => <p key={i}>{line || " "}</p>)}</div>;
   const tools = trackId !== undefined && l?.found && !l.instrumental;
+  // What 制作歌词 starts from: the words shown now, without their times.
+  const initialText = !l?.found ? "" : l.lines?.length ? l.lines.map((x) => x.text).join("\n") : (l.text ?? "");
   return (
     <>
       <div className="lyrics">{body}</div>
+      {making && trackId !== undefined && (
+        <LyricsMaker trackId={trackId} initialText={initialText} onClose={() => setMaking(false)} onSaved={(saved) => setLyrics(trackId, saved)} />
+      )}
       {(tools || notice) && (
         <div className="lyrics-tools small">
           {tools && confirmWrong ? (
@@ -205,6 +218,7 @@ export function LyricsView({ lyrics: l, trackId, onEmptied }: { lyrics: Lyrics |
                 </span>
               )}
               <button className="secondary" disabled={busy} onClick={() => setConfirmWrong(true)}>{t("lyrics.wrong")}</button>
+              <button className="secondary" onClick={() => setMaking(true)}>{t("lyrics.make")}</button>
             </>
           ) : null}
           {notice && (

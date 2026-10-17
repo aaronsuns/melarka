@@ -575,3 +575,39 @@ func TestLastFMInstrumentalTagDoesNotStopLyrics(t *testing.T) {
 		t.Fatalf("%+v %v", r, err)
 	}
 }
+
+// Lyrics a person makes (pasted text, timed in the app) become the selected lyrics for everyone;
+// timing the same words again updates them in place.
+func TestSetOwnLyrics(t *testing.T) {
+	e := newLyricsEnv(t, &fakeProv{name: "netease", cands: []Candidate{
+		{Source: "netease", ExternalID: "7", Title: "甜蜜蜜", Artist: "邓丽君", DurationS: 211, Synced: true, Text: "[00:01.00]x\n[00:02.00]y\n[00:03.00]z"}}})
+	if r, _ := e.svc.Get(e.ctx, e.track); r.Source != "netease" {
+		t.Fatalf("%+v", r)
+	}
+	lrc := "[00:12.30]甜蜜蜜 你笑得甜蜜蜜\n[00:18.00]好像花儿开在春风里\n[00:24.50]开在春风里"
+	r, err := e.svc.SetOwn(e.ctx, e.track, lrc)
+	if err != nil || r.Source != "user" || !r.Synced || len(r.Lines) != 3 || r.Lines[1].TMS != 18000 {
+		t.Fatalf("%+v %v", r, err)
+	}
+	if got, _ := e.svc.Get(e.ctx, e.track); got.ID != r.ID || got.Source != "user" {
+		t.Fatalf("not selected: %+v", got)
+	}
+	retimed := "[00:12.00]甜蜜蜜 你笑得甜蜜蜜\n[00:17.50]好像花儿开在春风里\n[00:24.00]开在春风里"
+	r2, err := e.svc.SetOwn(e.ctx, e.track, retimed)
+	if err != nil || r2.ID != r.ID || r2.Lines[1].TMS != 17500 {
+		t.Fatalf("retimed: %+v %v", r2, err)
+	}
+	cs, _ := e.svc.Candidates(e.ctx, e.track)
+	if len(cs) != 2 {
+		t.Fatalf("candidates %+v", cs) // netease's and the person's, once
+	}
+	plain, err := e.svc.SetOwn(e.ctx, e.track, "第一句\n第二句")
+	if err != nil || plain.Synced || plain.Text == "" {
+		t.Fatalf("plain: %+v %v", plain, err)
+	}
+	for _, bad := range []string{"", "   ", strings.Repeat("长", maxOwnLyrics+1)} {
+		if _, err := e.svc.SetOwn(e.ctx, e.track, bad); !errors.Is(err, ErrBadLyrics) {
+			t.Fatalf("%d runes: %v", len([]rune(bad)), err)
+		}
+	}
+}

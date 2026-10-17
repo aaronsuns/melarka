@@ -325,3 +325,28 @@ func TestLyricsOffsetAndWrongForMembers(t *testing.T) {
 		}
 	}
 }
+
+// Any signed-in user can make a song's lyrics: paste, time, save; everyone then sees them.
+func TestOwnLyrics(t *testing.T) {
+	s, ts := newTestServer(t)
+	kid := loginAs(t, s, "kid", "member")
+	dad := loginAs(t, s, "dad", "admin")
+	id := seedTrack(t, s, "a.mp3", "你是我的格桑花", "梁红", "Y")
+	p := fmt.Sprintf("/api/v1/tracks/%d/lyrics", id)
+	r, b := do(t, ts, kid, "PUT", p+"/own", map[string]string{"text": "[00:10.00]第一句\n[00:15.50]第二句\n[00:21.00]第三句"})
+	if r.StatusCode != 200 || !strings.Contains(string(b), `"source":"user"`) || !strings.Contains(string(b), `"t_ms":15500`) {
+		t.Fatalf("%d %s", r.StatusCode, b)
+	}
+	if _, b := do(t, ts, dad, "GET", p, nil); !strings.Contains(string(b), `"source":"user"`) || !strings.Contains(string(b), "第二句") {
+		t.Fatalf("another user: %s", b)
+	}
+	if r, b := do(t, ts, kid, "PUT", p+"/own", map[string]string{"text": "  "}); r.StatusCode != 400 || !strings.Contains(string(b), `"code":"bad_lyrics"`) {
+		t.Fatalf("empty: %d %s", r.StatusCode, b)
+	}
+	if r, _ := do(t, ts, kid, "PUT", "/api/v1/tracks/99999/lyrics/own", map[string]string{"text": "x"}); r.StatusCode != 404 {
+		t.Fatalf("missing track: %d", r.StatusCode)
+	}
+	if r, _ := do(t, ts, "", "PUT", p+"/own", map[string]string{"text": "x"}); r.StatusCode != 401 {
+		t.Fatalf("signed out: %d", r.StatusCode)
+	}
+}

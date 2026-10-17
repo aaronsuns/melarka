@@ -8,6 +8,15 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-10-17
+
+### Added
+
+- **Make a song's lyrics yourself** (制作歌词, in the lyrics view): paste the words found online,
+  then the song plays from the top and you tap as each line starts (撤销 takes a tap back, 重来
+  starts over); 保存 makes them the song's lyrics for everyone, timed like any other: they
+  align, show in the car, and follow on every device. A pasted .lrc can be saved as it is.
+
 ## [0.2.11] - 2026-10-17
 
 ### Added
@@ -282,7 +291,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.11...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.12...HEAD
+[0.2.12]: https://github.com/aaronsuns/melarka/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/aaronsuns/melarka/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/aaronsuns/melarka/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/aaronsuns/melarka/compare/v0.2.8...v0.2.9

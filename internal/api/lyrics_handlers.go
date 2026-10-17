@@ -15,6 +15,7 @@ func (s *Server) lyricsRoutes(a chi.Router) {
 	a.Get("/tracks/{id}/lyrics", s.getLyrics)
 	// Anyone signed in: they act on the track's lyrics for everyone.
 	a.Put("/tracks/{id}/lyrics/offset", s.setLyricsOffset)
+	a.Put("/tracks/{id}/lyrics/own", s.setOwnLyrics)
 	a.Post("/tracks/{id}/lyrics/wrong", s.reportWrongLyrics)
 	a.Post("/tracks/{id}/lyrics/wrong/undo", s.undoWrongLyrics) // the reporter, or an admin
 }
@@ -37,6 +38,8 @@ func (s *Server) lyricsFail(w http.ResponseWriter, err error) {
 		writeCoded(w, 409, "no_lyrics", "the track has no lyrics selected")
 	case errors.Is(err, lyrics.ErrLyricsChanged):
 		writeCoded(w, 409, "lyrics_changed", "other lyrics are shown for this track now")
+	case errors.Is(err, lyrics.ErrBadLyrics):
+		writeCoded(w, 400, "bad_lyrics", "lyrics must not be empty or over 20000 characters")
 	case errors.Is(err, lyrics.ErrForbidden):
 		writeCoded(w, 403, "not_your_report", "only the reporter or an admin can undo this report")
 	default:
@@ -66,6 +69,28 @@ func (s *Server) setLyricsOffset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(204)
+}
+
+// setOwnLyrics takes {"text"}: lyrics a person made (pasted, and timed in the
+// app as LRC), selected for everyone. 200 with the lyrics as GET answers them.
+func (s *Server) setOwnLyrics(w http.ResponseWriter, r *http.Request) {
+	id, ok := s.withID(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		Text string `json:"text"`
+	}
+	if err := decodeJSON(r, &in); err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	res, err := s.Lyrics.SetOwn(r.Context(), id, in.Text)
+	if err != nil {
+		s.lyricsFail(w, err)
+		return
+	}
+	writeJSON(w, 200, res)
 }
 
 // reportWrongLyrics is "wrong lyrics" for {"lyrics_id"} (the shown lyrics'

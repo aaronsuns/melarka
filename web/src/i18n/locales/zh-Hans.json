@@ -309,6 +309,7 @@
   "lyrics.wrongSwitched": "已换成另一版本歌词",
   "lyrics.wrongFlagged": "已标记，稍后自动修复",
   "lyrics.undo": "撤销",
+  "lyrics.make": "制作歌词", "lyrics.makePasteHint": "粘贴歌词，每句一行（网上找到的文本即可）。", "lyrics.makeStart": "开始打点", "lyrics.makeSaveAsIs": "直接保存", "lyrics.makeTapHint": "歌曲从头播放：每句开始唱时点一下“打点”。", "lyrics.makeDoneHint": "每句都打好点了，检查一下再保存。", "lyrics.makeTap": "打点", "lyrics.makeProgress": "{n}/{total}", "lyrics.makeRestart": "重来",
   "lyrics.undone": "已撤销",
   "lyrics.offsetResetDone": "已复位",
   "lyrics.changed": "歌词已被更换，已刷新",

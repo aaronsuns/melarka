@@ -216,6 +216,8 @@ export const api = {
     lyricsChange(id, req<Lyrics>("POST", `/tracks/${id}/lyrics/refresh`, override)),
   // "This song has no lyrics": nothing shown, and automatic lookups stop.
   noLyrics: (id: number) => lyricsChange(id, req<void>("PUT", `/tracks/${id}/lyrics`, { none: true })),
+  // Anyone signed in: lyrics they made (pasted, timed in the app), the song's lyrics for everyone.
+  setOwnLyrics: (id: number, text: string) => lyricsChange(id, req<Lyrics>("PUT", `/tracks/${id}/lyrics/own`, { text })),
   deleteLyricsCandidate: (id: number, candidateId: number) => req<void>("DELETE", `/tracks/${id}/lyrics/candidates/${candidateId}`),
 
   recommendations: () => req<Recommendations>("GET", "/me/recommendations"),

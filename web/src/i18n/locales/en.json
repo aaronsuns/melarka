@@ -312,6 +312,7 @@
   "lyrics.wrongSwitched": "Switched to another version of the lyrics",
   "lyrics.wrongFlagged": "Reported — they will be fixed automatically later",
   "lyrics.undo": "Undo",
+  "lyrics.make": "Make lyrics", "lyrics.makePasteHint": "Paste the words, one line each (text found online is fine).", "lyrics.makeStart": "Start timing", "lyrics.makeSaveAsIs": "Save as is", "lyrics.makeTapHint": "The song plays from the start: tap when each line begins.", "lyrics.makeDoneHint": "Every line is timed: check them, then save.", "lyrics.makeTap": "Tap", "lyrics.makeProgress": "{n}/{total}", "lyrics.makeRestart": "Start over",
   "lyrics.undone": "Undone",
   "lyrics.offsetResetDone": "Shift reset",
   "lyrics.changed": "These lyrics were changed meanwhile — showing the current ones",

@@ -628,3 +628,14 @@ input.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2
 @media (min-width: 900px) {
   .tabs-brand { display: block; padding: 0 12px 18px; font-size: var(--fs-title); font-weight: 700; letter-spacing: -.01em; }
 }
+/* 制作歌词: paste, then tap each line as it starts. */
+.lyrics-maker { display: grid; gap: 10px; max-height: 88vh; }
+.lyrics-maker-text { width: 100%; min-height: 200px; padding: 10px 12px; border: .5px solid var(--separator); border-radius: var(--radius); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; line-height: 1.5; resize: vertical; }
+.lyrics-maker-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.lyrics-maker-lines { margin: 0; padding: 0; list-style: none; max-height: 42vh; overflow-y: auto; }
+.lyrics-maker-lines li { display: grid; grid-template-columns: 64px 1fr; gap: 8px; padding: 6px 4px; border-radius: 8px; color: var(--muted); }
+.lyrics-maker-lines li.timed { color: var(--text); }
+.lyrics-maker-lines li.current { background: rgba(30, 215, 96, .12); color: var(--accent); font-weight: 600; }
+.lyrics-maker-time { font-variant-numeric: tabular-nums; font-size: var(--fs-foot); }
+.lyrics-maker-tap { min-height: 64px; font-size: var(--fs-headline); }
+.lyrics-note { display: grid; justify-items: center; gap: 12px; }

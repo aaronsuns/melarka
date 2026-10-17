@@ -309,6 +309,7 @@
   "lyrics.wrongSwitched": "已換成另一版本歌詞",
   "lyrics.wrongFlagged": "已標記，稍後自動修復",
   "lyrics.undo": "撤銷",
+  "lyrics.make": "製作歌詞", "lyrics.makePasteHint": "貼上歌詞，每句一行（網上找到的文字即可）。", "lyrics.makeStart": "開始打點", "lyrics.makeSaveAsIs": "直接儲存", "lyrics.makeTapHint": "歌曲從頭播放：每句開始唱時點一下「打點」。", "lyrics.makeDoneHint": "每句都打好點了，檢查一下再儲存。", "lyrics.makeTap": "打點", "lyrics.makeProgress": "{n}/{total}", "lyrics.makeRestart": "重來",
   "lyrics.undone": "已撤銷",
   "lyrics.offsetResetDone": "已復位",
   "lyrics.changed": "歌詞已被更換，已重新整理",

@@ -312,6 +312,7 @@
   "lyrics.wrongSwitched": "Bytte till en annan version av sångtexten",
   "lyrics.wrongFlagged": "Rapporterat – det åtgärdas automatiskt senare",
   "lyrics.undo": "Ångra",
+  "lyrics.make": "Skapa låttext", "lyrics.makePasteHint": "Klistra in texten, en rad per rad (text från nätet går bra).", "lyrics.makeStart": "Börja tajma", "lyrics.makeSaveAsIs": "Spara som den är", "lyrics.makeTapHint": "Låten spelas från början: tryck när varje rad börjar.", "lyrics.makeDoneHint": "Alla rader är tajmade: kontrollera och spara.", "lyrics.makeTap": "Tryck", "lyrics.makeProgress": "{n}/{total}", "lyrics.makeRestart": "Börja om",
   "lyrics.undone": "Ångrat",
   "lyrics.offsetResetDone": "Förskjutningen återställd",
   "lyrics.changed": "Sångtexten har ändrats under tiden – visar den aktuella",
