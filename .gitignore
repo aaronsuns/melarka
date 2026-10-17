@@ -23,3 +23,13 @@ ios/DerivedData/
 ios/*.ipa
 xcuserdata/
 *.tsbuildinfo
+# Android
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/buildSrc/build/
+android/buildSrc/.gradle/
+android/local.properties
+*.jks
+*.keystore

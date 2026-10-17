@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- docs/brand/melarka-icon.svg without its background, shrunk into the adaptive icon's safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:pivotX="512"
+        android:pivotY="512"
+        android:scaleX="0.78"
+        android:scaleY="0.78">
+        <group
+            android:scaleX="1.18"
+            android:scaleY="1.18"
+            android:translateX="-101.6"
+            android:translateY="-70">
+            <!-- the stem -->
+            <path
+                android:fillColor="#1ed760"
+                android:pathData="M593,170 H593 A33,33 0 0 1 626,203 V677 A33,33 0 0 1 560,677 V203 A33,33 0 0 1 593,170 Z" />
+            <!-- the wing -->
+            <path
+                android:fillColor="#1ed760"
+                android:pathData="M593,172 C700,200 820,262 850,392 C812,352 770,336 730,334 C772,368 792,410 796,462 C748,398 690,372 626,368 Z" />
+            <!-- the body -->
+            <group
+                android:pivotX="470"
+                android:pivotY="716"
+                android:rotation="-24">
+                <path
+                    android:fillColor="#1ed760"
+                    android:pathData="M298,716 A172,126 0 1 0 642,716 A172,126 0 1 0 298,716 Z" />
+            </group>
+            <!-- the beak -->
+            <path
+                android:fillColor="#1ed760"
+                android:pathData="M360,740 L232,712 L318,666 Z" />
+            <!-- the tail -->
+            <path
+                android:fillColor="#1ed760"
+                android:pathData="M598,690 L742,650 L700,712 L612,750 Z" />
+            <!-- the eye -->
+            <path
+                android:fillColor="#121212"
+                android:pathData="M384,654 A22,22 0 1 1 384,698 A22,22 0 1 1 384,654 Z" />
+        </group>
+    </group>
+</vector>
