@@ -3,6 +3,7 @@ package lark.auth
 import kotlinx.coroutines.test.runTest
 import lark.testing.FakeCookies
 import lark.testing.MemorySecretStore
+import lark.testing.ThrowingSecretStore
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -77,5 +78,28 @@ class AuthStoreTest {
         meOk(); cookies.value = "T2"; a.harvest(url)   // a fresh login
         assertEquals("T2", a.token)
         assertEquals(listOf<String?>("T1", null, "T2"), changes)
+    }
+
+    @Test fun clearSignsOutInMemoryAndNotifiesEvenWhenPersistingFails() = runTest {
+        val bad = ThrowingSecretStore(); val a = AuthStore(bad, cookies); val changes = mutableListOf<String?>()
+        a.onChange = { changes += it }
+        meOk(); cookies.value = "T1"; a.harvest(url)
+        bad.failSets = true
+        a.clear()
+        assertNull(a.token); assertNull(a.userId); assertEquals(listOf<String?>("T1", null), changes)
+        cookies.value = "T1"; a.harvest(url)   // still never re-adopted
+        assertNull(a.token)
+    }
+
+    @Test fun harvestRollsBackWhenPersistingTheTokenFails() = runTest {
+        val bad = ThrowingSecretStore(); val a = AuthStore(bad, cookies); var changes = 0
+        a.onChange = { changes++ }
+        bad.failSets = true
+        meOk(); cookies.value = "T1"
+        assertEquals(false, a.harvest(url))
+        assertNull(a.token); assertEquals(0, changes)
+        bad.failSets = false
+        meOk(); assertEquals(true, a.harvest(url))   // the next page load tries again
+        assertEquals("T1", a.token); assertEquals(1, changes)
     }
 }

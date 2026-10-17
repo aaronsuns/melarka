@@ -43,15 +43,20 @@ class AuthStore(
      */
     suspend fun harvest(serverUrl: String, userId: Long? = null): Boolean {
         synchronized(lock) {
-            if (userId != null && userId != this.userId) { this.userId = userId; secrets.set(USER_ID, userId.toString()) }
+            if (userId != null && userId != this.userId) {
+                try { secrets.set(USER_ID, userId.toString()); this.userId = userId } catch (_: Exception) {}   // best effort
+            }
         }
         val candidate = cookies.larkToken(serverUrl)?.takeIf { it.isNotEmpty() } ?: return false
         if (!isNew(candidate)) return false
         val meId = verify(serverUrl, candidate) ?: return false
         val changed = synchronized(lock) {
             if (!isNew(candidate)) return false   // cleared or adopted by someone else while the server was asked
-            token = candidate; secrets.set(TOKEN, candidate)
-            if (meId.id != null && meId.id != this.userId) { this.userId = meId.id; secrets.set(USER_ID, meId.id.toString()) }
+            try { secrets.set(TOKEN, candidate) } catch (_: Exception) { return false }   // nothing adopted, nothing announced
+            token = candidate
+            if (meId.id != null && meId.id != this.userId) {
+                try { secrets.set(USER_ID, meId.id.toString()); this.userId = meId.id } catch (_: Exception) {}
+            }
             true
         }
         if (changed) onChange?.invoke(candidate)
@@ -67,8 +72,11 @@ class AuthStore(
             had = token != null
             token?.let { revoked = it }
             token = null; userId = null
-            secrets.set(TOKEN, null); secrets.set(USER_ID, null)
         }
+        // Memory is already signed out and the page is told whatever the disk does; a failed erase is retried by the
+        // next write and the revoked value is never adopted again in this process.
+        try { secrets.set(TOKEN, null) } catch (_: Exception) {}
+        try { secrets.set(USER_ID, null) } catch (_: Exception) {}
         if (had) onChange?.invoke(null)
     }
 

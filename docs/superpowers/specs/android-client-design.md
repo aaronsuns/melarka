@@ -188,6 +188,9 @@ behaviour; the builder works through it as a checklist.
   revoked value is sent to `GET /api/v1/me` as a Bearer token; only a 200 stores it (the user id comes from the
   answer), a 401, an error or an unreadable answer stores nothing. With the name twice in the jar, the last
   (shortest Path, the server's `Path=/`) wins. A missing or empty cookie never signs out.
+- Accepted residual risk: Android's `CookieManager` hides HttpOnly and Path, so native adopts the last `lark_token`
+  cookie and relies on the `/me` check; a same-origin script could plant its own valid token (this needs XSS on
+  the user's own server).
 - Server URL: https only; plain http for `localhost`, `*.local`, and `10.0.2.2` (the emulator's host) in debug
   builds only; no user info; normalised to `scheme://host[:port]/`.
 - Store the token and user id with the Android Keystore (an AES key in the Keystore encrypting a

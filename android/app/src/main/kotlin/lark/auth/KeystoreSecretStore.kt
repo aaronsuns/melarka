@@ -22,11 +22,17 @@ class KeystoreSecretStore(private val file: File, private val alias: String = "l
 
     override fun get(key: String): String? = synchronized(lock) { load()[key] }
 
-    override fun set(key: String, value: String?) = synchronized(lock) {
+    override fun set(key: String, value: String?) { synchronized(lock) {
         val m = load()
-        if (value == null) { if (m.remove(key) == null) return } else m[key] = value
-        save(m)
-    }
+        if (value == null) {
+            if (m.remove(key) == null) return
+            // Erasing must not fail: if the rewrite does, delete the ciphertext file (the other secrets go with it).
+            try { save(m) } catch (e: Exception) { file.delete(); File(file.path + ".tmp").delete() }
+        } else {
+            m[key] = value
+            save(m)
+        }
+    } }
 
     private fun load(): MutableMap<String, String> {
         cache?.let { return it }

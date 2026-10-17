@@ -7,6 +7,9 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
@@ -99,7 +102,7 @@ class LarkApi(base: String, client: OkHttpClient, private val auth: AuthStore) :
         val token = auth.token ?: throw LarkError.SignedOut
         try {
             return Request.Builder().url(url).header("Authorization", "Bearer $token")
-                .method(method, body?.let { it.toString().toByteArray().toRequestBody(JSON) }).build()
+                .method(method, body?.let { it.toString().toByteArray(Charsets.UTF_8).toRequestBody(JSON) }).build()
         } catch (_: IllegalArgumentException) {
             throw LarkError.BadRequest   // a token that is not a valid header value; the exception's own text would quote it
         }
@@ -120,7 +123,10 @@ class LarkApi(base: String, client: OkHttpClient, private val auth: AuthStore) :
             // Only the token this request carried can be signed out: a late 401 for an old token, after a re-login
             // (or after another 401 already signed out), must leave the current state alone.
             val sentToken = sent.header("Authorization")?.removePrefix("Bearer ")
-            if (sentToken != null && auth.token == sentToken) signOutOnce()
+            if (sentToken != null && auth.token == sentToken) {
+                // The caller always learns about the 401, even when the sign-out hook fails.
+                try { signOutOnce() } catch (e: CancellationException) { throw e } catch (_: Exception) {}
+            }
             throw LarkError.Unauthorized
         }
         throw LarkError.Http(resp.code, withContext(Dispatchers.IO) { errorCode(resp) })
@@ -270,22 +276,38 @@ class LarkApi(base: String, client: OkHttpClient, private val auth: AuthStore) :
 
     override suspend fun download(trackId: Long, quality: String, dir: File): File {
         val req = request("GET", url("/tracks/$trackId/stream", listOf("quality" to quality)))
-        val resp = bulk.newCall(req).await()
-        return resp.use {
-            check(it, req)
-            val type = (it.header("Content-Type") ?: "").substringBefore(';').trim().lowercase()
-            val ext = fileExtension(type) ?: throw LarkError.BadResponse
-            withContext(Dispatchers.IO) {
-                dir.mkdirs()
-                val dest = File(dir, "$trackId.$ext")
-                val part = File(dir, "$trackId.part")
-                try {
-                    it.body.byteStream().use { src -> Files.copy(src, part.toPath(), StandardCopyOption.REPLACE_EXISTING) }
-                    Files.move(part.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                } finally { part.delete() }   // gone after a successful move; the partial otherwise
-                dest
+        val call = bulk.newCall(req)
+        val resp = call.await()
+        // The copy below blocks in the socket: cancelling the coroutine must cancel the call to wake it up.
+        val watch = currentCoroutineContext().job.invokeOnCompletion { if (it != null) call.cancel() }
+        try {
+            return resp.use {
+                check(it, req)
+                val type = (it.header("Content-Type") ?: "").substringBefore(';').trim().lowercase()
+                val ext = fileExtension(type) ?: throw LarkError.BadResponse
+                withContext(Dispatchers.IO) {
+                    dir.mkdirs()
+                    val dest = File(dir, "$trackId.$ext")
+                    val part = File(dir, "$trackId.part")
+                    try {
+                        it.body.byteStream().use { src ->
+                            part.outputStream().use { out ->
+                                val buf = ByteArray(64 * 1024)
+                                while (true) {
+                                    ensureActive()
+                                    val n = src.read(buf)
+                                    if (n < 0) break
+                                    out.write(buf, 0, n)
+                                }
+                            }
+                        }
+                        ensureActive()   // a cancelled download never reaches dest
+                        Files.move(part.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                    } finally { part.delete() }   // gone after a successful move; the partial otherwise
+                    dest
+                }
             }
-        }
+        } finally { watch.dispose() }
     }
 
     companion object {

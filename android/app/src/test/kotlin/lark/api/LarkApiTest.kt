@@ -284,6 +284,25 @@ class LarkApiTest {
         assertNull(auth.token)
     }
 
+    @Test fun a401IsReportedEvenWhenTheSignOutHookThrows() {
+        respond("", status = 401)
+        api.onUnauthorized = { throw IllegalStateException("boom") }
+        expectError(LarkError.Unauthorized) { api.queue() }
+    }
+
+    @Test fun aCancelledDownloadLeavesNoFileAndNoPart() = runBlocking {
+        server.enqueue(MockResponse().setBody("A".repeat(200_000)).setHeader("Content-Type", "audio/mpeg").throttleBody(2048, 50, java.util.concurrent.TimeUnit.MILLISECONDS))
+        val job = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).async { api.download(12, "high", dir) }
+        val part = File(dir, "12.part")
+        val deadline = System.currentTimeMillis() + 10_000
+        while (!(part.exists() && part.length() > 0) && System.currentTimeMillis() < deadline) delay(10)
+        assertTrue("the download never started", part.exists())
+        job.cancel()
+        kotlinx.coroutines.withTimeout(10_000) { job.join() }   // returns promptly: the call was cancelled, not drained
+        assertTrue(job.isCancelled)
+        assertEquals(emptyList<String>(), dir.list()!!.toList())
+    }
+
     @Test fun a401OnDownloadSignals() {
         respond("", status = 401)
         var signalled = false
