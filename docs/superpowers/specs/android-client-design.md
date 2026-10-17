@@ -203,7 +203,7 @@ behaviour; the builder works through it as a checklist.
 | cold start from the car (remote play) | `MediaSession.Callback.onPlaybackResumption` + media button receiver; the synchronous resume-from-disk logic of `PlayerEngine.resumeFromDisk` |
 | Shortcuts "car connects → shuffle favorites" | CompanionDeviceManager association with the car (picked in Settings; the system confirms once); its connect callback runs the same path as the iOS ShuffleFavorites intent; launcher shortcuts "Shuffle favorites" and "Resume" |
 | BGAppRefreshTask | WorkManager periodic work (6 h, unmetered network) for the favorites sync |
-| NWPathMonitor (+ expensive / Low Data) | `ConnectivityManager.NetworkCallback` (NOT_METERED; `isRestrictBackgroundStatus`), keeping the "answered" semantics |
+| NWPathMonitor (+ expensive / Low Data) | `ConnectivityManager.NetworkCallback` (NOT_METERED; `isRestrictBackgroundStatus`), keeping the "answered" semantics; online = INTERNET capability only (not VALIDATED), so a LAN-only self-hosted server stays reachable, as with `NWPath.satisfied` |
 | Library/Caches (purgeable) | `filesDir` (or app-specific external files) for audio; queues and events in `filesDir`; free space via `StorageManager.getAllocatableBytes` |
 | ATS http exception (localhost, *.local) | `networkSecurityConfig` cleartext for those domains only |
 | xcstrings | `values/`, `values-zh-rCN`, `values-zh-rTW`, `values-sv` |

@@ -11,17 +11,17 @@ import android.os.Looper
 internal data class NetworkState(val online: Boolean, val expensive: Boolean)
 
 /**
- * Online means the default network has validated internet access. Expensive means metered, or Data Saver
+ * Online means the default network has the INTERNET capability, like iOS `NWPath.status == .satisfied`. VALIDATED is
+ * not required: a self-hosted server on a Wi-Fi without WAN must stay reachable. Expensive means metered, or Data Saver
  * (`restrictBackgroundStatus == ENABLED`) is on: the user asked for no bulk downloads.
  */
-internal fun classifyNetwork(validatedInternet: Boolean, notMetered: Boolean, restrictBackground: Boolean) =
-    NetworkState(online = validatedInternet, expensive = !notMetered || restrictBackground)
+internal fun classifyNetwork(internet: Boolean, notMetered: Boolean, restrictBackground: Boolean) =
+    NetworkState(online = internet, expensive = !notMetered || restrictBackground)
 
 internal fun classifyNetwork(caps: NetworkCapabilities?, restrictBackground: Boolean) =
     if (caps == null) NetworkState(online = false, expensive = restrictBackground)
     else classifyNetwork(
-        validatedInternet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+        internet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
         notMetered = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
         restrictBackground = restrictBackground,
     )
@@ -42,12 +42,24 @@ class AndroidNetworkStatus(context: Context) : NetworkStatus {
     override var answered = false
         private set
 
+    /** The current default network: a loss of any other one (a stale loss after a switch) is ignored. */
+    private var current: Network? = null
+
     private val callback = object : ConnectivityManager.NetworkCallback() {
-        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = update(classifyNetwork(caps, restricted()))
-        override fun onLost(network: Network) = update(classifyNetwork(null, restricted()))
+        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+            current = network
+            update(classifyNetwork(caps, restricted()))
+        }
+
+        override fun onLost(network: Network) {
+            if (network != current) return
+            current = null
+            update(classifyNetwork(null, restricted()))
+        }
     }
 
     init {
+        // Never unregistered: this object lives as long as the app.
         cm.registerDefaultNetworkCallback(callback, Handler(Looper.getMainLooper()))
         // No default network at all: the callback may never fire, and "offline" is a sure answer.
         if (cm.activeNetwork == null) update(classifyNetwork(null, restricted()))

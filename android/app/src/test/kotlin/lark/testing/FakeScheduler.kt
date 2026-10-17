@@ -18,7 +18,10 @@ class FakeScheduler : Scheduler {
 
     override fun after(seconds: Double, fn: () -> Unit): Cancellable = add(Job(now + seconds, null, fn))
 
-    override fun every(seconds: Double, fn: () -> Unit): Cancellable = add(Job(now + seconds, seconds, fn))
+    override fun every(seconds: Double, fn: () -> Unit): Cancellable {
+        require(seconds > 0) { "every needs seconds > 0, or advance never ends" }
+        return add(Job(now + seconds, seconds, fn))
+    }
 
     private fun add(job: Job): Cancellable { jobs.add(job); return job }
 

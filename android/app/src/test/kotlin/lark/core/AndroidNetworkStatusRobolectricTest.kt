@@ -63,4 +63,24 @@ class AndroidNetworkStatusRobolectricTest {
         assertFalse(status.isOnline)
         assertEquals(3, changes)
     }
+
+    @Test fun internetWithoutValidatedIsOnline() {
+        val status = AndroidNetworkStatus(context)
+        val callback = shadowOf(cm).networkCallbacks.single()
+        callback.onCapabilitiesChanged(org.robolectric.shadows.ShadowNetwork.newInstance(1), caps(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+        assertTrue(status.isOnline)
+    }
+
+    @Test fun aStaleLossAfterASwitchIsIgnored() {
+        val status = AndroidNetworkStatus(context)
+        val callback = shadowOf(cm).networkCallbacks.single()
+        val wifi = org.robolectric.shadows.ShadowNetwork.newInstance(1)
+        val cellular = org.robolectric.shadows.ShadowNetwork.newInstance(2)
+        callback.onCapabilitiesChanged(wifi, caps(*validated))
+        callback.onCapabilitiesChanged(cellular, caps(*validated))
+        callback.onLost(wifi)
+        assertTrue(status.isOnline)
+        callback.onLost(cellular)
+        assertFalse(status.isOnline)
+    }
 }

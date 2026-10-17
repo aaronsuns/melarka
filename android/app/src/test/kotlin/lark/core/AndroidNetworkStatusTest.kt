@@ -13,6 +13,6 @@ class AndroidNetworkStatusTest {
     @Test fun dataSaverMakesAnUnmeteredNetworkExpensive() =
         assertEquals(NetworkState(online = true, expensive = true), classifyNetwork(true, notMetered = true, restrictBackground = true))
 
-    @Test fun notValidatedIsOffline() =
+    @Test fun noInternetIsOffline() =
         assertEquals(false, classifyNetwork(false, notMetered = true, restrictBackground = false).online)
 }
