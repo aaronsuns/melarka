@@ -1,6 +1,8 @@
 # Installing Melarka
 
-This guide expands the [quick start in the README](../README.md#quick-start-5-minutes). If you
+The quickest way is the [one-line installer](../README.md#tldr-install-in-one-command), which
+does all of the steps below for you. This guide expands the
+[step-by-step quick start in the README](../README.md#quick-start-step-by-step). If you
 use an AI coding agent, [AGENTS.md](../AGENTS.md) has the same steps with a check after each one.
 
 ## What you need
@@ -19,13 +21,13 @@ Releases are published to the GitHub Container Registry as `ghcr.io/aaronsuns/me
 
 | Tag | Meaning |
 |---|---|
-| `0.1.0` | exactly this release; recommended, so upgrades happen when you choose |
-| `0.1` | the newest `0.1.x` patch release |
-| `latest` | the newest release |
+| `latest` | the newest release; what `docker-compose.yml` runs unless `.env` sets `MELARKA_VERSION` |
+| `0.2.2` | exactly this release: set `MELARKA_VERSION=0.2.2` in `.env` to upgrade only when you choose |
+| `0.2` | the newest `0.2.x` patch release |
 
 The image contains the `lark` server binary, ffmpeg, yt-dlp and Node.js (which yt-dlp uses for
 YouTube's JavaScript challenges). It runs as uid `1000`, listens on port `4600`, and keeps its
-state under `/data`. `docker run --rm ghcr.io/aaronsuns/melarka:0.1.0 --version` prints the
+state under `/data`. `docker run --rm ghcr.io/aaronsuns/melarka:latest --version` prints the
 version.
 
 ## Step by step
@@ -122,8 +124,8 @@ page, so build the web app first and copy `web/dist/` to `internal/webui/dist/`,
 ## Upgrading and backups
 
 See [Backup, restore and upgrade](../README.md#backup-restore-and-upgrade) in the README. In
-short: back up `data/lark.db` with `sqlite3 data/lark.db ".backup …"`, change the image tag, then
-`docker compose pull && docker compose up -d`.
+short: back up `data/lark.db` with `sqlite3 data/lark.db ".backup …"`, then run the installer
+again or `docker compose pull && docker compose up -d`.
 
 ## Uninstalling
 

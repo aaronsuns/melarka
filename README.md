@@ -10,11 +10,29 @@ tags, lyrics and choices live in Melarka's own database.
 It runs as one Docker container. You use it from any browser, from a phone's home screen, or
 from the native iPhone app.
 
+## TL;DR: install in one command
+
+On a Linux server with Docker, run this with the path to your music folder:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music
+```
+
+That's it. The installer sets everything up in `~/melarka` (or `/srv/melarka` when run as root),
+starts Melarka, and prints the address and the admin password. Then:
+
+1. Open `http://127.0.0.1:4600` on the server and sign in as `admin`.
+2. Add your family under **Admin → Users**.
+3. To use it from phones, put [HTTPS in front of it](#reverse-proxy-and-https), then add it to
+   the home screen or install [the iPhone app](#the-iphone-app-sidestore).
+
+Run the same command again whenever you want to upgrade; your settings and data are kept.
+Want to see each step instead? Read the [step-by-step quick start](#quick-start-step-by-step) below.
+Installing with an AI coding agent? Point it at [AGENTS.md](AGENTS.md): the same steps, each
+followed by a command that checks it worked.
+
 > The code, the binary, the environment variables (`LARK_*`) and the database still use the
 > internal code name `lark`. Everything you see says Melarka.
-
-Installing with an AI coding agent? Point it at [AGENTS.md](AGENTS.md): the same steps as below,
-each followed by a command that checks it worked.
 
 ## Screenshots
 
@@ -69,8 +87,9 @@ Demo data: invented songs and channels, generated test tones and covers.</sub></
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Languages**: English, 简体中文, 繁體中文, svenska. Music metadata is never translated.
 
-## Quick start (5 minutes)
+## Quick start (step by step)
 
+This is what [the installer](deploy/install.sh) does, if you'd rather run each step yourself.
 You need a Linux host with Docker (Compose v2) and a directory of music files. Make a directory
 for Melarka and save this as `docker-compose.yml` in it. It is
 [`deploy/docker-compose.example.yml`](deploy/docker-compose.example.yml), so you can also download
@@ -81,12 +100,12 @@ that file:
 # Then: docker compose up -d
 services:
   melarka:
-    image: ghcr.io/aaronsuns/melarka:0.1.0       # or :0.1 (patch updates) or :latest
+    image: ghcr.io/aaronsuns/melarka:${MELARKA_VERSION:-latest}   # pin a release in .env: MELARKA_VERSION=0.2.2
     container_name: melarka
     restart: unless-stopped
     ports:
-      - "127.0.0.1:4600:4600"    # loopback only; put an HTTPS reverse proxy in front (README "Reverse proxy and HTTPS")
-    env_file: .env               # LARK_ADMIN_PASSWORD=… (first start only); optional LARK_LANGUAGE, LARK_LASTFM_API_KEY
+      - "${MELARKA_BIND:-127.0.0.1}:${MELARKA_PORT:-4600}:4600"   # this server only; HTTPS proxy in front (README "Reverse proxy and HTTPS")
+    env_file: .env               # MUSIC_DIR, LARK_ADMIN_PASSWORD (first start only); optional LARK_LANGUAGE, LARK_LASTFM_API_KEY
     environment:
       LARK_ADMIN_USER: admin     # the first admin's username, used only while no admin exists
       # TZ: Area/City            # local time for recommendations.refresh_at; UTC if unset
@@ -148,6 +167,9 @@ The ones you are most likely to change:
 - `LARK_LANGUAGE` (or `language`): the default UI language, `en`, `zh-Hans`, `zh-Hant` or `sv`.
 - `LARK_LASTFM_API_KEY`: turns on tags from Last.fm and Last.fm's similar tracks in **For you**.
 - `TZ` in `docker-compose.yml`: the local time of the nightly refresh (UTC if unset).
+- `MELARKA_VERSION`, `MELARKA_BIND` and `MELARKA_PORT` in `.env`: the release to run (`latest`
+  if unset), the address to listen on (`127.0.0.1`; `0.0.0.0` lets other computers at home
+  reach it over plain HTTP) and the port (`4600`). Run `docker compose up -d` after a change.
 - `lyrics.providers` and `artwork.providers`: which online sources to ask.
 - `channels.enabled`: `false` turns off Channels, previews and Video.
 
@@ -232,16 +254,16 @@ sudo chown 1000:1000 data/lark.db
 docker compose start
 ```
 
-**Upgrade:** back up first, then change the image tag in `docker-compose.yml` to the new version
-(see the [releases](https://github.com/aaronsuns/melarka/releases) and
-[CHANGELOG.md](CHANGELOG.md)), and run:
+**Upgrade:** back up first, then run the [one-line installer](#tldr-install-in-one-command)
+again, or in the Melarka directory:
 
 ```bash
 docker compose pull && docker compose up -d
 ```
 
-Database migrations run automatically at start. With the `:latest` tag, the same two commands
-upgrade to the newest release.
+Both fetch the newest release (see the [releases](https://github.com/aaronsuns/melarka/releases)
+and [CHANGELOG.md](CHANGELOG.md)); database migrations run automatically at start. To stay on
+one release instead, add `MELARKA_VERSION=0.2.2` (or any release) to `.env`.
 
 ## The iPhone app (SideStore)
 

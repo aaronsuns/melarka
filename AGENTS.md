@@ -6,6 +6,8 @@ Instructions for coding agents. Humans: see README.md and docs/install.md (same 
 
 Run each step, then its **Verify** command; stop and report if a verify fails.
 Inputs you need: `MUSIC_DIR` (an existing directory of audio files) and a host with Docker.
+Humans usually run `deploy/install.sh` instead, which does steps 2–4 in one command; these steps
+are the same with a check after each one.
 Melarka runs from the published image `ghcr.io/aaronsuns/melarka`; no clone or build is needed.
 Every command runs from the install directory `$DIR` (for example `/srv/melarka`); shell state
 may not persist between your commands, so re-`cd "$DIR"` each time.
@@ -44,8 +46,8 @@ may not persist between your commands, so re-`cd "$DIR"` each time.
    Verify: `test ! -e .lark-install-auth && echo ok` (the DELETE printed `204`).
 8. Optional, needs the user: an HTTPS reverse proxy (README "Reverse proxy and HTTPS"), then open the site on a phone and Add to Home Screen, or install the iPhone app (docs/iphone.md).
 
-Upgrading later: back up `data/lark.db` (`sqlite3 data/lark.db ".backup lark-backup.db"`), change the image tag in
-`docker-compose.yml`, then `docker compose pull && docker compose up -d` and repeat the step 4 verify.
+Upgrading later: back up `data/lark.db` (`sqlite3 data/lark.db ".backup lark-backup.db"`), then
+`docker compose pull && docker compose up -d` (the compose file runs `latest` unless `.env` sets `MELARKA_VERSION`) and repeat the step 4 verify.
 
 ## Naming
 
