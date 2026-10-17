@@ -62,6 +62,7 @@ The product is **Melarka** (internal code name `lark`).
 
 - Layout: `cmd/lark` (main), `internal/<package>` (one job each; see docs/architecture.md), `web/` (React app, embedded at build time), `ios/` (the iPhone app, XcodeGen), `skills/` (agent skills), `deploy/` (compose and config examples), `docs/` (user docs).
 - Before every commit: `go vet ./... && go test ./...` and `cd web && npm test && npm run build`; for UI flows also `npm run e2e` (it serves the built `web/dist`, so build first).
+- Design docs live in the repo: design specs in `docs/superpowers/specs/`, implementation plans in `docs/superpowers/plans/` (the iPhone app, the Android app, the native bridge, larger server features). A change to behaviour a spec describes updates that spec in the same commit; a new project gets a spec and a plan there first.
 - Tests never touch the network: external programs (ffmpeg, ffprobe, yt-dlp) and HTTP services (lyrics providers, Last.fm) sit behind interfaces; use fakes, `httptest`, and recorded fixtures under `testdata/`.
 - Never commit personal data: no email addresses, real tokens or real account names in code, fixtures or docs (`internal/config/hygiene_test.go` checks every tracked text file for email addresses; `scripts/oss-check.sh` is the release gate). Recorded fixtures replace keys with obviously fake ones.
 - Melarka never writes tags into audio files. Metadata, tags and lyrics live in SQLite.
