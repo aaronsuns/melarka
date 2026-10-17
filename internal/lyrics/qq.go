@@ -12,7 +12,7 @@ import (
 //
 //	POST {SearchURL} (https://u.y.qq.com/cgi-bin/musicu.fcg), JSON
 //	{"comm":{"ct":19,"cv":1859,"uin":"0"},"req":{"method":"DoSearchForQQMusicDesktop",
-//	"module":"music.search.SearchCgiService","param":{"grp":1,"num_per_page":5,
+//	"module":"music.search.SearchCgiService","param":{"grp":1,"num_per_page":10,
 //	"page_num":1,"query":"<title artist>","search_type":0}}}
 //	→ req.data.body.song.list[]  (the old c.y.qq.com/soso client_search_cp answers HTTP 500)
 //
@@ -82,25 +82,23 @@ func (p *QQ) Search(ctx context.Context, q Query) ([]Candidate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("qq search: %w", err)
 	}
+	hits := make([]Candidate, len(songs))
+	for i, s := range songs {
+		hits[i] = Candidate{Source: "qq", ExternalID: s.ID, Title: s.Title, Artist: s.Artist, DurationS: s.DurationS}
+	}
 	var out []Candidate
 	var firstErr error
-	fetched := 0
-	for _, s := range songs {
-		if fetched == unofficialMaxFetch {
+	for i, c := range closestMatches(q, hits) {
+		if i == unofficialMaxFetch {
 			break
 		}
-		c := Candidate{Source: "qq", ExternalID: s.ID, Title: s.Title, Artist: s.Artist, DurationS: s.DurationS}
-		if !Match(q, c) {
-			continue
-		}
-		fetched++
-		v := url.Values{"songmid": {s.ID}, "format": {"json"}, "nobase64": {"1"}, "g_tk": {"5381"}}
+		v := url.Values{"songmid": {c.ExternalID}, "format": {"json"}, "nobase64": {"1"}, "g_tk": {"5381"}}
 		var lr struct {
 			Retcode int    `json:"retcode"`
 			Lyric   string `json:"lyric"`
 		}
 		if err := getJSON(ctx, p.HTTP, "GET", p.lyricURL()+"?"+v.Encode(), nil, map[string]string{"Referer": "https://y.qq.com/"}, &lr); err != nil {
-			if e := failed(ctx, fmt.Errorf("qq lyric %s: %w", s.ID, err), &firstErr); e != nil {
+			if e := failed(ctx, fmt.Errorf("qq lyric %s: %w", c.ExternalID, err), &firstErr); e != nil {
 				return nil, e
 			}
 			continue

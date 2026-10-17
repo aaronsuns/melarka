@@ -140,7 +140,8 @@ func run(log *slog.Logger) error {
 		return cfg.YtDlpPath
 	}
 	ytClient := &ytdlp.Client{Runner: ytdlp.ExecRunner{Bin: ytBin}, CacheDir: filepath.Join(cfg.CacheDir(), "yt-dlp")}
-	downloads := &download.Service{DB: d, YT: ytClient, Library: libStore, Scans: scans, Log: log, Workers: 2}
+	downloads := &download.Service{DB: d, YT: ytClient, Library: libStore, Scans: scans, Log: log, Workers: 2,
+		MinFree: int64(cfg.Downloads.MinFreeGB) << 30}
 	downloadsDone := make(chan struct{})
 	go func() {
 		defer close(downloadsDone)
@@ -163,6 +164,9 @@ func run(log *slog.Logger) error {
 	go func() { defer close(prefetchDone); lyricsSvc.RunPrefetch(ctx, cfg.Lyrics.PrefetchInterval) }()
 	artworkDone := make(chan struct{})
 	go func() { defer close(artworkDone); artworkSvc.RunPrefetch(ctx, cfg.Artwork.PrefetchInterval) }()
+	// Covers of tracks gone from the library, and temp files a crash left: at start, then daily.
+	artworkSweepDone := make(chan struct{})
+	go func() { defer close(artworkSweepDone); artworkSvc.RunSweep(ctx) }()
 	// Loudness: one niced ffmpeg decode at a time, waiting while the stream
 	// preparer transcodes so playback always comes first.
 	loudnessDone := make(chan struct{})
@@ -274,6 +278,7 @@ func run(log *slog.Logger) error {
 	<-channelsDone
 	<-prefetchDone
 	<-artworkDone
+	<-artworkSweepDone
 	<-loudnessDone
 	<-prepareDone
 	return nil

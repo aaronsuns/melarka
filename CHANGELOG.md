@@ -8,6 +8,24 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+### Added
+
+- **Downloads stop before the disk fills**: with less than `downloads.min_free_gb` (10 GB) free
+  on the download target, a new YouTube download is refused and a queued one fails with "not
+  enough disk space"; retry it once there is room.
+- **The cover cache cleans itself**: covers of songs gone from the library, and temp files left
+  by a crash, are removed at start and then daily.
+
+### Fixed
+
+- **Many more songs get lyrics**, above all YouTube downloads: a release whose title and singer
+  match is now taken even when its duration is up to a minute off (a video's intro or outro;
+  the closest version still wins, and the offset fixes the timing). NetEase, QQ Music and Kugou
+  look at 10 search results instead of 5 and fetch the closest versions first. Songs that found
+  no lyrics before are looked up again.
+- **Lyrics of another song with the same title**: two different Western singers no longer count
+  as the same song just because the durations agree.
+
 ## [0.2.3] - 2026-10-17
 
 ### Added

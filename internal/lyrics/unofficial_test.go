@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -100,7 +101,7 @@ func TestNetEaseSearch(t *testing.T) {
 		t.Fatalf("%+v", cs)
 	}
 	s := f.on("/api/cloudsearch/pc")
-	if len(s) != 1 || s[0].Query.Get("s") != "甜蜜蜜 邓丽君" || s[0].Query.Get("type") != "1" || s[0].Query.Get("limit") != "5" {
+	if len(s) != 1 || s[0].Query.Get("s") != "甜蜜蜜 邓丽君" || s[0].Query.Get("type") != "1" || s[0].Query.Get("limit") != "10" {
 		t.Fatalf("%+v", s)
 	}
 	if s[0].Header.Get("Referer") != "https://music.163.com/" || s[0].Header.Get("User-Agent") != "Mozilla/5.0" {
@@ -109,6 +110,29 @@ func TestNetEaseSearch(t *testing.T) {
 	ly := f.on("/api/song/lyric")
 	if len(ly) != 2 || ly[0].Query.Get("id") != "204666" || ly[0].Query.Get("lv") != "1" || ly[0].Query.Get("tv") != "-1" {
 		t.Fatalf("the DJ version must be filtered before its lyric is fetched: %+v", ly)
+	}
+}
+
+// A video's duration is off from every release: the versions that match are
+// fetched closest first, so the cap of three keeps the best ones.
+func TestNetEaseFetchesTheClosestVersionsFirst(t *testing.T) {
+	song := func(id int, d int) string {
+		return `{"id":` + strconv.Itoa(id) + `,"name":"流年","ar":[{"name":"王菲"}],"dt":` + strconv.Itoa(d*1000) + `}`
+	}
+	f := newFakeSite(t, map[string]reply{
+		"/api/cloudsearch/pc": {raw: `{"code":200,"result":{"songs":[` + song(1, 230) + `,` + song(2, 300) + `,` +
+			song(3, 272) + `,` + song(4, 250) + `,` + song(5, 262) + `]}}`},
+		"/api/song/lyric": {fixture: "netease_lyric"},
+	})
+	if _, err := netease(f).Search(context.Background(), Query{Title: "流年", Artist: "王菲", DurationS: 263}); err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, r := range f.on("/api/song/lyric") {
+		ids = append(ids, r.Query.Get("id"))
+	}
+	if !slices.Equal(ids, []string{"5", "3", "4"}) { // 1 s, 9 s, 13 s; 33 s and 37 s are left
+		t.Fatalf("fetched %v", ids)
 	}
 }
 
@@ -217,7 +241,7 @@ func TestQQSearch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if body.Req.Method != "DoSearchForQQMusicDesktop" || body.Req.Module != "music.search.SearchCgiService" ||
-		body.Req.Param.Query != "甜蜜蜜 邓丽君" || body.Req.Param.NumPerPage != 5 || body.Req.Param.PageNum != 1 ||
+		body.Req.Param.Query != "甜蜜蜜 邓丽君" || body.Req.Param.NumPerPage != 10 || body.Req.Param.PageNum != 1 ||
 		body.Req.Param.Grp != 1 || body.Comm["cv"] != float64(1859) || body.Comm["uin"] != "0" {
 		t.Fatalf("%s", s[0].Body)
 	}
@@ -287,7 +311,7 @@ func TestKugouSearch(t *testing.T) {
 		t.Fatalf("BOM not stripped: %q", c.Text)
 	}
 	s := f.on("/api/v3/search/song")
-	if len(s) != 1 || s[0].Query.Get("keyword") != "甜蜜蜜 邓丽君" || s[0].Query.Get("pagesize") != "5" || s[0].Query.Get("format") != "json" {
+	if len(s) != 1 || s[0].Query.Get("keyword") != "甜蜜蜜 邓丽君" || s[0].Query.Get("pagesize") != "10" || s[0].Query.Get("format") != "json" {
 		t.Fatalf("%+v", s)
 	}
 	cd := f.on("/search")

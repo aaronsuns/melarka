@@ -104,6 +104,13 @@ func (c LoudnessConfig) validate() error {
 }
 
 // RecommendationsConfig switches "为你推荐" on and sets the nightly refresh time.
+// DownloadsConfig: YouTube downloads into the download-target library.
+type DownloadsConfig struct {
+	// MinFreeGB: free disk (GB) the download target must keep; a download is
+	// refused, or a queued one fails, below it. Default 10; 0 = no check.
+	MinFreeGB int `yaml:"min_free_gb"`
+}
+
 type RecommendationsConfig struct {
 	Enabled   bool   `yaml:"enabled"`    // default true
 	RefreshAt string `yaml:"refresh_at"` // "HH:MM" in the process's local time (TZ; UTC in a container without it), default "02:30"
@@ -160,6 +167,7 @@ type Config struct {
 	Artwork         ArtworkConfig         `yaml:"artwork"`
 	Loudness        LoudnessConfig        `yaml:"loudness"`
 	Recommendations RecommendationsConfig `yaml:"recommendations"`
+	Downloads       DownloadsConfig       `yaml:"downloads"`
 	Channels        ChannelsConfig        `yaml:"channels"`
 	// YouTubeFeedURL is where channel feeds are read (LARK_YOUTUBE_FEED_URL;
 	// tests and e2e point it at a local server).
@@ -213,6 +221,7 @@ func Load() (Config, error) {
 		Artwork:         ArtworkConfig{Providers: []string{"embedded", "folder", "itunes", "netease", "qq"}, PrefetchInterval: 3 * time.Second},
 		Loudness:        LoudnessConfig{Enabled: true, Gap: 2 * time.Second, RetryFailedAfter: 720 * time.Hour},
 		Recommendations: RecommendationsConfig{Enabled: true, RefreshAt: "02:30"},
+		Downloads:       DownloadsConfig{MinFreeGB: 10},
 		Channels:        ChannelsConfig{Enabled: true, PollInterval: 2 * time.Hour, KeepDays: 10, InitialBackfill: 3, MaxGB: 200, PreviewTTL: 24 * time.Hour, PreviewMaxGB: 10},
 	}
 	c.OfflineCache = true
@@ -248,6 +257,9 @@ func Load() (Config, error) {
 	}
 	if !refreshAtRe.MatchString(c.Recommendations.RefreshAt) {
 		return c, fmt.Errorf("recommendations.refresh_at %q: want HH:MM (00:00–23:59)", c.Recommendations.RefreshAt)
+	}
+	if c.Downloads.MinFreeGB < 0 {
+		return c, fmt.Errorf("downloads.min_free_gb %d: 0 or more", c.Downloads.MinFreeGB)
 	}
 	if err := c.Channels.validate(); err != nil {
 		return c, err

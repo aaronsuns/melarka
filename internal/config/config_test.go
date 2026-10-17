@@ -186,6 +186,23 @@ func TestRecommendationsConfig(t *testing.T) {
 	}
 }
 
+func TestDownloadsConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LARK_DATA_DIR", dir)
+	c, err := Load()
+	if err != nil || c.Downloads.MinFreeGB != 10 {
+		t.Fatalf("default %+v %v", c.Downloads, err)
+	}
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("downloads:\n  min_free_gb: 0\n"), 0o644)
+	if c, err = Load(); err != nil || c.Downloads.MinFreeGB != 0 {
+		t.Fatalf("0 (no check) %+v %v", c.Downloads, err)
+	}
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("downloads:\n  min_free_gb: -1\n"), 0o644)
+	if _, err := Load(); err == nil {
+		t.Error("min_free_gb -1 accepted")
+	}
+}
+
 func TestChannelsDefaultsAndRoots(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("LARK_DATA_DIR", dir)

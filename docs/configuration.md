@@ -65,6 +65,8 @@ With Docker, put `LARK_ADMIN_PASSWORD` (and any key) in `.env`, which the compos
 | `tagging.folder_rules[].match` | | texts matched case-insensitively against a song's folder path |
 | `tagging.folder_rules[].tags` | | vocabulary tags given to matching songs |
 | `tagging.lastfm_min_count` | `10` | minimum Last.fm tag count for a tag to be kept |
+| `downloads` | | YouTube downloads (see [YouTube downloads](#youtube-downloads)) |
+| `downloads.min_free_gb` | `10` | free disk (GB) the download-target library must keep; below it new downloads are refused and queued ones fail; `0` = no check |
 | `recommendations` | | "For you" settings (see [For you](#for-you)) |
 | `recommendations.enabled` | `true` | `false` switches the nightly refresh and the Home section off |
 | `recommendations.refresh_at` | `"02:30"` | time of day (`HH:MM`) the nightly refresh starts, in the container's local time: UTC unless `TZ` is set |
@@ -103,6 +105,9 @@ your download jobs.
 - Downloads are saved as m4a into the library marked `libraries[].download_target`
   (`/music/youtube` in the example).
 - Each downloaded song is added to the favorites of whoever asked for it.
+- Downloads stop when the disk is nearly full: with less than `downloads.min_free_gb` (10 GB)
+  free on the download target, a new download is refused and a queued one fails with "not enough
+  disk space". Retry it once there is room.
 - Downloading a whole playlist (up to 200 entries) creates a Melarka playlist in YouTube's order.
   Downloading it again adds what is new, keeps songs you added by hand, and fetches nothing twice.
 - YouTube often breaks old yt-dlp versions, so Melarka updates its own copy of yt-dlp in the

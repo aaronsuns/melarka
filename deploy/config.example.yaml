@@ -45,6 +45,9 @@ loudness:                   # loudness and true peak per song, measured in the b
   gap: 2s                   # pause between songs; 0s = back to back
   retry_failed_after: 720h  # a song that failed to decode is tried again after this (at least 1h)
 
+downloads:                  # YouTube downloads into the download_target library
+  min_free_gb: 10           # refuse new downloads, and fail queued ones, below this much free disk there; 0 = no check
+
 recommendations:            # "For you" on Home: YouTube songs like the ones you play (docs/configuration.md)
   enabled: true
   refresh_at: "02:30"       # nightly refresh (HH:MM), container local time: UTC unless TZ is set (compose example: TZ)

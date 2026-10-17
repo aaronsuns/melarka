@@ -19,12 +19,20 @@ func TestMatch(t *testing.T) {
 		{q("Faded", "Alan Walker", 212), c("Faded (Official Music Video)", "Alan Walker", 0), true},
 		{q("甜蜜蜜 (Live)", "邓丽君", 0), c("甜蜜蜜", "邓丽君", 0), true},
 		{q("甜蜜蜜【MV】", "邓丽君", 0), c("甜蜜蜜", "邓丽君, 周杰伦", 0), true},
-		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "毛辣角", 228), false},        // other artist, 17 s off
-		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "毛辣角", 241), false},        // other artist, 30 s off
-		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "邓丽君", 215), false},        // same song, 4 s off
-		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "Teresa Teng", 210), true}, // romanized artist, durations agree
-		{q("甜蜜蜜", "邓丽君", 0), c("甜蜜蜜", "Teresa Teng", 210), false},  // ...but not without a duration
-		{q("爱", "X", 200), c("爱你一万年", "X", 200), false},            // too-short containment
+		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "毛辣角", 228), false},                                               // other artist, 17 s off
+		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "毛辣角", 241), false},                                               // other artist, 30 s off
+		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "邓丽君", 215), true},                                                // same song and singer, 4 s off
+		{q("流年", "王菲", 263), c("流年", "王菲", 276), true},                                                    // a video with an intro: 13 s longer
+		{q("白狐", "陳瑞", 349), c("白狐", "陈瑞", 306), true},                                                    // 43 s, traditional vs simplified singer
+		{q("渡口", "蔡琴 Tsai Chin", 234), c("渡口", "蔡琴", 204), true},                                          // 30 s, a romanized name beside it
+		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "邓丽君", 272), false},                                               // same singer, but 61 s: another song
+		{q("甜蜜蜜", "", 211), c("甜蜜蜜", "邓丽君", 220), false},                                                  // no singer to agree on: 3 s still
+		{q("甜蜜蜜", "Teresa Teng", 211), c("甜蜜蜜", "邓丽君", 220), false},                                       // singers that can't be compared: 3 s still
+		{q("Six Feet Under", "Smash Into Pieces", 187), c("Six Feet Under", "Billie Eilish", 189), false}, // two Latin names that differ: another song
+		{q("女儿情", "王园园", 265), c("女儿情", "湫的歌", 262), true},                                                // a cover of the same song
+		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "Teresa Teng", 210), true},                                        // romanized artist, durations agree
+		{q("甜蜜蜜", "邓丽君", 0), c("甜蜜蜜", "Teresa Teng", 210), false},                                         // ...but not without a duration
+		{q("爱", "X", 200), c("爱你一万年", "X", 200), false},                                                   // too-short containment
 		{q("River Flows In You", "", 180), c("River Flows in You", "Yiruma", 181), true},
 		{q("Anything", "Anyone", 100), c("", "", 0), true}, // the file's own lyrics
 	}
@@ -97,7 +105,7 @@ func TestMatchBroad(t *testing.T) {
 		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "鄧麗君", 210), true},                     // strict matches stay matches
 		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "毛辣角", 228), true},                     // any artist, 17 s off
 		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "邓丽君", 230), true},                     // 19 s off
-		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "邓丽君", 241), false},                    // 30 s off
+		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "毛辣角", 241), false},                    // another singer, 30 s off
 		{q("甜蜜蜜", "邓丽君", 400), c("甜蜜蜜", "邓丽君", 211), true},                     // a long video: duration ignored
 		{q("甜蜜蜜", "邓丽君", 211), c("甜蜜蜜", "毛辣角", 0), true},                       // candidate without a duration
 		{q("甜蜜蜜", "", 0), c("甜蜜蜜", "Teresa Teng", 210), true},                  // title only

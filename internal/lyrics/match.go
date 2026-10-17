@@ -46,23 +46,65 @@ func similar(a, b string) bool {
 	return a == b || (strings.Contains(b, a) && len(a)*10 >= len(b)*6)
 }
 
+// sameSongDurationS is how far a release's duration may be from the track's
+// when the title and the singer both agree: a video's intro, outro or talk.
+const sameSongDurationS = 60
+
 // Match reports whether candidate c is lyrics for the track q describes: a
 // similar normalized title, durations within ±3 s when both are known, and
 // an agreeing artist — or, when the artist spellings can't be compared (e.g.
-// "Teresa Teng" vs 邓丽君), agreeing durations instead.
+// "Teresa Teng" vs 邓丽君), agreeing durations instead. With both singers
+// known and agreeing, durations may be up to sameSongDurationS apart (Rank
+// still prefers the closest; the offset fixes an intro).
 func Match(q Query, c Candidate) bool {
 	if c.Title == "" {
 		return true
 	}
-	both := q.DurationS > 0 && c.DurationS > 0
-	if both && abs(q.DurationS-c.DurationS) > 3 {
-		return false
-	}
 	if !similar(Norm(q.Title), Norm(c.Title)) {
 		return false
 	}
+	both := q.DurationS > 0 && c.DurationS > 0
+	if gap := abs(q.DurationS - c.DurationS); both && gap > 3 {
+		return gap <= sameSongDurationS && artistAgrees(q, c)
+	}
 	qa, ca := Norm(q.Artist), Norm(c.Artist)
-	return qa == "" || ca == "" || strings.Contains(ca, qa) || strings.Contains(qa, ca) || both
+	if qa == "" || ca == "" || strings.Contains(ca, qa) || strings.Contains(qa, ca) {
+		return true
+	}
+	// Different singers with agreeing durations: a romanized name ("Teresa Teng"
+	// vs 邓丽君) or a cover with the same words. Two Latin names that differ
+	// can be compared, so that is another song with the same title.
+	return both && !(latinOnly(q.Artist) && latinOnly(c.Artist))
+}
+
+// latinOnly: s has letters, and every letter is Latin.
+func latinOnly(s string) bool {
+	seen := false
+	for _, r := range s {
+		if unicode.IsLetter(r) {
+			if !unicode.Is(unicode.Latin, r) {
+				return false
+			}
+			seen = true
+		}
+	}
+	return seen
+}
+
+// closestMatches keeps the candidates Match accepts, closest duration first
+// (unknown last, else search order): providers fetch lyrics for only the
+// first few, so those must be the likeliest versions.
+func closestMatches(q Query, cs []Candidate) []Candidate {
+	out := make([]Candidate, 0, len(cs))
+	for _, c := range cs {
+		if Match(q, c) {
+			out = append(out, c)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		return durationGap(q.DurationS, out[i].DurationS) < durationGap(q.DurationS, out[j].DurationS)
+	})
+	return out
 }
 
 func abs(n int) int {

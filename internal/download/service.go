@@ -7,11 +7,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/aaronsuns/lark-server/internal/fileutil"
 	"github.com/aaronsuns/lark-server/internal/library"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
@@ -31,6 +33,8 @@ var (
 	// ErrAlreadyQueued: a retry was refused because another job already
 	// covers the same video (queued, running, or done and still playable).
 	ErrAlreadyQueued = errors.New("download: video already queued")
+	// ErrNoSpace: the download target has less than MinFree free disk.
+	ErrNoSpace = errors.New("download: not enough free disk space")
 )
 
 type Service struct {
@@ -41,6 +45,11 @@ type Service struct {
 	Log     *slog.Logger
 	Workers int // default 2
 	Now     func() time.Time
+	// MinFree: free disk the target library must have to queue or start a
+	// download (0 = no check; config downloads.min_free_gb). FreeBytes reports
+	// a directory's free disk (nil = fileutil.FreeBytes; tests fake it).
+	MinFree   int64
+	FreeBytes func(dir string) (int64, error)
 
 	initOnce sync.Once
 	kick     chan struct{}
@@ -127,7 +136,7 @@ func (s *Service) EnqueueURL(ctx context.Context, userID int64, rawURL string) (
 	if err != nil {
 		return Enqueued{}, err
 	}
-	if _, err := s.target(ctx); err != nil {
+	if err := s.roomOnTarget(ctx); err != nil {
 		return Enqueued{}, err
 	}
 	list, err := s.resolve(ctx, u)
@@ -168,6 +177,33 @@ func (s *Service) EnqueueURL(ctx context.Context, userID int64, rawURL string) (
 	return res, nil
 }
 
+// roomOnTarget: a download target exists and has room (ErrNoTarget, ErrNoSpace).
+func (s *Service) roomOnTarget(ctx context.Context) error {
+	lib, err := s.target(ctx)
+	if err != nil {
+		return err
+	}
+	return s.room(lib)
+}
+
+// room: lib has at least MinFree free disk (an error reading it counts as none).
+func (s *Service) room(lib library.Library) error {
+	minFree := s.MinFree
+	if minFree <= 0 {
+		return nil
+	}
+	free := s.FreeBytes
+	if free == nil {
+		free = fileutil.FreeBytes
+	}
+	if n, err := free(lib.Root); err != nil {
+		return fmt.Errorf("%w: %v", ErrNoSpace, err)
+	} else if n < minFree {
+		return ErrNoSpace
+	}
+	return nil
+}
+
 func (s *Service) resolveTimeoutOrDefault() time.Duration {
 	if s.resolveTimeout > 0 {
 		return s.resolveTimeout
@@ -199,7 +235,7 @@ func (s *Service) EnqueueVideo(ctx context.Context, userID int64, v ytdlp.Video)
 	if strings.TrimSpace(v.ID) == "" {
 		return Job{}, ytdlp.ErrBadURL
 	}
-	if _, err := s.target(ctx); err != nil {
+	if err := s.roomOnTarget(ctx); err != nil {
 		return Job{}, err
 	}
 	v.URL = u
@@ -357,6 +393,10 @@ func (s *Service) process(runCtx, jctx context.Context, j Job) {
 	lib, err := s.target(runCtx)
 	if err != nil {
 		final, msg = StatusFailed, "lark:no_download_target"
+		return
+	}
+	if err := s.room(lib); err != nil {
+		final, msg = StatusFailed, "lark:no_space"
 		return
 	}
 	destNoExt, title, artist := destFor(lib, j)

@@ -389,6 +389,8 @@ func (s *Server) downloadFail(w http.ResponseWriter, err error) {
 		writeError(w, 404, "not found")
 	case errors.Is(err, download.ErrNoTarget):
 		writeCoded(w, 409, "no_download_target", "no library is set as the download target")
+	case errors.Is(err, download.ErrNoSpace):
+		writeCoded(w, 507, "download_no_space", "the server is short of disk space for downloads")
 	case errors.Is(err, download.ErrAlreadyQueued):
 		writeCoded(w, 409, "already_queued", "this video is already in the download queue")
 	case errors.Is(err, ytdlp.ErrBadURL):

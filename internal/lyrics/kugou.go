@@ -14,7 +14,7 @@ const kugouMaxFetch = 2
 
 // Kugou asks Kugou's unofficial web API (no key) for LRC (never KRC):
 //
-//	GET {SearchURL}?format=json&keyword=<title artist>&page=1&pagesize=5
+//	GET {SearchURL}?format=json&keyword=<title artist>&page=1&pagesize=10
 //	    (default http://mobilecdn.kugou.com/api/v3/search/song) → data.info[]
 //	GET {CandidatesURL}?ver=1&man=yes&client=mobi&keyword=&duration=<ms>&hash=<hash>
 //	    (default https://krcs.kugou.com/search) → candidates[0].{id, accesskey}
@@ -57,7 +57,7 @@ func (k *Kugou) Search(ctx context.Context, q Query) ([]Candidate, error) {
 	if strings.TrimSpace(q.Title) == "" {
 		return nil, nil
 	}
-	v := url.Values{"format": {"json"}, "keyword": {SearchTerm(q)}, "page": {"1"}, "pagesize": {"5"}}
+	v := url.Values{"format": {"json"}, "keyword": {SearchTerm(q)}, "page": {"1"}, "pagesize": {"10"}}
 	var sr kugouSearch
 	if err := getJSON(ctx, k.HTTP, "GET", strOr(k.SearchURL, "http://mobilecdn.kugou.com/api/v3/search/song")+"?"+v.Encode(), nil, nil, &sr); err != nil {
 		return nil, fmt.Errorf("kugou search: %w", err)
@@ -65,21 +65,19 @@ func (k *Kugou) Search(ctx context.Context, q Query) ([]Candidate, error) {
 	if sr.Status != 1 {
 		return nil, fmt.Errorf("kugou search: API status %d errcode %d %s", sr.Status, sr.Errcode, sr.Error)
 	}
+	hits := make([]Candidate, len(sr.Data.Info))
+	for i, s := range sr.Data.Info {
+		hits[i] = Candidate{Source: "kugou", ExternalID: s.Hash, Title: s.SongName, Artist: s.SingerName, DurationS: s.Duration}
+	}
 	var out []Candidate
 	var firstErr error
-	fetched := 0
-	for _, s := range sr.Data.Info {
-		if fetched == kugouMaxFetch {
+	for i, c := range closestMatches(q, hits) {
+		if i == kugouMaxFetch {
 			break
 		}
-		c := Candidate{Source: "kugou", ExternalID: s.Hash, Title: s.SongName, Artist: s.SingerName, DurationS: s.Duration}
-		if !Match(q, c) {
-			continue
-		}
-		fetched++
-		text, err := k.lyric(ctx, s.Hash, s.Duration)
+		text, err := k.lyric(ctx, c.ExternalID, c.DurationS)
 		if err != nil {
-			if e := failed(ctx, fmt.Errorf("kugou lyric %s: %w", s.Hash, err), &firstErr); e != nil {
+			if e := failed(ctx, fmt.Errorf("kugou lyric %s: %w", c.ExternalID, err), &firstErr); e != nil {
 				return nil, e
 			}
 			continue

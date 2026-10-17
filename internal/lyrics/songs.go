@@ -30,7 +30,7 @@ type Song struct {
 
 // Songs is the cloudsearch call (see NetEase); a "code" other than 200 is an error.
 func (n *NetEase) Songs(ctx context.Context, term string) ([]Song, error) {
-	v := url.Values{"s": {term}, "type": {"1"}, "limit": {"5"}, "offset": {"0"}}
+	v := url.Values{"s": {term}, "type": {"1"}, "limit": {"10"}, "offset": {"0"}}
 	var sr neteaseSearch
 	if err := getJSON(ctx, n.HTTP, "GET", n.base()+"/api/cloudsearch/pc?"+v.Encode(), nil, neteaseHeaders, &sr); err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (p *QQ) Songs(ctx context.Context, term string) ([]Song, error) {
 		"req": map[string]any{
 			"method": "DoSearchForQQMusicDesktop",
 			"module": "music.search.SearchCgiService",
-			"param":  map[string]any{"grp": 1, "num_per_page": 5, "page_num": 1, "query": term, "search_type": 0},
+			"param":  map[string]any{"grp": 1, "num_per_page": 10, "page_num": 1, "query": term, "search_type": 0},
 		},
 	})
 	if err != nil {

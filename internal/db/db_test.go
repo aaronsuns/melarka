@@ -33,7 +33,7 @@ func TestOpenMigratesAndIsIdempotent(t *testing.T) {
 	}
 	var n int
 	d.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&n)
-	if n != 26 {
+	if n != 27 {
 		t.Fatalf("migrations=%d", n)
 	}
 }
@@ -146,5 +146,45 @@ func TestLoudnessColumns(t *testing.T) {
 	d.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='tracks_loudness_pending'`).Scan(&idx)
 	if idx != 1 {
 		t.Fatal("tracks_loudness_pending index missing")
+	}
+}
+
+// 0027: automatic lyrics misses are retried; a user's "no lyrics" and a reported-wrong track are not.
+func TestLyricsMissesRetried(t *testing.T) {
+	d, err := Open(context.Background(), filepath.Join(t.TempDir(), "lark.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	if _, err := d.Exec(`INSERT INTO libraries(id,name,root) VALUES (1,'m','/m')`); err != nil {
+		t.Fatal(err)
+	}
+	for id := 1; id <= 4; id++ {
+		if _, err := d.Exec(`INSERT INTO tracks(id,library_id,rel_path,size,mtime,fingerprint,duration_ms,codec,bitrate,status,added_at)
+			VALUES (?,1,?,1,1,?,1000,'mp3',1,'kept',1)`, id, fmt.Sprint(id), fmt.Sprint(id)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := d.Exec(`INSERT INTO lyrics_lookup(track_id,attempted_at,found,manual,wrong_at) VALUES
+		(1,500,0,0,NULL), (2,500,0,1,NULL), (3,500,0,0,400), (4,500,1,0,NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	sqlText, err := os.ReadFile("migrations/0027_lyrics_retry_misses.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Exec(string(sqlText)); err != nil {
+		t.Fatal(err)
+	}
+	var got []int64
+	rows, _ := d.Query(`SELECT attempted_at FROM lyrics_lookup ORDER BY track_id`)
+	for rows.Next() {
+		var at int64
+		rows.Scan(&at)
+		got = append(got, at)
+	}
+	rows.Close()
+	if fmt.Sprint(got) != "[0 500 500 500]" {
+		t.Fatalf("attempted_at %v", got)
 	}
 }

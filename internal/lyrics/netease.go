@@ -26,7 +26,7 @@ func failed(ctx context.Context, err error, first *error) error {
 
 // NetEase asks NetEase Cloud Music's unofficial web API (no key). Search:
 //
-//	GET {BaseURL}/api/cloudsearch/pc?s=<title artist>&type=1&limit=5&offset=0
+//	GET {BaseURL}/api/cloudsearch/pc?s=<title artist>&type=1&limit=10&offset=0
 //	(Referer https://music.163.com/, User-Agent Mozilla/5.0)
 //
 // whose "code" must be 200: -462 is the "bind a phone" captcha wall that
@@ -88,18 +88,16 @@ func (n *NetEase) Search(ctx context.Context, q Query) ([]Candidate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("netease search: %w", err)
 	}
+	hits := make([]Candidate, len(songs))
+	for i, s := range songs {
+		hits[i] = Candidate{Source: "netease", ExternalID: s.ID, Title: s.Title, Artist: s.Artist, DurationS: s.DurationS}
+	}
 	var out []Candidate
 	var firstErr error
-	fetched := 0
-	for _, s := range songs {
-		if fetched == unofficialMaxFetch {
+	for i, c := range closestMatches(q, hits) {
+		if i == unofficialMaxFetch {
 			break
 		}
-		c := Candidate{Source: "netease", ExternalID: s.ID, Title: s.Title, Artist: s.Artist, DurationS: s.DurationS}
-		if !Match(q, c) {
-			continue
-		}
-		fetched++
 		lv := url.Values{"id": {c.ExternalID}, "lv": {"1"}, "tv": {"-1"}}
 		var lr neteaseLyric
 		if err := getJSON(ctx, n.HTTP, "GET", n.base()+"/api/song/lyric?"+lv.Encode(), nil, neteaseHeaders, &lr); err != nil {
