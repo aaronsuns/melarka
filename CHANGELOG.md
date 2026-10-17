@@ -8,6 +8,21 @@ the iPhone app share one version number.
 
 ## [Unreleased]
 
+### Changed
+
+- **YouTube search results weigh in view counts**: YouTube's order stays the main signal, but a
+  far more watched upload (the official one, the version everyone plays) moves up a few places.
+  The same goes for the video Melarka picks for a song behind the scenes.
+- **For you favours well-made songs**: the top candidates are weighed by YouTube's view count
+  and like ratio (fetched in the background and kept for 30 days), so a popular, well-liked song
+  beats an obscure upload that matches your taste just as well.
+
+### Fixed
+
+- **Lyrics for songs Last.fm calls instrumental**: Last.fm tags often describe the singer, not
+  the song, so its "instrumental" no longer stops the lyrics lookup (folder rules, the agent and
+  your own tags still do).
+
 ## [0.2.4] - 2026-10-17
 
 ### Added

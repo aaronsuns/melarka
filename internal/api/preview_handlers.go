@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -26,6 +27,7 @@ func (s *Server) previewRoutes(a chi.Router) {
 		c.Post("/previews", s.createPreview)
 		c.Get("/previews/{id}", s.getPreview)
 		c.Get("/previews/{id}/stream", s.streamPreview)
+		c.Get("/previews/by-video/{video}/stream", s.streamPreviewByVideo)
 		c.Post("/previews/{id}/keep", s.keepPreview)
 	})
 }
@@ -104,6 +106,25 @@ func (s *Server) streamPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.Previews.Serve(w, r, id); err != nil && r.Context().Err() == nil {
+		s.previewFail(w, err)
+	}
+}
+
+// streamPreviewByVideo streams the caller's audio preview of a YouTube video,
+// starting it first when needed (Start reuses a live one): a stable URL per
+// video, for the iPhone app's queue of a YouTube playlist, whose next item
+// it asks for ahead (the preload starts that preview). title, channel and
+// duration_s, when given, describe a new preview.
+func (s *Server) streamPreviewByVideo(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	dur, _ := strconv.Atoi(q.Get("duration_s"))
+	p, err := s.Previews.Start(r.Context(), auth.UserFrom(r.Context()).ID, preview.Request{
+		VideoID: chi.URLParam(r, "video"), Media: "audio", Title: q.Get("title"), Channel: q.Get("channel"), DurationS: dur})
+	if err != nil {
+		s.previewFail(w, err)
+		return
+	}
+	if err := s.Previews.Serve(w, r, p.ID); err != nil && r.Context().Err() == nil {
 		s.previewFail(w, err)
 	}
 }

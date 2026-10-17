@@ -217,3 +217,31 @@ func (blockingDL) DownloadPreviewHD(ctx context.Context, v ytdlp.Video, destNoEx
 	<-ctx.Done()
 	return "", ctx.Err()
 }
+
+// The iPhone app plays a YouTube playlist from stable per-video URLs: the first request starts the
+// audio preview, later ones (Range requests, a replay) reuse it.
+func TestPreviewStreamByVideo(t *testing.T) {
+	s, ts := newTestServer(t)
+	withPreviews(t, s, liuxiang)
+	kid := loginAs(t, s, "kid", "member")
+	path := "/api/v1/previews/by-video/pv_00000009/stream?title=Song&channel=Chan&duration_s=200"
+	for range 2 {
+		if resp, body := do(t, ts, kid, "GET", path, nil); resp.StatusCode != 200 || string(body) != "0123456789" || resp.Header.Get("Content-Type") != "audio/mp4" {
+			t.Fatalf("%d %q", resp.StatusCode, body)
+		}
+	}
+	p, err := s.Previews.Get(context.Background(), 1)
+	if err != nil || p.VideoID != "pv_00000009" || p.Media != "audio" || p.Channel != "Chan" || p.DurationS != 200 {
+		t.Fatalf("%+v %v", p, err)
+	}
+	if _, err := s.Previews.Get(context.Background(), 2); err == nil {
+		t.Fatal("a second preview was started for the same video")
+	}
+	if resp, body := do(t, ts, kid, "GET", "/api/v1/previews/by-video/bad/stream", nil); resp.StatusCode != 400 || code(body) != "bad_video_id" {
+		t.Fatalf("bad id: %d %s", resp.StatusCode, body)
+	}
+	if resp, _ := do(t, ts, "", "GET", path, nil); resp.StatusCode != 401 {
+		t.Fatalf("signed out: %d", resp.StatusCode)
+	}
+	waitPreviewsIdle(t, s)
+}

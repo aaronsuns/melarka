@@ -80,7 +80,7 @@ func TestLyricsMissingList(t *testing.T) {
 	exec(`INSERT INTO lyrics(track_id,source,external_id,synced,text,selected,created_at) VALUES (?,'lrclib','1',0,'x',1,1)`, t3)
 	exec(`UPDATE tracks SET status='trashed' WHERE id=?`, t4)
 	exec(`UPDATE tracks SET missing_since=1 WHERE id=?`, t5)
-	if err := s.Tags.Replace(ctx, t6, "lastfm", []tags.Tag{{Name: "instrumental", Kind: "genre"}}); err != nil {
+	if err := s.Tags.Replace(ctx, t6, "agent", []tags.Tag{{Name: "instrumental", Kind: "genre"}}); err != nil { // not Last.fm: its tags don't count
 		t.Fatal(err)
 	}
 	exec(`INSERT INTO lyrics(track_id,source,external_id,synced,text,selected,created_at) VALUES (?,'lrclib','2',0,'y',0,1)`, t7)
