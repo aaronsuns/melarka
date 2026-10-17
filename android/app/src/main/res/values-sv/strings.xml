@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="engine_offline_notice">Offline: spelar cachade favoriter</string>
+    <string name="engine_no_favorites_notice">Inga favoriter än: blandar alla låtar</string>
+    <string name="engine_cannot_play">Kan inte spela upp</string>
+    <string name="engine_stall_notice">Nätverket är för långsamt: spelar cachade låtar först</string>
+    <string name="engine_offline_stopped">Offline: inga cachade låtar att spela</string>
+    <string name="engine_episode_fallback_notice">Avsnittet kan inte spelas upp: spelar musik i stället</string>
+    <string name="engine_nothing_cached_notice">Offline, och inga favoriter är cachade</string>
+    <string name="engine_shuffle_failed_notice">Kunde inte hämta favoriter; försök igen senare</string>
+</resources>

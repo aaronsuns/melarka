@@ -99,3 +99,13 @@ internal fun StringBuilder.appendJsonString(s: String): StringBuilder {
     }
     return append('"')
 }
+
+/** The member `key` of an object; null for a missing key or a non-object (iOS `JSONValue` subscript). */
+operator fun JsonElement.get(key: String): JsonElement? = (this as? JsonObject)?.get(key)
+
+/** An object with `key` set to `value` (in place when it is there, else appended); a non-object becomes `{key: value}`. */
+fun JsonElement.setting(key: String, value: JsonElement): JsonObject {
+    val o = LinkedHashMap<String, JsonElement>((this as? JsonObject) ?: emptyMap())
+    o[key] = value
+    return JsonObject(o)
+}

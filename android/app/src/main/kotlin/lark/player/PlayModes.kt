@@ -45,24 +45,12 @@ data class PlayModes(
             element(key)?.let { el -> (el as? JsonArray ?: throw Malformed("$key: not an array")).map { p ->
                 (p as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw Malformed("$key: not a string") } }
 
-        /** Fisher-Yates with an injected random source (iOS: `NextChooser.shuffled`). */
-        fun <T> shuffled(xs: List<T>, random: () -> Double): List<T> {
-            val out = xs.toMutableList()
-            var i = out.size - 1
-            while (i > 0) {
-                val j = minOf(i, (random() * (i + 1)).toInt())
-                val t = out[i]; out[i] = out[j]; out[j] = t
-                i -= 1
-            }
-            return out
-        }
-
         /** The current item stays put; everything after it is shuffled. Returns the new queue and the upcoming ids in their order before (`original`). */
         fun shuffleUpcoming(q: PlaybackQueue, random: () -> Double): Pair<PlaybackQueue, List<String>> {
             val cut = minOf(q.items.size, q.index + 1)
             val head = q.items.subList(0, cut)
             val rest = q.items.subList(cut, q.items.size)
-            return q.copy(items = head + shuffled(rest, random)) to rest.map { it.id }
+            return q.copy(items = head + NextChooser.shuffled(rest, random)) to rest.map { it.id }
         }
 
         /**
@@ -111,7 +99,7 @@ data class PlayModes(
         fun newPass(q: PlaybackQueue, shuffle: Boolean, random: () -> Double): PlaybackQueue {
             val out = q.copy(index = 0, positionMs = 0)
             if (!shuffle) return out
-            val items = shuffled(q.items, random).toMutableList()
+            val items = NextChooser.shuffled(q.items, random).toMutableList()
             val ended = q.current?.id
             if (items.size > 1 && items[0].id == ended) {
                 val others = items.indices.filter { items[it].id != ended }

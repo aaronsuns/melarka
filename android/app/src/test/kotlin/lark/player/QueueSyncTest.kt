@@ -3,6 +3,7 @@ package lark.player
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import lark.api.ServerQueue
 import lark.testing.FakeClock
@@ -138,6 +139,19 @@ class QueueSyncTest {
         s.playingTick(); clock.advance(60.0); s.playingTick()   // the clock restarted: first tick only starts it
         advanceUntilIdle()
         assertEquals(1, api.saveCalls.size)   // only the push after the restart; the cancelled one never went out
+    }
+
+    /** Sign-out while a PUT's answer is on its way: the answer that still arrives is dropped (the epoch check). */
+    @Test fun anAnswerArrivingAfterCancelIsDropped() = runTest {
+        val s = sync()
+        val names = mutableListOf<String>()
+        s.onOwnDevice = { names.add(it) }
+        api.holdSaves = true
+        s.push(); runCurrent()
+        assertEquals(1, api.saveCalls.size)                  // in flight
+        s.cancel()
+        api.releaseSaves(); advanceUntilIdle()
+        assertTrue(names.isEmpty())
     }
 
     // shouldAdopt

@@ -208,6 +208,9 @@ behaviour; the builder works through it as a checklist.
 | Bearer header | decided: `OkHttpDataSource.Factory(client).setDefaultRequestProperties` built per item from `MediaSource.Remote(uri, token)`; the token is in no URL, `MediaItem`, tag or log, and a stream's `MediaSource` is built when the item is loaded or preloaded, with the token current then |
 | Pitch-preserving rate (episodes) | `PlaybackParameters(speed, 1f)` (Sonic keeps pitch) |
 | `rebuild()` after a media services reset | none: Android has no such reset; a dead audio output surfaces as a playback error (`backendFailed`) and the engine's retry loads again |
+| `@MainActor`, `Task`, `TaskBag` | decided: the engine and everything it owns run on the main thread; async work is coroutines in one application-scoped `CoroutineScope` on `Dispatchers.Main` (passed in, so tests run it on a test dispatcher), the engine's own jobs in a `TaskBag` that sign-out cancels; timers on the `Scheduler`. `PlayerEngine.mediaServicesReset` is not ported (see the row above) |
+| `String(localized:)` engine notices | `EngineTexts.from(context)`: the engine's notices and errors from string resources in the four locales (the iOS wording; Swedish added) |
+| `CacheProviding.localURL` | `CacheProviding.localFile(trackId): File?` (the player is handed a file); the rest of the protocol keeps the iOS names |
 | AVAudioSession interruptions | audio focus via `AudioAttributes` + `handleAudioFocus=true`; transient loss pauses and resumes |
 | route `oldDeviceUnavailable` | `setHandleAudioBecomingNoisy(true)` |
 | MPNowPlayingInfo + remote commands | MediaSession metadata/state + commands; custom commands for skip ±, shuffle, repeat |

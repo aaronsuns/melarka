@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Melarka</string>
+    <string name="app_name" translatable="false">Melarka</string>
+    <!-- The player engine's notices and errors (EngineTexts), the iOS wording. -->
+    <string name="engine_offline_notice">Offline: playing cached favorites</string>
+    <string name="engine_no_favorites_notice">No favorites yet: shuffling all songs</string>
+    <string name="engine_cannot_play">Can\'t play</string>
+    <string name="engine_stall_notice">Network too slow: playing cached songs first</string>
+    <string name="engine_offline_stopped">Offline: no cached songs to play</string>
+    <string name="engine_episode_fallback_notice">Episode can\'t play: playing music instead</string>
+    <string name="engine_nothing_cached_notice">Offline, and no favorites are cached</string>
+    <string name="engine_shuffle_failed_notice">Couldn\'t get favorites; try again later</string>
 </resources>
