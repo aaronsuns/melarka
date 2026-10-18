@@ -36,6 +36,9 @@ same script in the `android-emulator` job.
 `versionName` is `MARKETING_VERSION` in `ios/project.yml` (one version for both apps, bumped by hand);
 `versionCode` is X*10000 + Y*100 + Z. A release build overrides it with `-PlarkVersion=X.Y.Z`.
 The logic is `buildSrc/src/main/kotlin/lark/build/LarkVersion.kt`, tested by `SmokeTest`.
+`version.properties` repeats the versionCode for F-Droid's update check; bump it with the version
+(`internal/config/release_test.go` fails otherwise). The store texts F-Droid shows are in `fastlane/` at the
+repository root (docs/fdroid/README.md).
 
 ## Identifiers
 

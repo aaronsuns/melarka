@@ -148,6 +148,18 @@ pages (they come from the server), the same reliable playback.
   in the F-Droid metadata. If F-Droid can't reproduce it, fall back to F-Droid's own signature and
   say in the docs that the two installs can't replace each other. The "NonFreeNet" anti-feature
   (YouTube) is declared; that is acceptable.
+  **As built** (checked on 0.2.16): the unsigned release build is byte-identical across clean checkouts and
+  between the private Mac (Homebrew OpenJDK 17) and F-Droid's Debian buildserver, and `apksigcopier compare`
+  matches the published signed APK, with no Gradle change: AGP writes a constant
+  `META-INF/version-control-info.textproto` (`NO_SUPPORTED_VCS_FOUND`, since the Gradle root `android/` has no
+  `.git`) and a deterministic baseline profile; zip times are AGP's fixed 1981 date. The recipe
+  (`docs/fdroid/io.github.aaronsuns.melarka.yml`, copied into fdroiddata) installs JDK 17 from bookworm, builds
+  `android/app` with `gradle: yes` and no `-PlarkVersion`, so the release gate requires the tag to equal
+  `MARKETING_VERSION`. For F-Droid the signing block carries no Google "dependency metadata" (`dependenciesInfo`
+  off; outside the signed content, so the unsigned APK is unchanged), the update check reads
+  `android/version.properties` (`versionCode`, checked against the version by `internal/config/release_test.go`,
+  with the English changelog), and the store texts moved to the repository root. Those three arrived after
+  0.2.16, so the first F-Droid version is the next release. `docs/fdroid/README.md` has the merge-request steps.
 - **Shortcuts instead of Siri**: launcher shortcuts "Shuffle favorites" and "Resume" (the iOS
   ResumeIntent: resume, or shuffle favorites when the queue is empty), both running without
   showing the page. Voice phrases are dropped (Google Assistant App Actions need Google Play).
