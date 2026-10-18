@@ -1,28 +1,55 @@
 package lark.app
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.widget.FrameLayout
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import lark.bridge.WebShell
 import lark.car.CarAutoplay
+import lark.ui.BatteryGuide
+import lark.ui.CantConnectScreen
+import lark.ui.LarkTheme
+import lark.ui.OfflinePlayerModel
+import lark.ui.OfflinePlayerScreen
+import lark.ui.ServerScreen
+import lark.ui.SettingsHost
+import lark.ui.SettingsScreen
 
 /**
  * The one Activity: it only shows the app services. The server's web app fills it ([WebShell]); the native screens
- * (server, can't connect, offline player, settings) come in Task 12. Starting and stopping is the services' scene phase
- * (events to the page, the cache index, a resume held back in the background). The web view lives as long as the
- * Activity, which is not recreated on rotation or resizing (`configChanges`); playback never depends on either.
+ * (Compose, `lark.ui`) cover it when they are up: the server screen with no server, the can't-connect screen over a page
+ * that failed, the offline player, and Settings. Starting and stopping is the services' scene phase (events to the page,
+ * the cache index, a resume held back in the background). The web view lives as long as the Activity, which is not
+ * recreated on rotation or resizing (`configChanges`); playback never depends on either.
  */
-class MainActivity : Activity(), WebShell.Host {
+class MainActivity : ComponentActivity(), WebShell.Host {
     private val services: AppServices get() = (application as LarkApplication).services
     private lateinit var root: FrameLayout
+    private lateinit var native: ComposeView
+    /** What the native screens show, from the services (they are not Compose state; [render] copies it here). */
+    private var ui by mutableStateOf(NativeUi())
+    private val settingsHost = SettingsHost(
+        requestCarPermissions = { CarAutoplay.requestPermissions(this) },
+        associate = { CarAutoplay.associate(this, it) },
+        pairedCars = { CarAutoplay.pairedCars(this) },
+        requestBatteryExemption = { BatteryGuide.request(this) },
+        batteryExempt = { BatteryGuide.isExempt(this) },
+    )
     private var shell: WebShell? = null
     private var fullscreen: Pair<View, WebChromeClient.CustomViewCallback>? = null
     /** The page's open `alert`/`confirm` dialogs. */
@@ -38,6 +65,8 @@ class MainActivity : Activity(), WebShell.Host {
             v.setPadding(b.left, b.top, b.right, b.bottom)
             WindowInsetsCompat.CONSUMED
         }
+        native = ComposeView(this).apply { setContent { LarkTheme { NativeScreens() } } }
+        root.addView(native, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         setContentView(root)
         services.observe(render)
         render()
@@ -46,6 +75,11 @@ class MainActivity : Activity(), WebShell.Host {
     override fun onStart() {
         super.onStart()
         services.scenePhaseChanged(ScenePhase.active)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        settingsHost.refresh++         // back from the battery dialog or the system's settings
     }
 
     override fun onStop() {
@@ -62,9 +96,17 @@ class MainActivity : Activity(), WebShell.Host {
         super.onDestroy()
     }
 
-    /** The web view for the current server: made when there is one, dropped (with its data) when the server changes. */
+    /**
+     * The web view for the current server: made when there is one, dropped (with its data) when the server changes. The
+     * native screens are shown over it, and only while one is up (otherwise the page gets every touch).
+     */
     private fun render() {
-        val server = services.serverUrl
+        val app = services
+        val server = app.serverUrl
+        val now = NativeUi(server, app.offlinePlayer as? OfflinePlayerModel, app.pageFailed, app.showSettings, app.stayOffline,
+            app.changingServer, app.pageFailed && app.hasOfflineFavorites)
+        ui = now
+        native.visibility = if (now.shown) View.VISIBLE else View.GONE
         if (shell != null && shell?.server != server) dropShell(clearData = true)
         if (server == null || shell != null) return
         val s = WebShell(this, server, services.bridge(server), this)
@@ -129,18 +171,72 @@ class MainActivity : Activity(), WebShell.Host {
         callback.onCustomViewHidden()
     }
 
-    /** The system's car picker answered (car autoplay, from Settings). */
+    /**
+     * The system's car picker answered (car autoplay, from Settings). `CarAutoplay.associate` starts it with the
+     * platform's `startIntentSenderForResult`, so its answer comes here.
+     */
+    @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (CarAutoplay.onActivityResult(this, requestCode, resultCode, data)) return
+        if (CarAutoplay.onActivityResult(this, requestCode, resultCode, data)) { settingsHost.refresh++; return }
         super.onActivityResult(requestCode, resultCode, data)
     }
 
-    /** Back leaves full screen, then goes back in the page, then leaves the app (playback goes on). */
+    /** The Nearby devices permission's answer (car autoplay, asked by `CarAutoplay.requestPermissions`). */
+    @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        if (requestCode == CarAutoplay.REQUEST_PERMISSIONS) {
+            settingsHost.permissionsAnswered(grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED })
+            return
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+    /**
+     * Back leaves full screen, then closes Settings, then the offline player (back to the can't-connect screen), then
+     * goes back in the page, then leaves the app (playback goes on).
+     */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (fullscreen != null) { hideFullscreen(); return true }
-            if (shell?.goBack() == true) return true
+            if (services.showSettings) { if (!services.changingServer) services.closeSettings(); return true }
+            if (services.offlinePlayer != null && services.serverUrl != null) { services.closeOfflinePlayer(); return true }
+            if (!ui.shown && shell?.goBack() == true) return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    // MARK: - The native screens
+
+    /** A copy of what the native screens show (see [render]). */
+    private data class NativeUi(
+        val server: String? = null,
+        val offlinePlayer: OfflinePlayerModel? = null,
+        val pageFailed: Boolean = false,
+        val showSettings: Boolean = false,
+        val stayOffline: Boolean = false,
+        val changingServer: Boolean = false,
+        val hasOfflineFavorites: Boolean = false,
+    ) {
+        /** A native screen covers the page. */
+        val shown: Boolean get() = server == null || offlinePlayer != null || pageFailed || showSettings
+    }
+
+    @Composable
+    private fun NativeScreens() {
+        val u = ui
+        val s = services
+        val server = u.server
+        when {
+            server == null -> ServerScreen(onConnected = { url -> lifecycleScope.launch { s.setServerUrl(url) } })
+            u.offlinePlayer != null -> OfflinePlayerScreen(u.offlinePlayer, server, u.stayOffline, { s.setStayOffline(it) },
+                onClose = { s.closeOfflinePlayer() })
+            u.pageFailed -> CantConnectScreen(server, u.stayOffline, u.hasOfflineFavorites,
+                onRetry = { s.retryPage() }, onSettings = { s.openSettings() },
+                onPlayOfflineFavorites = { lifecycleScope.launch { s.playOfflineFavorites() } },
+                onStayOffline = { s.setStayOffline(it) })
+        }
+        if (u.showSettings) {
+            SettingsScreen(s, CarAutoplay.of(this), settingsHost, u.stayOffline, u.changingServer, onDone = { s.closeSettings() })
+        }
     }
 }

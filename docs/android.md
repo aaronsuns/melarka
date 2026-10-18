@@ -1,0 +1,126 @@
+# The Melarka Android app
+
+The Android app shows the same web app you use in a browser, full screen, but plays audio with a
+native player. That gives it what a browser tab on a phone can't do reliably:
+
+- playback that keeps going with the screen off, with lock-screen, notification, headphone and car
+  (Bluetooth) controls;
+- gapless transitions and a few songs downloaded ahead;
+- an offline cache of your favorites, synced on Wi-Fi, with a size limit you choose;
+- launcher shortcuts, **Shuffle Favorites** and **Resume** (long-press the Melarka icon);
+- **car autoplay**: your favorites start by themselves when the phone connects to the car;
+- the current lyric line on the lock screen and the car's display.
+
+It needs Android 8.0 or later and a Melarka server reachable over **HTTPS**. Plain `http://` works
+only for `localhost` and `*.local` addresses, for development.
+
+## 1. Install
+
+Each release on GitHub has an APK: open
+<https://github.com/aaronsuns/melarka/releases/latest> on the phone and download
+`Melarka-X.Y.Z.apk`.
+
+1. Open the downloaded file. Android asks whether your browser (or file manager) may install
+   apps: tap **Settings**, turn on **Allow from this source**, and go back.
+2. Tap **Install**.
+
+To update, install the newer APK over the old one; your server, sign-in and cache stay. The
+[Obtainium](https://obtainium.imranr.dev) app can do this for you: add the app with the URL
+`https://github.com/aaronsuns/melarka` and it installs new releases as they come out.
+
+## 2. Connect to your server
+
+1. Open Melarka. On first launch it asks for your server address, for example
+   `https://music.example.com`.
+2. Tap **Connect**. The app checks that the address answers `/api/v1/info`.
+3. Sign in with your Melarka username and password, exactly as in the browser.
+
+**A server with a certificate from your own CA** (a home server behind a private certificate
+authority or a LAN proxy): install the CA certificate on the phone first, in **Settings → Security
+(& privacy) → More security settings → Encryption & credentials → Install a certificate → CA
+certificate** (the menu names vary a little between phones). Melarka trusts certificates you
+installed this way, as the phone's browser does. A self-signed server certificate alone is not
+enough.
+
+## Settings
+
+The app's own settings open from the web's **Me → Settings** (the app settings entry) and from the
+"can't connect" screen:
+
+- **Server**: the address in use, and changing it (it signs you out of the old one).
+- **Offline cache**: how much is used, the size limit (1, 2, 5 or 10 GB), **Sync Favorites Now**,
+  and clearing it. Favorites are cached automatically on Wi-Fi.
+- **Stay Offline**: for a flight. The app stops trying to reach the server and plays from the
+  offline cache until you turn it off.
+- **Car autoplay** (below).
+- **Background playback** (below).
+- **About**: the app version.
+
+When the server can't be reached, the app shows a "can't connect" screen instead of the page:
+**Retry**, **Settings**, **Play Offline Favorites** (when some are cached) and **Stay Offline**. It
+tries again by itself when the network comes back.
+
+## Car autoplay
+
+Most cars send "play" when Bluetooth connects, and Android passes it to the app that played last:
+Melarka then resumes its last queue (from the cache when it can). For a sure start, use car
+autoplay:
+
+1. In Melarka's settings, turn on **Car autoplay**. On Android 12 and later, allow **Nearby
+   devices** when asked (it is needed to list the cars paired with your phone).
+2. Choose your car from the list (pair it in Android's Bluetooth settings first), or **Search
+   Nearby**.
+3. Android asks once to confirm that Melarka may use the car. Confirm.
+
+From then on, when the car's Bluetooth connects, Melarka shuffles your favorites, even in the
+background. If music is already playing (the car's own "play" came first), nothing changes.
+**Test: Shuffle Favorites** in the settings runs the same thing now; under it the settings say what
+happened the last time the car connected. Turning car autoplay off lets the car go.
+
+On Android 8 to 11, Android doesn't wake Melarka for the car: autoplay works only while Melarka is
+allowed to run in the background (see below), and not after you force-stop it.
+
+## Background playback and your phone's battery settings
+
+If music stops when the screen is off, or car autoplay doesn't start, the phone's battery
+optimisation is stopping Melarka. In Melarka's settings, **Background Playback → Allow Background
+Playback** asks Android to let Melarka run in the background; confirm it. By hand, the same
+setting is **Settings → Apps → Melarka → Battery → Unrestricted**.
+
+Some phone makers add their own power management on top. The settings show the line for your
+phone; the steps are:
+
+- **Xiaomi, Redmi, POCO**: turn on **Autostart** for Melarka (Settings → Apps → Manage apps →
+  Melarka) and set its **Battery saver** to **No restrictions**.
+- **Huawei, Honor**: Settings → Battery → **App launch**, set Melarka to **Manage manually** and
+  turn on all three switches.
+- **OPPO, realme, OnePlus**: allow Melarka to **auto-launch** and allow its **background
+  activity** (Settings → Apps → Melarka → Battery).
+- **vivo, iQOO**: allow **Autostart** for Melarka and allow its **high background power
+  consumption** (Settings → Battery).
+- **Samsung**: add Melarka to **Never sleeping apps**: Settings → Battery → **Background usage
+  limits**.
+
+Menu names change between versions; <https://dontkillmyapp.com> keeps current steps for each
+phone maker.
+
+## Language
+
+The app's own screens (the server screen, the settings, the "can't connect" screen and the
+offline player) follow the phone's language: English, 简体中文, 繁體中文 or svenska, and English for
+every other language. Android 13 and later can set it for Melarka alone in **Settings → Apps →
+Melarka → Language**. The music pages are the web app, which keeps its own language (the server's
+default, or the one chosen in **Me → Settings**).
+
+## Troubleshooting
+
+- **"Can't connect" on first launch**: open `https://<your server>/api/v1/info` in the phone's
+  browser. It must load without a certificate warning; for a private CA, install its certificate
+  (see "Connect to your server").
+- **Music stops with the screen off**: see "Background playback" above.
+- **Car autoplay doesn't start**: check that the car is the one shown in the settings, that the
+  battery setting above is done, and run **Test: Shuffle Favorites** to see whether favorites play
+  at all (offline, only cached ones can).
+- **"App not installed" when updating**: the new APK must be signed by the same key as the
+  installed one. An install from another source (such as F-Droid's own build) has to be
+  uninstalled first; this deletes the offline cache.

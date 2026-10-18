@@ -327,7 +327,7 @@ ports as is.
   disabled in the manifest and enabled below API 31 only while car autoplay is on, so no Bluetooth link wakes Melarka
   otherwise.
 - **Phone makers** (outside China first, one standard approach): no vendor code paths. Settings shows Android's
-  battery exemption (Task 12) and, for the makers whose power management goes further, one line of guidance from
+  battery exemption (Native screens, Background playback) and, for the makers whose power management goes further, one line of guidance from
   `CarAutoplay.vendorHint(Build.MANUFACTURER)` (four locales): Xiaomi/Redmi/POCO (Autostart, battery saver "No
   restrictions"), Huawei/Honor (App launch → manage manually), OPPO/realme/OnePlus (auto-launch, background activity),
   vivo/iQOO (Autostart, high background power use), Samsung (Never sleeping apps). Stock-like phones (Pixel, Motorola,
@@ -342,7 +342,30 @@ ports as is.
 Server URL, can't-connect (Retry, Settings, Play Offline Favorites, Stay Offline), the offline
 player (header, now-playing card with lyrics preview and sheet, Up Next, Offline Favorites) and
 Settings (server, offline cache cap 1/2/5/10 GB, sync now, clear, Stay Offline, car autoplay
-setup and test, about). Jetpack Compose, Material 3, dark theme matching the web app's colours.
+setup and test, background playback, about). Jetpack Compose, Material 3, dark theme matching the web app's colours.
+
+- **Structure** (`lark.ui`): `MainActivity` is a `ComponentActivity` whose root holds the web view and, above it, one
+  `ComposeView` with the native screens. The view is shown only while a native screen is up (no server, a failed page,
+  the offline player, Settings), so the page gets every touch otherwise. `AppServices` is not Compose state: the
+  Activity copies what the screens show on each `observe` change. The models (`OfflinePlayerModel`, `SettingsModel`,
+  ports of iOS) hold Compose state; `AppServices.makeOfflinePlayer` builds the offline player's model on the engine
+  (`EngineControl`: `WebMessage`s in, `NativeEvent`s out, no network). The theme takes `web/src/styles.css`'s tokens;
+  the few icons are Material paths in code (no icon library).
+- **Server screen**: `ServerUrl.normalize`, then `ServerUrl.check` (`GET /api/v1/info` answers 200) before
+  `setServerUrl`. Changing the server later asks for confirmation, then runs `AppServices.changeServer`.
+- **Car autoplay in Settings**: the switch asks for Nearby devices only when turned on, then lists the paired cars
+  (or the system's search nearby) and calls `CarAutoplay.associate`; the car's name, another car, Test: Shuffle
+  Favorites (the shortcut's `IntentRun`), what the last connection did (`lastResult`), and below Android 12 the
+  `car_autoplay_old_android` note.
+- **Background playback**: the plain guide ("If music stops when the screen is off…"), a button for Android's
+  exemption request (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; the manifest declares
+  `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, an accepted use for a media player, and F-Droid accepts it for media apps;
+  where a phone has no such dialog, the battery-optimisation list), or that it is done; the phone maker's line
+  (`vendorHint`); and a link to `docs/android.md` on GitHub.
+- **Languages**: four locales; `zh-rTW` is written in Traditional characters with Taiwan wording (設定, 應用程式,
+  網路, 快取), unlike the iOS zh-Hant entries; a test checks every key and placeholder in all four, and that no
+  Simplified-only character is in `zh-rTW`. `res/xml/locales_config.xml` offers them to Android 13's per-app
+  language setting. Hong Kong and Macau phones get the Traditional text (Android's script-aware fallback).
 
 ### Web side (small, additive)
 
