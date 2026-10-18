@@ -96,7 +96,7 @@ def ff(*args):
 def gradient(path, size, colors):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     c0, c1 = colors
-    ff("-f", "lavfi", "-i", f"gradients=s={size}:c0=0x{c0}:c1=0x{c1}:x0=0:y0=0:x1={size.split('x')[0]}:y1={size.split('x')[1]}:speed=0",
+    ff("-f", "lavfi", "-i", f"gradients=s={size}:c0=0x{c0}:c1=0x{c1}:x0=0:y0=0:x1={size.split('x')[0]}:y1={size.split('x')[1]}:speed=0.00001",
        "-frames:v", "1", path)
 
 
