@@ -1,1 +1,1 @@
-Din egen musikserver i fickan: inbyggd uppspelning, offlinefavoriter, bilstart
+Din musikserver i fickan: inbyggd spelare, offlinefavoriter, spelar i bilen

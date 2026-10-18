@@ -3,12 +3,9 @@ name: release
 on:
   push:
     tags: ['v*.*.*']
+  # A manual run only builds and signs the Android APK of the version in ios/project.yml and keeps it as a
+  # workflow artifact; it never publishes anything.
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: Build and sign the Android APK from the current version and keep it as a workflow artifact; publish nothing
-        type: boolean
-        default: true
 
 permissions: {}
 
@@ -149,13 +146,15 @@ jobs:
           if-no-files-found: error
 
   # The signed Android APK. The key is a repository secret, decoded to a temporary file for this job only. Run by
-  # hand with dry_run (Actions -> release -> Run workflow) it builds the APK of the version in ios/project.yml and
+  # hand (Actions -> release -> Run workflow) it builds the APK of the version in ios/project.yml and
   # keeps it as a workflow artifact; nothing is published.
   apk:
     needs: gate
     # A tag push waits for a clean gate; a manual run has no gate.
     if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.gate.result == 'success') }}
     runs-on: ubuntu-latest
+    # The signing secrets are environment secrets of `release`, limited to v* tags and main (docs/superpowers/specs/android-client-design.md).
+    environment: release
     permissions:
       contents: read
     env:
@@ -188,11 +187,17 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           VERSION: ${{ steps.v.outputs.version }}
         run: |
-          [ -n "$KEYSTORE_B64" ] || { echo "the ANDROID_KEYSTORE_B64 secret is not set" >&2; exit 1; }
+          for n in KEYSTORE_B64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            [ -n "${!n}" ] || { echo "the $n secret is missing or empty (environment 'release')" >&2; exit 1; }
+          done
           export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/melarka-release.jks"
           trap 'rm -f "$ANDROID_KEYSTORE_FILE"' EXIT
           (umask 077; printf '%s' "$KEYSTORE_B64" | base64 -d > "$ANDROID_KEYSTORE_FILE")
-          ./gradlew --console=plain assembleRelease -PlarkVersion="$VERSION"
+          # No daemon: it would keep the passwords in its environment after the step.
+          ./gradlew --console=plain --no-daemon assembleRelease -PlarkVersion="$VERSION"
+      - name: Remove the keystore file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/melarka-release.jks"
       - name: The APK is signed with the release key and says what it should
         env:
           VERSION: ${{ steps.v.outputs.version }}
@@ -202,13 +207,15 @@ jobs:
           src=android/app/build/outputs/apk/release/app-release.apk
           mkdir -p dist && cp "$src" "dist/Melarka-$VERSION.apk"
           apk="dist/Melarka-$VERSION.apk"
-          "$tools/apksigner" verify --print-certs "$apk" | tee "$RUNNER_TEMP/certs.txt"
-          got=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt")
+          "$tools/apksigner" verify --print-certs "$apk" > "$RUNNER_TEMP/certs.txt"
+          cat "$RUNNER_TEMP/certs.txt"
+          got=$(sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt")
           want=$(tr -d '[:space:]' < "$APK_CERT_FILE")
-          [ "$(printf '%s' "$got" | wc -l)" = 0 ] && [ -n "$got" ] || { echo "no single signer certificate found" >&2; exit 1; }
+          [ -n "$got" ] && [ "$(printf '%s\n' "$got" | wc -l)" = 1 ] || { echo "expected exactly one signer certificate" >&2; exit 1; }
           [ "$got" = "$want" ] || { echo "signed with $got, want $want ($APK_CERT_FILE)" >&2; exit 1; }
-          "$tools/aapt2" dump badging "$apk" | tee "$RUNNER_TEMP/badging.txt" | head -1
+          "$tools/aapt2" dump badging "$apk" > "$RUNNER_TEMP/badging.txt"
           line=$(head -1 "$RUNNER_TEMP/badging.txt")
+          echo "$line"
           for part in "name='$APP_BUNDLE_ID'" "versionCode='$CODE'" "versionName='$VERSION'"; do
             [[ "$line" == *"$part"* ]] || { echo "badging lacks $part" >&2; exit 1; }
           done

@@ -6,7 +6,7 @@ Appen visar serverns webbapp i helskärm och spelar ljudet med en inbyggd spelar
 - Sömlösa övergångar, med de närmaste låtarna nedladdade i förväg
 - En offlinekopia av dina favoriter, som synkas över Wi-Fi, med en storleksgräns du väljer
 - Genvägar på startskärmen: Blanda favoriter och Fortsätt
-- Bilstart: dina favoriter börjar spelas av sig själva när telefonen ansluter till bilen
+- Spelar när bilen ansluter: dina favoriter börjar spelas av sig själva när telefonen ansluter till bilen
 - Den aktuella textraden på låsskärmen och i bilens display
 - Fungerar med servrar bakom din egen certifikatutfärdare, när du har installerat dess certifikat i telefonen
 

@@ -118,18 +118,27 @@ pages (they come from the server), the same reliable playback.
   Actions secrets: `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
   `app/build.gradle.kts` reads signing only from the environment (`ANDROID_KEYSTORE_FILE` plus those three); without
   `ANDROID_KEYSTORE_FILE` the release build is unsigned and never uses the debug key.
-- **Release job** (as built): the `apk` job in `release.yml` decodes the keystore to a file under `$RUNNER_TEMP`
-  (deleted when the step ends), builds `assembleRelease -PlarkVersion=<tag>`, then fails unless
-  `apksigner verify --print-certs` shows exactly the SHA-256 in `android/signing-cert.sha256` and
-  `aapt2 dump badging` shows package `io.github.aaronsuns.melarka`, the tag as versionName, X*10000+Y*100+Z as
+- **Release job** (as built): the `apk` job in `release.yml` runs in the GitHub environment `release`, where the
+  four secrets live as environment secrets (not repository secrets). It checks all four are non-empty, decodes the
+  keystore to a file under `$RUNNER_TEMP`, builds `assembleRelease --no-daemon -PlarkVersion=<tag>` (no Gradle daemon
+  keeps the passwords), removes the file (an `if: always()` step; the build step's trap too), then fails unless
+  `apksigner verify --print-certs` shows exactly one signer whose SHA-256 is the one in `android/signing-cert.sha256`
+  and `aapt2 dump badging` shows package `io.github.aaronsuns.melarka`, the tag as versionName, X*10000+Y*100+Z as
   versionCode and the label Melarka. The `release` job attaches `Melarka-X.Y.Z.apk` next to the IPA, and only after
-  the gate, the image, the IPA and the APK all succeeded. Run by hand (`workflow_dispatch`, input `dry_run`) the
-  workflow runs only the `apk` job on the version in `ios/project.yml` and keeps the APK as a workflow artifact;
-  nothing is published. The release APK was also installed on the emulator (debug build uninstalled first) and
-  reached the server screen and a demo server (plain http to `localhost` through `adb reverse`; the emulator host
-  `10.0.2.2` is debug-only).
+  the gate, the image, the IPA and the APK all succeeded. A manual run (`workflow_dispatch`, no inputs) runs only the
+  `apk` job on the version in `ios/project.yml`, keeps the APK as a workflow artifact and never publishes.
+  **Owner's one-time setup**: create the environment `release` (Settings > Environments) with deployment branches
+  and tags limited to the tag pattern `v*` and the branch `main` (so a manual run works from `main` only), then, on
+  the private Mac:
+  `gh secret set --env release ANDROID_KEYSTORE_B64 < <(base64 -i ~/melarka-release/melarka-release.jks)`, and
+  `gh secret set --env release ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`melarka`) and
+  `ANDROID_KEY_PASSWORD` (prompted, never on a command line), and delete any repository-level copies.
+  Verified by hand on the build Mac with the real key: the signed APK matches the fingerprint and badging. The
+  release APK was installed on the emulator (no debug build was installed, so no uninstall was needed), launched to
+  the server screen and connected to a demo server by `http://localhost:4700` through `adb reverse`, because release
+  builds refuse cleartext to the emulator host `10.0.2.2` (debug only).
 - **Store metadata** (as built): `android/fastlane/metadata/android/{en-US,zh-CN,zh-TW,sv-SE}` with title, short and
-  full description, `changelogs/<versionCode>.txt` (the next release's code) and five phone screenshots.
+  full description, `changelogs/<versionCode>.txt` (the next release's code) and five phone screenshots (under en-US only; F-Droid falls back to it for the other locales).
 - **F-Droid**: prepare fastlane metadata (`android/fastlane/metadata/android/…`: title,
   descriptions in four languages, screenshots, changelogs) and submit the merge request to
   fdroiddata after the first GitHub release works. Aim for a **reproducible build signed with our

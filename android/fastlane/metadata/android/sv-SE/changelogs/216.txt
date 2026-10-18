@@ -1,1 +1,1 @@
-Första Android-versionen: webbappen i helskärm med en inbyggd spelare. Uppspelning i bakgrunden, offlinefavoriter, bilstart, genvägar och låttext på låsskärmen.
+Första Android-versionen: webbappen i helskärm med en inbyggd spelare. Uppspelning i bakgrunden, offlinefavoriter, autostart i bilen, genvägar och låttext på låsskärmen.

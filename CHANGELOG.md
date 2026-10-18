@@ -3,8 +3,7 @@
 All notable changes to Melarka are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
-adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The server, the web app and
-the iPhone app and the Android app share one version number.
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The server, the web app, the iPhone app and the Android app share one version number.
 
 ## [Unreleased]
 
