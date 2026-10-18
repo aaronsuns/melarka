@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -124,7 +125,8 @@ fun SettingsScreen(
                     Labeled(stringResource(R.string.cache), model.usageText)
                     Divider()
                     Text(stringResource(R.string.cache_limit), Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodyLarge)
-                    Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Wrapping, not squeezed: on a 320 dp phone four chips do not fit in a row ("10 GB" broke per letter).
+                    FlowRow(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (gb in SettingsModel.capChoices) {
                             FilterChip(selected = model.capGB == gb, onClick = { model.setCap(gb) }, enabled = !busy,
                                 label = { Text("$gb GB") },

@@ -54,6 +54,20 @@ class AppServicesTest : ServicesTestCase() {
         assertFalse(s.intentRunning)
     }
 
+    /** A message for the user from work with no screen (a shortcut's late failure): observed, shown, then dismissed. */
+    @Test fun aNoticeIsKeptUntilDismissed() = servicesTest {
+        val s = makeServices()
+        var changes = 0
+        s.observe { changes++ }
+        assertNull(s.notice)
+        s.showNotice("The server could not be reached")
+        assertEquals("The server could not be reached", s.notice)
+        assertEquals(1, changes)
+        s.dismissNotice()
+        assertNull(s.notice)
+        assertEquals(2, changes)
+    }
+
     // MARK: Sign-out
 
     @Test fun signOutDeletesTheSessionCookieSoItCannotBeHarvestedAgain() = servicesTest {

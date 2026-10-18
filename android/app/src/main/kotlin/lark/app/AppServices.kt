@@ -690,6 +690,16 @@ class AppServices(
         network.stayOffline = on
     }
 
+    /**
+     * A message for the user from work that ran with no screen (a shortcut's failure that came after its activity
+     * finished); the Activity shows it in a dialog until it is dismissed.
+     */
+    var notice: String? = null
+        private set(v) { field = v; changed() }
+
+    fun showNotice(text: String) { notice = text }
+    fun dismissNotice() { notice = null }
+
     /** The native settings (change server, cache, Stay Offline), also without a page. */
     fun openSettings() { showSettings = true }
     fun closeSettings() { showSettings = false }

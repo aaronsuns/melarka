@@ -32,6 +32,30 @@ import java.io.IOException
 class IntentRunTest {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
+    /**
+     * What a shortcut does with its result: while its activity shows, a toast (and Melarka opened when it is not set up
+     * or signed out). After the activity finished, Android 13+ drops a background app's toast, so a failure brings
+     * Melarka forward with the message instead; a success or "already playing" says nothing.
+     */
+    @Test fun aShortcutsResultIsToastedWhileShowingAndOpensMelarkaWhenItFailedLater() {
+        fun reply(r: IntentResult, showing: Boolean) = ShortcutActivity.reply(r, showing, r.text(context))
+        val offline = context.getString(R.string.intent_offline_nothing_cached)
+        assertEquals(ShortcutActivity.Reply(toast = context.getString(R.string.intent_shuffling_favorites)), reply(IntentResult.played, true))
+        assertEquals(ShortcutActivity.Reply(toast = offline), reply(IntentResult.offlineNothingCached, true))
+        assertEquals(ShortcutActivity.Reply(toast = context.getString(R.string.intent_not_signed_in), open = true), reply(IntentResult.notSignedIn, true))
+        assertEquals(ShortcutActivity.Reply(toast = context.getString(R.string.intent_not_set_up), open = true), reply(IntentResult.notSetUp, true))
+
+        assertEquals(ShortcutActivity.Reply(), reply(IntentResult.played, false))
+        assertEquals(ShortcutActivity.Reply(), reply(IntentResult.alreadyPlaying, false))
+        assertEquals(ShortcutActivity.Reply(open = true, notice = "The server could not be reached"),
+            reply(IntentResult.nothingToPlay("The server could not be reached"), false))
+        assertEquals(ShortcutActivity.Reply(open = true, notice = context.getString(R.string.engine_cannot_play)),
+            reply(IntentResult.nothingToPlay(null), false))
+        assertEquals(ShortcutActivity.Reply(open = true, notice = offline), reply(IntentResult.offlineNothingCached, false))
+        assertEquals(ShortcutActivity.Reply(open = true, notice = context.getString(R.string.intent_not_signed_in)),
+            reply(IntentResult.notSignedIn, false))
+    }
+
     @Test fun shuffleIntentCallsEngineWithoutUI() = runTest {
         val fake = FakeIntentPlayer()
         assertEquals(IntentResult.played, ShortcutActivity.run(ShortcutActivity.ACTION_SHUFFLE_FAVORITES, fake, { true }, "refused"))

@@ -28,13 +28,20 @@ class ShortcutActivity : Activity() {
         val refused = getString(R.string.intent_background_start_refused)
         services.runIntent {
             val result = run(action, services.intentPlayer, start, refused) ?: return@runIntent
-            report(app, action, result)
-            if (creating && (result == IntentResult.notSetUp || result == IntentResult.notSignedIn))
-                startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            val r = reply(result, showing = creating, text = result.text(app, shuffle = action == ACTION_SHUFFLE_FAVORITES))
+            r.toast?.let { Toast.makeText(app, it, Toast.LENGTH_SHORT).show() }
+            r.notice?.let { services.showNotice(it) }
+            if (r.open) startActivity(app)
         }
         creating = false
         finish()
     }
+
+    /**
+     * What the shortcut does with its result ([reply]): a [toast], opening Melarka ([open]), and a [notice] the app
+     * shows in a dialog once it is on screen.
+     */
+    data class Reply(val toast: String? = null, val open: Boolean = false, val notice: String? = null)
 
     companion object {
         const val ACTION_SHUFFLE_FAVORITES = "lark.action.SHUFFLE_FAVORITES"
@@ -55,10 +62,29 @@ class ShortcutActivity : Activity() {
             }
         }
 
-        /** The result's text as a toast (Resume that played says nothing, as on iOS). */
-        fun report(context: Context, action: String?, result: IntentResult) {
-            val text = result.text(context, shuffle = action == ACTION_SHUFFLE_FAVORITES) ?: return
-            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        /**
+         * The result's [text] (iOS's Shortcuts dialog). While the activity is [showing], a toast (Resume that played
+         * says nothing, as on iOS), and with no server or signed out Melarka opens too. After it finished (a shuffle the
+         * server answered later), Android 13+ drops a toast from an app in the background whose notifications are off,
+         * and Melarka asks for no notification permission: a failure brings Melarka forward with the message instead;
+         * a success or "already playing" needs none.
+         */
+        fun reply(result: IntentResult, showing: Boolean, text: String?): Reply = when {
+            showing -> Reply(toast = text, open = result == IntentResult.notSetUp || result == IntentResult.notSignedIn)
+            result.failed -> Reply(open = true, notice = text)
+            else -> Reply()
+        }
+
+        /**
+         * Melarka in front. From the background Android may refuse it (it allows it for a few seconds after the
+         * shortcut's activity): the notice then waits in the services until Melarka is opened.
+         */
+        private fun startActivity(context: Context) {
+            try {
+                context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (_: RuntimeException) {
+                // Not allowed from the background: the notice shows when Melarka is next opened.
+            }
         }
     }
 }

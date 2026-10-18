@@ -8,6 +8,9 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import lark.DemoServer
 import lark.Instrumented
 import lark.Instrumented.onMain
@@ -15,6 +18,7 @@ import lark.Instrumented.waitFor
 import lark.app.AppServices
 import lark.auth.KeystoreSecretStore
 import lark.service.PlaybackService
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,5 +68,29 @@ class ShortcutTest {
             ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).isEmpty()
         })
         onMain { Instrumented.app.services.engine?.pause() }
+    }
+
+    /**
+     * The shortcut's shuffle fails after its activity finished (the server does not answer): no toast can show then
+     * (Android 13+, no notification permission), so Melarka comes forward and says why in a dialog.
+     */
+    @Test fun aShuffleThatFailsLaterBringsMelarkaForwardWithTheReason() {
+        val ctx = Instrumented.context
+        // Signed in to a server that is gone (nothing listens on that port of the host).
+        ctx.getSharedPreferences("lark", Context.MODE_PRIVATE).edit().putString(AppServices.SERVER_URL_KEY, "http://10.0.2.2:4799/").commit()
+        KeystoreSecretStore(File(ctx.filesDir, "secrets.bin")).apply { set("token", "not-a-real-token"); set("userId", "1") }
+
+        ctx.startActivity(Intent(ShortcutActivity.ACTION_SHUFFLE_FAVORITES).setClassName(ctx, ShortcutActivity::class.java.name)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+
+        waitFor("Melarka in front", 30_000) {
+            onMain { ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).any { it is lark.app.MainActivity } }
+        }
+        val notice = checkNotNull(onMain { Instrumented.app.services.notice }) { "the services' notice" }
+        val device = UiDevice.getInstance(Instrumented.instrumentation)
+        checkNotNull(device.wait(Until.findObject(By.text(notice)), 10_000)) { "the dialog saying: $notice" }
+        assertFalse("nothing plays", onMain { Instrumented.app.services.engine?.playing == true })
+        device.findObject(By.text(ctx.getString(android.R.string.ok))).click()
+        waitFor("the notice dismissed") { onMain { Instrumented.app.services.notice == null } }
     }
 }

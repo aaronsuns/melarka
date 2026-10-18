@@ -54,6 +54,8 @@ class MainActivity : ComponentActivity(), WebShell.Host {
     private var fullscreen: Pair<View, WebChromeClient.CustomViewCallback>? = null
     /** The page's open `alert`/`confirm` dialogs. */
     private val dialogs = LinkedHashMap<AlertDialog, () -> Unit>()
+    /** The services' notice on screen (`AppServices.notice`), and which text it shows. */
+    private var noticeDialog: Pair<AlertDialog, String>? = null
     private val render: () -> Unit = { render() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,6 +94,8 @@ class MainActivity : ComponentActivity(), WebShell.Host {
         // Answered (false) now, as the dismiss listener runs only later: the page's alert()/confirm() never waits forever.
         dialogs.toList().forEach { (dialog, cancel) -> cancel(); dialog.dismiss() }
         dialogs.clear()
+        noticeDialog?.first?.let { it.setOnDismissListener(null); it.dismiss() }     // still unseen: shown by the next Activity
+        noticeDialog = null
         services.removeObserver(render)
         dropShell(clearData = false)
         super.onDestroy()
@@ -108,6 +112,7 @@ class MainActivity : ComponentActivity(), WebShell.Host {
             app.changingServer, app.pageFailed && app.hasOfflineFavorites, app.cacheChanges)
         ui = now
         native.visibility = if (now.shown) View.VISIBLE else View.GONE
+        showNotice(app.notice)
         if (shell != null && shell?.server != server) dropShell(clearData = true)
         if (server == null || shell != null) return
         val s = WebShell(this, server, services.bridge(server), this)
@@ -115,6 +120,18 @@ class MainActivity : ComponentActivity(), WebShell.Host {
         root.addView(s.view, 0, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         services.page = PageControl { s.load(it) }
         if (!services.stayOffline) s.load(server)       // Stay Offline: not loaded until it is turned off
+    }
+
+    /** The services' notice in a dialog (OK dismisses it for good); one dialog per notice. */
+    private fun showNotice(text: String?) {
+        if (text == null || noticeDialog?.second == text || isFinishing || isDestroyed) return
+        noticeDialog?.first?.let { it.setOnDismissListener(null); it.dismiss() }
+        val d = AlertDialog.Builder(this)
+            .setMessage(text)
+            .setPositiveButton(android.R.string.ok, null)
+            .setOnDismissListener { noticeDialog = null; services.dismissNotice() }
+            .show()
+        noticeDialog = d to text
     }
 
     private fun dropShell(clearData: Boolean) {

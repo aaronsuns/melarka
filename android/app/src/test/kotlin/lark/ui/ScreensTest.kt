@@ -192,6 +192,26 @@ class ScreensTest : ServicesTestCase() {
         compose.onNodeWithText("Used 1000 B / limit 2 GB").assertIsDisplayed()
     }
 
+    /** On a 320 dp phone the cache limit chips wrap to a second row; no label breaks over lines ("10 GB" did, per letter). */
+    @Config(sdk = [34], qualifiers = "w320dp-h640dp-mdpi")
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)     // real text measuring
+    @Test fun theCacheLimitChipsKeepTheirLabelsOnOneLineOnANarrowPhone() {
+        scope = TestScope()
+        val s = makeServices(cache = null)
+        compose.setContent {
+            LarkTheme {
+                SettingsScreen(s, car = null, host = SettingsHost(), stayOffline = false, changingServer = false, cacheChanges = 0,
+                    onDone = {})
+            }
+        }
+        for (gb in SettingsModel.capChoices) {
+            val node = compose.onNodeWithText("$gb GB", useUnmergedTree = true).fetchSemanticsNode()
+            val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            node.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+            assertEquals("$gb GB on one line", 1, layouts.single().lineCount)
+        }
+    }
+
     /** Settings lays out with a signed-in user; the cap chips set the cap; Change Server asks first. */
     @Test fun settingsLaysOutAndAsksBeforeChangingServer() {
         scope = TestScope()

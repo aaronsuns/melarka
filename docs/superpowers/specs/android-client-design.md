@@ -297,11 +297,14 @@ ports as is.
   the activity is gone still gets its media notification. The activity's own task (`taskAffinity=""`) goes as it
   finishes, and Android tells the app's started services (`onTaskRemoved`): `PlaybackService` ignores it for that task
   (Media3's default would pause the shuffle that is just starting and stop the service; any other task, Melarka's own
-  swiped away, keeps Media3's default). The result shows as a toast (iOS's Shortcuts dialog; a Resume that played says
-  nothing); with no server or signed out, Melarka opens instead of only saying so. Found on the emulator (Task 14):
-  Android 13+ drops a toast from an app in the background whose notifications are off, and Melarka has no
-  notification permission, so a result that comes after the activity finished (a shuffle answered by the server) is
-  not shown there; open with the owner.
+  swiped away, keeps Media3's default). The result (iOS's Shortcuts dialog) shows as a toast while the activity is
+  still showing (a Resume that played says nothing); with no server or signed out, Melarka opens too. A result that
+  comes after the activity finished (a shuffle the server answered) cannot be a toast: Android 13+ drops a toast from
+  an app in the background whose notifications are off, and Melarka asks for no notification permission (the owner's
+  call, Task 14). So a failure then brings Melarka forward (`MainActivity`, from the background within Android's grace
+  period after the shortcut's activity) with the reason in a dialog (`AppServices.notice`; if Android refuses the
+  start, the dialog shows when Melarka is next opened); a success or "already playing" says nothing
+  (`ShortcutActivity.reply`).
 - **The cold start's foreground**: a media button with the app not running reaches `MediaButtonReceiver`, which starts
   the service with `startForegroundService`; car autoplay does the same (`PlaybackService.startInForeground`). Android
   requires `startForeground` within 5 s even when nothing turns out to be playable (no server, signed out, offline with
