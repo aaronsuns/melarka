@@ -55,7 +55,14 @@ class PlaybackHost(
             }
         }
 
-    val remote: RemoteCommands = remote ?: RemoteCommands(scope) { engine }
+    /**
+     * Builds the engine when a command finds none (the app services' `engine`, set by the application): the car's play
+     * after a server change, before anything else asked for the new server's engine, still plays (iOS
+     * `installRemoteCommands` resolves `AppServices.engine`). Null: commands use [engine] as it is.
+     */
+    var engineProvider: (() -> PlayerEngine?)? = null
+
+    val remote: RemoteCommands = remote ?: RemoteCommands(scope) { engine ?: engineProvider?.invoke() }
 
     /** The engine's now-playing sink. */
     val nowPlayingSink = NowPlayingController(sink, artwork, scope, clock)

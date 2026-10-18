@@ -1,13 +1,26 @@
 package lark.service
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
@@ -37,6 +50,7 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         running = true
+        foregroundStartPending = false
         host = Playback.host(this)
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -53,7 +67,66 @@ class PlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
+    // MARK: Cold start: the foreground within 5 s
+
+    private val handler = Handler(Looper.getMainLooper())
+    /** The cold-start notification is up and Media3's own has not taken over yet. */
+    private var holding = false
+    private var holdSince = 0L
+
+    /**
+     * A start with `startForegroundService` (a media button with the app not running, or car autoplay from the
+     * background) must call `startForeground` within 5 s, even when nothing turns out to be playable (no server yet,
+     * signed out, offline with nothing cached). The service goes into the foreground at once with a plain notification
+     * on Media3's channel and id, which Media3's media notification replaces when playback starts; when nothing plays,
+     * it is removed and the service stops.
+     */
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val coldStart = intent != null && !isPlaybackOngoing &&
+            (intent.action == Intent.ACTION_MEDIA_BUTTON || intent.getBooleanExtra(EXTRA_FOREGROUND_START, false))
+        if (coldStart) hold()
+        val r = super.onStartCommand(intent, flags, startId)
+        if (coldStart && holding) handler.post(checkHold)       // after the media button's play, which Media3 posted
+        return r
+    }
+
+    private fun hold() {
+        holdSince = SystemClock.elapsedRealtime()
+        try {
+            ServiceCompat.startForeground(this, DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID, holdNotification(this),
+                if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0)
+            holding = true
+        } catch (e: IllegalStateException) {
+            // ForegroundServiceStartNotAllowedException (API 31+): nothing can play from here; the start is dropped.
+            Log.w(TAG, "media service: not allowed into the foreground (${e.javaClass.simpleName})")
+            stopSelf()
+        }
+    }
+
+    /**
+     * Until Media3 takes over (its notification put the service in the foreground) or nothing is going to play: playing,
+     * a shuffle from the server still running, or a cold start waiting for the network's first answer keep it (the
+     * waits for at most [HOLD_MAX_MS]).
+     */
+    private val checkHold: Runnable = object : Runnable {
+        override fun run() {
+            if (!holding) return
+            if (isPlaybackOngoing) { holding = false; return }
+            val engine = host.engine
+            val waiting = host.remote.starting || engine?.awaitingNetworkAnswer == true
+            if (engine?.playing == true || (waiting && SystemClock.elapsedRealtime() - holdSince < HOLD_MAX_MS)) {
+                handler.postDelayed(this, HOLD_CHECK_MS)
+                return
+            }
+            holding = false
+            ServiceCompat.stopForeground(this@PlaybackService, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            if (engine?.playing != true) stopSelf()
+        }
+    }
+
     override fun onDestroy() {
+        handler.removeCallbacks(checkHold)
+        holding = false
         host.remote.removeListener(onRemote)
         session?.let {
             it.player.release()          // the session's view only: the app-wide player plays on
@@ -82,20 +155,73 @@ class PlaybackService : MediaSessionService() {
 
         /**
          * Asked when a controller plays with no current item and the player could take one. [SessionPlayer] takes no
-         * items (its play is the engine's cold start), so Media3 does not call this for a play; it is wired to the
-         * host's resumption hook for when it does, and answers a metadata request with the current item, if any.
+         * items (its play is the engine's cold start, [RemoteCommands.handlePlay]), so Media3 does not call this for a
+         * play today; when it does, it answers at once from disk: for a play, the host's resumption hook (the engine's
+         * synchronous `resumeFromDisk`, no network), then the engine's active queue, its index and position (the
+         * restored one, or what the resume chose); nothing when there is no queue.
          */
         override fun onPlaybackResumption(session: MediaSession, controller: MediaSession.ControllerInfo,
                                           isForPlayback: Boolean): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
             if (isForPlayback) host.resumption()
-            val item = session.player.currentMediaItem
-            return Futures.immediateFuture(MediaSession.MediaItemsWithStartPosition(listOfNotNull(item),
-                if (item == null) C.INDEX_UNSET else 0, C.TIME_UNSET))
+            return Futures.immediateFuture(resumed(host))
         }
     }
 
     companion object {
         private const val TAG = "PlaybackService"
+        /** Set on a [startInForeground] start: hold the foreground until playback starts or nothing will. */
+        const val EXTRA_FOREGROUND_START = "lark.FOREGROUND_START"
+        const val HOLD_CHECK_MS = 1_000L
+        /** How long a cold start waiting for the server or the network keeps the notification. */
+        const val HOLD_MAX_MS = 30_000L
+
+        /** The engine's active queue as media items (the session's resumption answer). */
+        fun resumed(host: PlaybackHost): MediaSession.MediaItemsWithStartPosition {
+            val e = host.engine
+            val q = e?.let { if (it.active == Item.Kind.episode) it.episodes else it.music }
+            if (e == null || q == null || q.items.isEmpty()) return MediaSession.MediaItemsWithStartPosition(emptyList(), C.INDEX_UNSET, C.TIME_UNSET)
+            val items = q.items.map {
+                MediaItem.Builder().setMediaId(it.id).setMediaMetadata(MediaMetadata.Builder()
+                    .setTitle(it.title).setArtist(it.artist).setAlbumTitle(it.album).build()).build()
+            }
+            return MediaSession.MediaItemsWithStartPosition(items, q.index, e.activePositionMs)
+        }
+
+        /** The plain notification the service shows while a cold start decides (replaced by Media3's). */
+        fun holdNotification(context: Context): android.app.Notification {
+            val nm = context.getSystemService(NotificationManager::class.java)
+            if (nm.getNotificationChannel(DefaultMediaNotificationProvider.DEFAULT_CHANNEL_ID) == null)
+                nm.createNotificationChannel(NotificationChannel(DefaultMediaNotificationProvider.DEFAULT_CHANNEL_ID,
+                    context.getString(DefaultMediaNotificationProvider.DEFAULT_CHANNEL_NAME_RESOURCE_ID), NotificationManager.IMPORTANCE_LOW))
+            return NotificationCompat.Builder(context, DefaultMediaNotificationProvider.DEFAULT_CHANNEL_ID)
+                .setSmallIcon(androidx.media3.session.R.drawable.media3_notification_small_icon)
+                .setContentTitle(context.getString(R.string.app_name))
+                .setContentText(context.getString(R.string.cold_start_notification))
+                .setOngoing(true)
+                .setSilent(true)
+                .build()
+        }
+
+        /**
+         * Starts the service from the background into the foreground (car autoplay: a companion device appeared, or the
+         * car's Bluetooth connected below Android 12). Android 12+ allows it for an app with a companion device
+         * association that holds `REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND`; a refusal is logged and
+         * returns false (nothing plays: playback without the service would be stopped by the system anyway).
+         */
+        fun startInForeground(context: Context): Boolean {
+            if (running) return true
+            return try {
+                ContextCompat.startForegroundService(context, Intent(context, PlaybackService::class.java).putExtra(EXTRA_FOREGROUND_START, true))
+                foregroundStartPending = true
+                true
+            } catch (e: IllegalStateException) {
+                Log.w(TAG, "media service: not allowed to start in the foreground from the background (${e.javaClass.simpleName})")
+                false
+            }
+        }
+
+        /** [startInForeground] asked for the service and it is not created yet. */
+        @Volatile private var foregroundStartPending = false
 
         /** The service exists (created and not yet destroyed). */
         @Volatile var running = false
@@ -107,7 +233,7 @@ class PlaybackService : MediaSessionService() {
          * session comes with the next controller or media button instead.
          */
         fun start(context: Context) {
-            if (running) return
+            if (running || foregroundStartPending) return
             try {
                 context.startService(Intent(context, PlaybackService::class.java))
             } catch (_: IllegalStateException) {

@@ -14,6 +14,8 @@ import lark.auth.WebViewData
 import lark.cache.CacheLayout
 import lark.cache.FavoritesRefresh
 import lark.cache.StorageManagerFreeSpace
+import lark.car.CarAutoplay
+import lark.car.CarAutoplaySettings
 import lark.core.AndroidNetworkStatus
 import lark.core.Clock
 import lark.core.MainScheduler
@@ -37,6 +39,17 @@ class LarkApplication : Application() {
 
     /** The app services, built on first use (main thread). */
     val services: AppServices get() = built ?: build()
+
+    /** Car autoplay: the associated car's appearance runs Shuffle Favorites on the services' engine (main thread). */
+    @OptIn(UnstableApi::class)
+    val carAutoplay: CarAutoplay by lazy {
+        CarAutoplay(
+            CarAutoplaySettings(getSharedPreferences(PREFS, Context.MODE_PRIVATE)),
+            player = { services.intentPlayer },
+            startService = { PlaybackService.startInForeground(this) },
+            run = { body -> services.runIntent(body) },
+        )
+    }
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -74,6 +87,7 @@ class LarkApplication : Application() {
                 freeSpace = { StorageManagerFreeSpace(this, it) },
             )
             s.serviceRunning = { PlaybackService.running }
+            host.engineProvider = { s.engine }
             built = s
             s.start()
             return s

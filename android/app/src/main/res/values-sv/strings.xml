@@ -14,4 +14,23 @@
     <string name="media_repeat_one">Upprepa en</string>
     <string name="media_back_15">Bakåt 15 sekunder</string>
     <string name="media_forward_30">Framåt 30 sekunder</string>
+    <string name="shortcut_shuffle_favorites">Blanda favoriter</string>
+    <string name="shortcut_resume">Fortsätt spela</string>
+    <string name="intent_shuffling_favorites">Blandar favoriter</string>
+    <string name="intent_already_playing">Spelar redan</string>
+    <string name="intent_not_set_up">Öppna Melarka och ange servern först</string>
+    <string name="intent_not_signed_in">Inte inloggad</string>
+    <string name="intent_offline_nothing_cached">Offline, och inga låtar är cachade</string>
+    <string name="cold_start_notification">Startar uppspelningen…</string>
+    <string name="car_autoplay_title">Autostart i bilen</string>
+    <string name="car_autoplay_explain">När bilens Bluetooth ansluter blandar Melarka dina favoriter, även i bakgrunden. Om musik redan spelas händer ingenting. Android ber dig bekräfta bilen en gång.</string>
+    <string name="car_autoplay_choose">Välj din bil</string>
+    <string name="car_autoplay_permission">För att visa bilarna som är parkopplade med telefonen behöver Melarka behörigheten Enheter i närheten.</string>
+    <string name="car_autoplay_old_android">På den här Android-versionen märker Melarka bilen bara när appen får köras i bakgrunden. Om uppspelningen inte startar, ställ in Melarkas batterianvändning på Obegränsad.</string>
+    <string name="car_autoplay_hint_generic">Om uppspelningen inte startar eller musiken stannar när skärmen är av, ställ in Melarkas batterianvändning på Obegränsad: Inställningar › Appar › Melarka › Batteri.</string>
+    <string name="car_autoplay_hint_xiaomi">På Xiaomi-, Redmi- och POCO-telefoner: slå även på Autostart för Melarka (Inställningar › Appar › Hantera appar › Melarka) och ställ in Batterisparläge på Inga begränsningar.</string>
+    <string name="car_autoplay_hint_huawei">På Huawei- och Honor-telefoner: öppna Inställningar › Batteri › Appstart, välj Hantera manuellt för Melarka och slå på alla tre reglagen.</string>
+    <string name="car_autoplay_hint_oppo">På OPPO-, realme- och OnePlus-telefoner: tillåt att Melarka startar automatiskt och tillåt bakgrundsaktivitet (Inställningar › Appar › Melarka › Batteri).</string>
+    <string name="car_autoplay_hint_vivo">På vivo- och iQOO-telefoner: tillåt Autostart för Melarka och tillåt hög strömförbrukning i bakgrunden (Inställningar › Batteri).</string>
+    <string name="car_autoplay_hint_samsung">På Samsung-telefoner: lägg till Melarka bland Appar som aldrig försätts i viloläge: Inställningar › Batteri › Begränsningar för bakgrundsanvändning.</string>
 </resources>

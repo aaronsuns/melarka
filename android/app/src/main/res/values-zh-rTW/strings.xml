@@ -14,4 +14,23 @@
     <string name="media_repeat_one">單曲循環</string>
     <string name="media_back_15">後退 15 秒</string>
     <string name="media_forward_30">前進 30 秒</string>
+    <string name="shortcut_shuffle_favorites">隨機播放收藏</string>
+    <string name="shortcut_resume">繼續播放</string>
+    <string name="intent_shuffling_favorites">正在隨機播放收藏</string>
+    <string name="intent_already_playing">已在播放</string>
+    <string name="intent_not_set_up">請先開啟 Melarka 並設定伺服器</string>
+    <string name="intent_not_signed_in">未登入</string>
+    <string name="intent_offline_nothing_cached">離線且沒有已快取的歌曲</string>
+    <string name="cold_start_notification">正在開始播放…</string>
+    <string name="car_autoplay_title">車載自動播放</string>
+    <string name="car_autoplay_explain">汽車藍牙連線後，Melarka 會隨機播放收藏，即使在背景也可以。如果已經在播放，則不做任何改變。Android 會請你確認一次這輛車。</string>
+    <string name="car_autoplay_choose">選擇你的汽車</string>
+    <string name="car_autoplay_permission">要列出與這支手機配對的汽車，Melarka 需要「鄰近裝置」權限。</string>
+    <string name="car_autoplay_old_android">在這個 Android 版本上，Melarka 只有在允許背景執行時才能發現汽車。如果沒有自動播放，請把 Melarka 的電池用量設為「不受限制」。</string>
+    <string name="car_autoplay_hint_generic">如果沒有自動播放，或鎖定螢幕後音樂停止，請把 Melarka 的電池用量設為「不受限制」：設定 › 應用程式 › Melarka › 電池。</string>
+    <string name="car_autoplay_hint_xiaomi">小米、Redmi 和 POCO 手機：還需為 Melarka 開啟「自動啟動」（設定 › 應用程式 › 管理應用程式 › Melarka），並把省電模式設為「無限制」。</string>
+    <string name="car_autoplay_hint_huawei">華為和榮耀手機：開啟 設定 › 電池 › 應用程式啟動管理，把 Melarka 設為「手動管理」並開啟全部三個開關。</string>
+    <string name="car_autoplay_hint_oppo">OPPO、realme 和 OnePlus 手機：允許 Melarka 自動啟動，並允許其背景活動（設定 › 應用程式 › Melarka › 電池）。</string>
+    <string name="car_autoplay_hint_vivo">vivo 和 iQOO 手機：允許 Melarka 自動啟動，並允許其背景高耗電（設定 › 電池）。</string>
+    <string name="car_autoplay_hint_samsung">三星手機：把 Melarka 加入「永不休眠的應用程式」：設定 › 電池 › 背景使用限制。</string>
 </resources>

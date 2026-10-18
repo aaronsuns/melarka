@@ -26,6 +26,9 @@ import lark.cache.FavoritesSync
 import lark.cache.FreeSpace
 import lark.cache.SyncRun
 import lark.cache.UserCache
+import lark.car.EngineIntentPlayer
+import lark.car.IntentPlayer
+import lark.car.IntentRun
 import lark.core.Cancellable
 import lark.core.Clock
 import lark.core.NetworkStatus
@@ -173,6 +176,27 @@ class AppServices(
             onEngine(e)     // the playback host: the session, the remote commands, and its `willStartPlayback`
             return e
         }
+
+    private var intentOverride: IntentPlayer? = null
+    private var engineIntentPlayer: EngineIntentPlayer? = null
+
+    /**
+     * What the shortcuts and car autoplay drive (iOS `AppServices.intentPlayer`): the engine (null before a server is
+     * set), unless a test replaced it. Setting null goes back to the engine.
+     */
+    var intentPlayer: IntentPlayer?
+        get() {
+            intentOverride?.let { return it }
+            val e = engine ?: return null
+            return engineIntentPlayer?.takeIf { it.engine === e } ?: EngineIntentPlayer(e).also { engineIntentPlayer = it }
+        }
+        set(value) { intentOverride = value }
+
+    /**
+     * Runs a shortcut's or car autoplay's [IntentRun] on the main thread. The scope's dispatcher is immediate: [body] runs
+     * now up to its first suspension, so playback is prepared before this returns (while a shortcut is still visible).
+     */
+    fun runIntent(body: suspend () -> Unit): Job = scope.launch { body() }
 
     /**
      * At launch: builds the player when a server is known, so the car's play finds its engine even when Android
@@ -643,14 +667,12 @@ class AppServices(
 
     /**
      * Play Offline Favorites: opens the offline player and, unless something is already playing, shuffles the cached
-     * favorites (the steps of the Shuffle Favorites shortcut, `IntentRun`, Task 11).
+     * favorites (the Shuffle Favorites shortcut, [IntentRun]).
      */
     suspend fun playOfflineFavorites() {
         openOfflinePlayer()
-        val e = engine ?: return
-        if (e.playing || e.intentBlocker(resume = false) != null) return
-        e.prepareForPlayback()
-        e.shuffleFavorites()
+        if (engine == null) return
+        IntentRun.shuffleFavorites(intentPlayer)
     }
 
     // MARK: - The offline player

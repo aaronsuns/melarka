@@ -422,6 +422,12 @@ class PlayerEngine(
     /** The remote play's cold start: playback is prepared now ([willStartPlayback]), before the async shuffle. */
     fun prepareForPlayback() { willStartPlayback?.invoke() }
 
+    /**
+     * A cold start before the network monitor's first answer, with nothing on the phone ([resumeFromDisk]): it plays
+     * once the network is known. The media service keeps its cold-start notification meanwhile.
+     */
+    val awaitingNetworkAnswer: Boolean get() = stoppedOffline && !network.answered
+
     /** The backend holds an item (playing or paused); false after a launch until something is played. */
     val isLoaded: Boolean get() = loaded != null
 

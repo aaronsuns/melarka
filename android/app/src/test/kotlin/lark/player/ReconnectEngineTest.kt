@@ -3,6 +3,9 @@ package lark.player
 import kotlinx.coroutines.test.TestScope
 import lark.api.RandomFavorites
 import lark.bridge.WebMessage
+import lark.car.EngineIntentPlayer
+import lark.car.IntentResult
+import lark.car.IntentRun
 import lark.service.RemoteCommands
 import lark.testing.EngineTestCase
 import lark.testing.q
@@ -23,14 +26,8 @@ class ReconnectEngineTest : EngineTestCase() {
     /** What the media session's play command runs: iOS `RemoteCommands.handlePlay`. */
     private fun TestScope.handlePlay() { RemoteCommands.handlePlay(engine, this) }
 
-    /** iOS `IntentRun.shuffleFavorites` (the shortcut, Task 11): a no-op while playing, else focus, then the shuffle. */
-    private suspend fun shuffleIntent(): String {
-        if (engine.playing) return "alreadyPlaying"
-        engine.intentBlocker(resume = false)?.let { return it.name }
-        engine.prepareForPlayback()
-        engine.shuffleFavorites()
-        return if (engine.playing) "started" else "nothingToPlay"
-    }
+    /** iOS `IntentRun.shuffleFavorites` (the shortcut): a no-op while playing, else playback prepared, then the shuffle. */
+    private suspend fun shuffleIntent(): IntentResult = IntentRun.shuffleFavorites(EngineIntentPlayer(engine))
 
     // MARK: 5. `greeted`
 
@@ -145,12 +142,12 @@ class ReconnectEngineTest : EngineTestCase() {
         val loads = backend.loads.size
         var activations = 0
         engine.willStartPlayback = { activations += 1 }
-        assertEquals("alreadyPlaying", shuffleIntent())
+        assertEquals(IntentResult.alreadyPlaying, shuffleIntent())
         assertEquals(loads, backend.loads.size)
         assertEquals(0, activations)
         assertEquals("5", engine.current?.id)
         engine.pause()
-        assertEquals("started", shuffleIntent())
+        assertEquals(IntentResult.played, shuffleIntent())
         assertEquals("1", engine.current?.id)
     }
 }

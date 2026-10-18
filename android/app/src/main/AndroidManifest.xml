@@ -7,6 +7,16 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />   <!-- ExoPlayer keeps the CPU and Wi-Fi awake while it plays -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Car autoplay: the system tells Melarka when the associated car connects (Android 12+), and a companion app
+         may start its media service from the background then. Both are granted at install. -->
+    <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
+    <!-- Nearby devices (Android 12+): asked only when car autoplay is turned on, to list the paired cars. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Below Android 12: the car's Bluetooth connection broadcast (car autoplay's fallback). -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-feature android:name="android.software.companion_device_setup" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
 
     <application
         android:name="lark.app.LarkApplication"
@@ -29,7 +39,42 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Launcher shortcuts: Shuffle Favorites, Resume. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- The shortcuts' target: no UI, runs the intent and finishes (launched by the system as this app). -->
+        <activity
+            android:name="lark.car.ShortcutActivity"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:exported="false" />
+
+        <!-- Car autoplay, Android 12+: bound by the system when the associated car connects or goes. -->
+        <service
+            android:name="lark.car.CarCompanionService"
+            android:enabled="@bool/car_companion_service"
+            android:exported="true"
+            android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE"
+            tools:targetApi="31">
+            <intent-filter>
+                <action android:name="android.companion.CompanionDeviceService" />
+            </intent-filter>
+        </service>
+
+        <!-- Car autoplay below Android 12: the car's Bluetooth connection (system broadcasts only). -->
+        <receiver
+            android:name="lark.car.CarConnectionReceiver"
+            android:enabled="@bool/car_connection_receiver"
+            android:exported="true"
+            android:permission="android.permission.BLUETOOTH">
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
+            </intent-filter>
+        </receiver>
 
         <!-- The media service: the session, the notification, and media buttons (headset, Bluetooth, the car).
              Exported with no permission: System UI, the car and Bluetooth controllers bind to it as media controllers

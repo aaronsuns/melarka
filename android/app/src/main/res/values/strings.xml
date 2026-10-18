@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">Melarka</string>
     <!-- The player engine's notices and errors (EngineTexts), the iOS wording. -->
     <string name="engine_offline_notice">Offline: playing cached favorites</string>
@@ -17,4 +17,26 @@
     <string name="media_repeat_one">Repeat One</string>
     <string name="media_back_15">Back 15 seconds</string>
     <string name="media_forward_30">Forward 30 seconds</string>
+    <!-- Launcher shortcuts and their results (the iOS intents' wording). -->
+    <string name="shortcut_shuffle_favorites">Shuffle Favorites</string>
+    <string name="shortcut_resume">Resume</string>
+    <string name="intent_shuffling_favorites">Shuffling favorites</string>
+    <string name="intent_already_playing">Already playing</string>
+    <string name="intent_not_set_up">Open Melarka and set the server first</string>
+    <string name="intent_not_signed_in">Not signed in</string>
+    <string name="intent_offline_nothing_cached">Offline, and no songs are cached</string>
+    <!-- The media service's notification while a play from the car or a headset is starting. -->
+    <string name="cold_start_notification">Starting playback…</string>
+    <!-- Car autoplay: shown by the Settings screen (Task 12); the hints by phone maker come from CarAutoplay.vendorHint. -->
+    <string name="car_autoplay_title" tools:ignore="UnusedResources">Car autoplay</string>
+    <string name="car_autoplay_explain" tools:ignore="UnusedResources">When your car\'s Bluetooth connects, Melarka shuffles your favorites, even in the background. If music is already playing, nothing changes. Android asks you once to confirm the car.</string>
+    <string name="car_autoplay_choose" tools:ignore="UnusedResources">Choose your car</string>
+    <string name="car_autoplay_permission" tools:ignore="UnusedResources">To list the cars paired with this phone, Melarka needs the Nearby devices permission.</string>
+    <string name="car_autoplay_old_android" tools:ignore="UnusedResources">On this Android version, Melarka notices the car only while it is allowed to run in the background. If autoplay doesn\'t start, set Melarka\'s battery usage to Unrestricted.</string>
+    <string name="car_autoplay_hint_generic" tools:ignore="UnusedResources">If autoplay doesn\'t start or music stops with the screen off, set Melarka\'s battery usage to Unrestricted: Settings › Apps › Melarka › Battery.</string>
+    <string name="car_autoplay_hint_xiaomi">On Xiaomi, Redmi and POCO phones, also turn on Autostart for Melarka (Settings › Apps › Manage apps › Melarka) and set its Battery saver to No restrictions.</string>
+    <string name="car_autoplay_hint_huawei">On Huawei and Honor phones, open Settings › Battery › App launch, set Melarka to Manage manually and turn on all three switches.</string>
+    <string name="car_autoplay_hint_oppo">On OPPO, realme and OnePlus phones, allow Melarka to auto-launch and allow its background activity (Settings › Apps › Melarka › Battery).</string>
+    <string name="car_autoplay_hint_vivo">On vivo and iQOO phones, allow Autostart for Melarka and allow its high background power consumption (Settings › Battery).</string>
+    <string name="car_autoplay_hint_samsung">On Samsung phones, add Melarka to Never sleeping apps: Settings › Battery › Background usage limits.</string>
 </resources>

@@ -2,6 +2,7 @@ package lark.app
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
@@ -11,6 +12,7 @@ import android.widget.FrameLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import lark.bridge.WebShell
+import lark.car.CarAutoplay
 
 /**
  * The one Activity: it only shows the app services. The server's web app fills it ([WebShell]); the native screens
@@ -128,6 +130,12 @@ class MainActivity : Activity(), WebShell.Host {
     }
 
     /** Back leaves full screen, then goes back in the page, then leaves the app (playback goes on). */
+    /** The system's car picker answered (car autoplay, from Settings). */
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (CarAutoplay.onActivityResult(this, requestCode, resultCode, data)) return
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             if (fullscreen != null) { hideFullscreen(); return true }

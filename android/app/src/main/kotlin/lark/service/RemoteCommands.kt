@@ -1,6 +1,7 @@
 package lark.service
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import lark.bridge.Item
 import lark.bridge.RepeatMode
@@ -90,9 +91,16 @@ class RemoteCommands(
 
     // MARK: Handlers
 
+    /** The cold start's shuffle from the server, while it runs (the media service holds the foreground meanwhile). */
+    private var coldStart: Job? = null
+
+    /** A play's shuffle from the server is still running: playback may start any moment. */
+    val starting: Boolean get() = coldStart?.isActive == true
+
     fun playNow(): Status {
         val engine = resolve() ?: return Status.noActionableNowPlayingItem
-        return handlePlay(engine, scope)
+        coldStart = startPlay(engine, scope)
+        return Status.success
     }
 
     fun pauseNow(): Status {
@@ -182,13 +190,19 @@ class RemoteCommands(
          * is prepared first (`prepareForPlayback`: the media service comes up), before the coroutine.
          */
         fun handlePlay(engine: PlayerEngine, scope: CoroutineScope): Status {
+            startPlay(engine, scope)
+            return Status.success
+        }
+
+        /** [handlePlay]'s steps; the shuffle's coroutine when the server has to be asked, else null. */
+        private fun startPlay(engine: PlayerEngine, scope: CoroutineScope): Job? {
             if (engine.isLoaded) {
                 engine.play()
             } else if (!engine.resumeFromDisk()) {
                 engine.prepareForPlayback()
-                scope.launch { engine.shuffleFavorites() }
+                return scope.launch { engine.shuffleFavorites() }
             }
-            return Status.success
+            return null
         }
     }
 }

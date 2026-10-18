@@ -79,7 +79,7 @@ pages (they come from the server), the same reliable playback.
 - **Car autoplay through a companion device.** The user picks the car in Melarka's settings; Android's
   CompanionDeviceManager shows its own pairing confirmation once; from then on the car's Bluetooth
   connecting starts "Shuffle favorites" even while Melarka is in the background (the companion
-  association is what lets an app start playback from the background on Android 12+). It does
+  association, with its install-time permission, is what lets an app start playback from the background on Android 12+). It does
   nothing if music is already playing, like the iOS intent. Documented in `docs/android.md` and in
   the setup screen's text.
 - **Standard Android first.** Target stock Android and the phones used outside China (where
@@ -240,7 +240,8 @@ behaviour; the builder works through it as a checklist.
   asks `canAutoStart` first. In the foreground, or with the media service running (its notification is up),
   it plays at once. In the background with no service, Android 8+ refuses to start the service, so the
   engine does not try: it stays paused by the system (no error shown) and resumes when the Activity starts
-  again, or on a play (`AppServices.mayStartPlayback`; checked on the emulator in Task 14).
+  again, or on a play (`AppServices.mayStartPlayback`; checked on the emulator in Task 14). Car autoplay is the one
+  background start that asks for the foreground itself (the companion exemption, below).
 - The background favorites sync (`FavoritesRefresh`) is scheduled after a sign-in and cancelled on sign-out;
   its `provider` is the services' `syncRun()` (null while signed out).
 
@@ -264,8 +265,8 @@ behaviour; the builder works through it as a checklist.
 | MPNowPlayingInfo + remote commands | decided: a Media3 `MediaSessionService` (`PlaybackService`) whose session player is `SessionPlayer`, a `ForwardingSimpleBasePlayer` over the app-wide ExoPlayer that shows the engine's view: one item (the current one, from `NowPlayingController`), the engine's position and `playing`, no player errors (the engine handles them). Its commands go to `RemoteCommands` (port of iOS `RemoteCommands`): play/pause, seek, next, previous always; seek back 15 s / forward 30 s for episodes; shuffle and repeat for music; never set items, volume (the sleep fade's) or speed. The notification's own buttons are custom commands: `SKIP_BACK_15`/`SKIP_FORWARD_30` in place of previous/next for episodes, `SHUFFLE`/`REPEAT` (showing their state) for music. Releasing the session player only detaches it: the ExoPlayer and the engine live in the process-wide `PlaybackHost`, so the service ending (swiped away while paused) stops nothing |
 | MPMediaItemArtwork | decided: `MediaMetadata.artworkData` (bytes from `LarkApiProtocol.artwork`, the token only in its header), never an artwork URI; kept for the last 20 items, the same array on every write, "no cover" (404) remembered, a failed fetch asked again after 30 s doubling up to 10 min |
 | car lyrics as title | the same: the current line as the MediaSession title, "song · artist" as the artist, updated only when the line changes (the session item's own metadata keeps the song, so only the shown metadata changes) |
-| cold start from the car (remote play) | decided: a session play with nothing current reaches `RemoteCommands.handlePlay` (the iOS steps: play, else `resumeFromDisk`, else prepare and shuffle favorites); the session player takes no media items, so Media3 never asks for resumption on a play. `MediaSession.Callback.onPlaybackResumption` is wired to the host's resumption hook (`resumeFromDisk`) for when it is asked; Task 11 owns the cold start's behaviour. `MediaButtonReceiver` in the manifest |
-| Shortcuts "car connects → shuffle favorites" | CompanionDeviceManager association with the car (picked in Settings; the system confirms once); its connect callback runs the same path as the iOS ShuffleFavorites intent; launcher shortcuts "Shuffle favorites" and "Resume" |
+| cold start from the car (remote play) | decided: a session play with nothing current reaches `RemoteCommands.handlePlay` (the iOS steps: play, else `resumeFromDisk`, else prepare and shuffle favorites); the session player takes no media items, so Media3 never asks for resumption on a play. `MediaSession.Callback.onPlaybackResumption` answers at once from disk: for a play the host's hook (`resumeFromDisk`, no network), then the engine's active queue as media items with its index and position. `MediaButtonReceiver` in the manifest; the start's foreground rule: see "Cold start, shortcuts and car autoplay" |
+| Shortcuts "car connects → shuffle favorites" | decided: car autoplay through a CompanionDeviceManager association (below); launcher shortcuts "Shuffle Favorites" and "Resume" (`res/xml/shortcuts.xml` → `ShortcutActivity`); both run `IntentRun`, the port of iOS `Intents/*` |
 | BGAppRefreshTask | decided: WorkManager periodic work (`FavoritesRefresh`, unique name `io.github.aaronsuns.melarka.refresh`, 6 h, `NetworkType.UNMETERED`, kept across launches) for the favorites sync. The worker takes the signed-in user's sync from a small app-level seam (`FavoritesRefresh.provider`, set by the app services; null while signed out or before they are up, then the work ends at once); stopping the work cancels the sync. The sync itself still requires Wi-Fi (`!isExpensive`: metered or Data Saver) |
 | NWPathMonitor (+ expensive / Low Data) | `ConnectivityManager.NetworkCallback` (NOT_METERED; `isRestrictBackgroundStatus`), keeping the "answered" semantics; online = INTERNET capability only (not VALIDATED), so a LAN-only self-hosted server stays reachable, as with `NWPath.satisfied` |
 | Library/Caches (purgeable) | decided: `filesDir/lark/<serverKey>/<userId>/{files,staging,covers,lyrics,index.json}` (`serverKey` = first 8 bytes, hex, of the SHA-256 of the normalised base URL), internal storage, not purgeable by the system and not backed up (`allowBackup=false`); queues and events in `filesDir`. Free space via `StorageManager.getAllocatableBytes` behind `FreeSpace` (500 MB must stay free). `index.json` and every file write go through a temporary file and a rename; an unreadable index is an empty cache, `staging/` is emptied at every start, and nothing outside the user's folder is ever deleted. `CacheStore.wipe()` deletes a user's whole folder (sign-out for good, another server); `CacheLayout.pruneOtherServers` keeps only the current server's folder. The index write delay runs on the `Scheduler` |
@@ -277,6 +278,58 @@ retries 2/5/10 s, stall switch after 6 s, failed items skipped 30 min, never-sto
 refill, offline resume modes, play events, queue sync incl. the `yt:` rule, episode progress,
 queue persistence, lookahead, offline cache with cap and eviction, favorites sync, offline lyrics)
 ports as is.
+
+### Cold start, shortcuts and car autoplay
+
+- **`IntentRun`** (`lark.car`, port of iOS `ShuffleFavoritesIntent.swift`): `shuffleFavorites(player)` and `resume(player)`
+  on an `IntentPlayer` (the engine through `EngineIntentPlayer`; `AppServices.intentPlayer`, replaceable in tests), with
+  the iOS steps: shuffle while playing → `alreadyPlaying` and nothing else; no engine (no server) → `notSetUp`; the
+  engine's `intentBlocker` (`notSignedIn`, `offlineNothingCached`) before anything starts; then `prepareForPlayback`
+  before the first suspension, the shuffle (or resume, else shuffle), and `played` or `nothingToPlay(reason)`. One
+  sealed `IntentResult` carries iOS's `IntentOutcome` and `LarkIntentError`. A permanent focus loss is the user's pause
+  (the engine clears `pausedBySystem`), so it never counts as playing: the shuffle starts afresh.
+- **Launcher shortcuts**: static (`android.app.shortcuts` on the launcher activity), targeting `ShortcutActivity`
+  (`Theme.NoDisplay`, not exported: the system starts shortcuts as the app). It runs the intent on the services'
+  main-thread scope, synchronously up to the first suspension, so the media service is started while the activity is
+  still visible (the background-start rule), then finishes. The result shows as a toast (iOS's Shortcuts dialog; a
+  Resume that played says nothing); with no server or signed out, Melarka opens instead of only saying so.
+- **The cold start's foreground**: a media button with the app not running reaches `MediaButtonReceiver`, which starts
+  the service with `startForegroundService`; car autoplay does the same (`PlaybackService.startInForeground`). Android
+  requires `startForeground` within 5 s even when nothing turns out to be playable (no server, signed out, offline with
+  nothing cached), and Media3 only does it once something plays. So `PlaybackService.onStartCommand` goes into the
+  foreground at once with a plain "Starting playback…" notification on Media3's channel and id (Media3's media
+  notification replaces it), keeps it while the engine plays, a shuffle from the server runs, or a cold start waits for
+  the network's first answer (at most 30 s), and otherwise removes it and stops the service. A cold start offline with
+  nothing cached therefore ends with the service stopped; when the network comes back later in the background, the
+  background-start rule (App services) applies (the engine waits for the user).
+- **Car autoplay** (`CarAutoplay`, `CarAutoplaySettings`): Settings turns it on; only then is the Nearby devices
+  permission asked (`BLUETOOTH_CONNECT`, Android 12+), to list the paired cars. The user picks one and
+  `CarAutoplay.associate(activity, address)` asks CompanionDeviceManager (a `BluetoothDeviceFilter` for that address);
+  the system confirms once, the answer comes to `MainActivity.onActivityResult`, and on Android 12+ the car's presence
+  is observed (`startObservingDevicePresence`, `REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE`, an install-time
+  permission). When the car connects, the system binds `CarCompanionService` (`onDeviceAppeared`), which runs
+  `IntentRun.shuffleFavorites` once per appearance: nothing again until `onDeviceDisappeared`, nothing at all if music
+  is already playing (the car's own play resumed the queue first). The media service is started into the foreground
+  first; Android 12+ allows that from the background only through the documented exemption for companion apps holding
+  `REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND` (install-time; presence observation by itself grants
+  no exemption). A refusal is logged and nothing plays, never a crash. Turning it off stops the observation, removes
+  the association and forgets the car.
+- **Below Android 12** (no presence observation): the manifest receiver `CarConnectionReceiver` hears the associated
+  car's `ACL_CONNECTED`/`ACL_DISCONNECTED` (exempt from the implicit-broadcast limits; `BLUETOOTH`, maxSdk 30) and runs
+  the same path; Android 8–11 allow the foreground start from a receiver. What is lost: the system does not bind or
+  wake Melarka for the car, so nothing happens after a force stop or where the phone maker blocks broadcasts to a
+  stopped app (the vendor's "autostart"); any ACL link counts as the car connecting (not only audio); Settings says
+  so (`car_autoplay_old_android`). The service is enabled from API 31 and the receiver below it (`@bool/` resources).
+- **Phone makers** (outside China first, one standard approach): no vendor code paths. Settings shows Android's
+  battery exemption (Task 12) and, for the makers whose power management goes further, one line of guidance from
+  `CarAutoplay.vendorHint(Build.MANUFACTURER)` (four locales): Xiaomi/Redmi/POCO (Autostart, battery saver "No
+  restrictions"), Huawei/Honor (App launch → manage manually), OPPO/realme/OnePlus (auto-launch, background activity),
+  vivo/iQOO (Autostart, high background power use), Samsung (Never sleeping apps). Stock-like phones (Pixel, Motorola,
+  Nokia, Sony, …) get only the generic battery text. Car autoplay and playback with the screen off can still fail on
+  those phones until the user follows the guidance; `docs/android.md` gives the steps (dontkillmyapp.com).
+- Checked on the emulator and by first users only (Task 14): the shortcut's foreground start for a server shuffle
+  that returns after the activity finished (Android records the start's permission when the service is started, while
+  the activity is visible), CDM presence for a classic-Bluetooth car on Android 12/12L, and the vendor menu paths.
 
 ### Native screens
 
