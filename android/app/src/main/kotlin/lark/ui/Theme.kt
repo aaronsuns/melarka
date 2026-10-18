@@ -1,8 +1,10 @@
 package lark.ui
 
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -46,9 +48,14 @@ private val scheme = darkColorScheme(
     onError = Color.Black,
 )
 
-/** Material 3, dark, in the web's colours. */
+/**
+ * Material 3, dark, in the web's colours. Text and icons outside a `Surface` (the screens draw their own backgrounds)
+ * take the theme's text colour, not Compose's default black.
+ */
 @Composable
-fun LarkTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = scheme, content = content)
+fun LarkTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = scheme) {
+    CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
+}
 
 /**
  * The few icons the native screens use, as 24 dp vectors (Material Design icons, Apache 2.0), so the app needs no
