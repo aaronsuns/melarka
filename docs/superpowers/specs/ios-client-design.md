@@ -35,7 +35,7 @@ launch with no window (the car).
 ## Bridge
 
 - **Injection**: a document-start user script, main frame only, idempotent:
-  `window.larkNative = Object.freeze({version:1, post(msg){ webkit.messageHandlers.lark.postMessage(msg) }})`.
+  `window.larkNative = Object.freeze({version:1, platform:"ios", post(msg){ webkit.messageHandlers.lark.postMessage(msg) }})`.
   Handler name `lark`. Messages are accepted only from the main frame and the server's origin
   (scheme, host, effective port). Undecodable messages are dropped silently; bodies are never
   logged. (`Bridge/BridgeController.swift`)

@@ -44,7 +44,7 @@ enough.
 
 ## Settings
 
-The app's own settings open from the web's **Me → Settings** (the app settings entry) and from the
+The app's own settings open from the web's **Me → Settings** (the **Android app settings** entry) and from the
 "can't connect" screen:
 
 - **Server**: the address in use, and changing it (it signs you out of the old one).

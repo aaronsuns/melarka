@@ -9,7 +9,7 @@
   "settings.onOpen": "When Melarka opens", "settings.onOpen.shuffle_favorites": "Shuffle my favorites",
   "settings.onOpen.resume": "Continue where I left off", "settings.onOpen.nothing": "Do nothing",
   "settings.languageServerDefault": "Server default ({name})",
-  "settings.nativeApp": "iPhone app settings", "settings.nativeAppHint": "Offline cache, server and Shortcuts for the Melarka app on this iPhone.",
+  "settings.nativeApp": "Melarka app settings", "settings.nativeAppIos": "iPhone app settings", "settings.nativeAppAndroid": "Android app settings", "settings.nativeAppHint": "Offline cache and server for the Melarka app on this phone.",
   "settings.version": "Version {v}", "settings.source": "Source code",
   "settings.carLyrics": "Car lyrics (Bluetooth)", "settings.carLyricsHint": "Shows the current lyric line as the song title in the car and on the lock screen.",
   "settings.loudness": "Volume normalization", "settings.loudnessHint": "Plays every song at a similar loudness. Loud songs are turned down; quiet ones are never boosted.",

@@ -11,6 +11,7 @@ import os
       if (window.larkNative) return;
       Object.defineProperty(window, "larkNative", { value: Object.freeze({
         version: 1,
+        platform: "ios",
         post: function (msg) { window.webkit.messageHandlers.lark.postMessage(msg); }
       }) });
     })();

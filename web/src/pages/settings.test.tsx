@@ -4,6 +4,7 @@ import { renderWithApp } from "../test/render";
 import { usePlayer, type Player } from "../player/PlayerProvider";
 import { dictionaries, getLocale, setLocale, t } from "../i18n/i18n";
 import type { Track } from "../api/types";
+import { installFakeNative } from "../native/fakeNative";
 
 let p!: Player;
 function Probe() { p = usePlayer(); return null; }
@@ -90,4 +91,20 @@ test("no version line when the server reports none", async () => {
   await waitFor(() => expect(f.mock.calls.some((c) => String(c[0]).endsWith("/api/v1/info"))).toBe(true));
   await screen.findByLabelText("语言");
   expect(screen.queryByText(/版本/)).toBeNull();
+});
+
+describe("the native app's settings entry names the platform", () => {
+  test.each([
+    ["ios", "iPhone App 设置"],
+    ["android", "Android App 设置"],
+    [null, "Melarka App 设置"],
+  ] as const)("platform %s", async (platform, label) => {
+    const n = installFakeNative(platform);
+    try {
+      renderWithApp(<SettingsPage />);
+      expect(await screen.findByRole("button", { name: label })).toBeInTheDocument();
+    } finally {
+      n.uninstall();
+    }
+  });
 });

@@ -15,6 +15,8 @@ final class BridgeWebViewTests: XCTestCase {
         try await loadHTML(web, "<html><body>t</body></html>", base: URL(string: "https://lark.test/")!)
         let v = try await web.evaluateJavaScript("typeof window.larkNative.post + ':' + window.larkNative.version") as? String
         XCTAssertEqual(v, "function:1")
+        let platform = try await web.evaluateJavaScript("window.larkNative.platform") as? String
+        XCTAssertEqual(platform, "ios")
         _ = try await web.evaluateJavaScript("window.larkNative.post({type:'play', kind:'track'}); 0")
         try await waitUntil { got == [.play(.track)] }
         // native → web

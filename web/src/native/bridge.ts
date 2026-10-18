@@ -1,4 +1,4 @@
-// The bridge to the Lark iPhone app (lark-ios). Inside the app the page runs
+// The bridge to the Lark native apps (iPhone: lark-ios; Android: lark-android). Inside the app the page runs
 // in a WKWebView that injects `window.larkNative = { version, post }`; the
 // web posts the messages below, and native answers with `lark-native`
 // CustomEvents on window. The field names are the wire protocol of
@@ -83,6 +83,8 @@ export type FromNative =
 
 interface LarkNative {
   version: number;
+  /** Which app this is; absent in an iPhone app older than the Android app. */
+  platform?: "ios" | "android";
   post(msg: unknown): void;
 }
 
@@ -92,9 +94,14 @@ declare global {
   }
 }
 
+/** Which native app the page runs in (undefined: the web, or an older iPhone app that does not say). */
+export function nativePlatform(): "ios" | "android" | undefined {
+  return typeof window === "undefined" ? undefined : window.larkNative?.platform;
+}
+
 export const NATIVE_EVENT = "lark-native";
 
-/** True inside the Lark iPhone app. */
+/** True inside a Lark native app (iPhone or Android). */
 export function hasNative(): boolean {
   return typeof window !== "undefined" && !!window.larkNative;
 }

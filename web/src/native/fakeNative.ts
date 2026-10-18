@@ -1,4 +1,4 @@
-// Tests only: a fake `window.larkNative` (the Lark iPhone app's bridge).
+// Tests only: a fake `window.larkNative` (the Lark iPhone/Android app's bridge; `platform` null = an older iPhone app).
 import { act } from "@testing-library/react";
 import { vi, type Mock } from "vitest";
 import { NATIVE_EVENT, type FromNative, type ItemKind, type NativeState, type ToNative } from "./bridge";
@@ -12,9 +12,9 @@ export interface FakeNative {
   uninstall(): void;
 }
 
-export function installFakeNative(): FakeNative {
+export function installFakeNative(platform: "ios" | "android" | null = "ios"): FakeNative {
   const post = vi.fn<(m: ToNative) => void>();
-  Object.defineProperty(window, "larkNative", { value: { version: 1, post }, configurable: true, writable: true });
+  Object.defineProperty(window, "larkNative", { value: { version: 1, ...(platform ? { platform } : {}), post }, configurable: true, writable: true });
   return {
     post,
     emit(m) {

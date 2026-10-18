@@ -5,7 +5,7 @@ import type { OnOpen, Quality } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { usePlayer } from "../player/PlayerProvider";
 import { usePrefs } from "../prefs/PrefsProvider";
-import { hasNative, nativePost } from "../native/bridge";
+import { hasNative, nativePlatform, nativePost } from "../native/bridge";
 import { OfflineSettings } from "./OfflineSettings";
 import { getServerDefault, LANGUAGE_NAMES, LOCALES, useT, type Locale } from "../i18n/i18n";
 
@@ -23,9 +23,11 @@ export default function SettingsPage() {
   const carHint = useId();
   const loudnessHint = useId();
   const nativeHint = useId();
-  // Inside the Lark iPhone app: its own settings (cache, server) replace the
+  // Inside a Lark native app (iPhone or Android): its own settings (cache, server) replace the
   // web's offline cache and the Home Screen tip.
   const [native] = useState(hasNative);
+  const platform = nativePlatform();
+  const nativeLabelKey = platform === "ios" ? "settings.nativeAppIos" : platform === "android" ? "settings.nativeAppAndroid" : "settings.nativeApp";
   // The server's version, for the footer; the line is hidden without one.
   const [version, setVersion] = useState<string>();
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function SettingsPage() {
       {native ? (
         <div className="field">
           <button type="button" className="settings-link" aria-describedby={nativeHint} onClick={() => nativePost({ type: "openSettings" })}>
-            {t("settings.nativeApp")}
+            {t(nativeLabelKey)}
           </button>
           <span id={nativeHint} className="small">{t("settings.nativeAppHint")}</span>
         </div>
