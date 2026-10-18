@@ -209,7 +209,9 @@ jobs:
           apk="dist/Melarka-$VERSION.apk"
           "$tools/apksigner" verify --print-certs "$apk" > "$RUNNER_TEMP/certs.txt"
           cat "$RUNNER_TEMP/certs.txt"
-          got=$(sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt")
+          # Older apksigner prints "Signer #1 certificate …", newer one line per scheme
+          # ("V2 Signer: certificate …"); the same certificate in several schemes counts once.
+          got=$(sed -nE 's/^(Signer #[0-9]+|V[0-9.]+ Signer):? certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt" | sort -u)
           want=$(tr -d '[:space:]' < "$APK_CERT_FILE")
           [ -n "$got" ] && [ "$(printf '%s\n' "$got" | wc -l)" = 1 ] || { echo "expected exactly one signer certificate" >&2; exit 1; }
           [ "$got" = "$want" ] || { echo "signed with $got, want $want ($APK_CERT_FILE)" >&2; exit 1; }
