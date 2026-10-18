@@ -8,6 +8,7 @@ androidx-test-core = "1.6.1"
 okhttp = "5.1.0"
 coroutines = "1.10.2"
 media3 = "1.9.4"
+work = "2.10.5"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -25,6 +26,9 @@ media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp"
 media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
 media3-test-utils = { module = "androidx.media3:media3-test-utils", version.ref = "media3" }
 media3-test-utils-robolectric = { module = "androidx.media3:media3-test-utils-robolectric", version.ref = "media3" }
+
+androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

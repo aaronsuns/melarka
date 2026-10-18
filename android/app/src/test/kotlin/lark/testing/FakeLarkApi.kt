@@ -1,7 +1,9 @@
 package lark.testing
 
 import android.net.Uri
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import lark.api.ApiTrack
@@ -114,7 +116,15 @@ class FakeLarkApi : LarkApiProtocol {
     }
 
     override suspend fun info(): ServerInfo = TODO("not scripted")
-    override suspend fun favorites(): List<ApiTrack> = TODO("not scripted")
+    /** The favorites list (iOS `favoritesAnswer`); [favoritesError] is thrown instead when set. */
+    var favoritesAnswer: List<ApiTrack> = emptyList()
+    var favoritesError: Exception? = null
+    var favoritesCalls = 0
+    override suspend fun favorites(): List<ApiTrack> {
+        favoritesCalls++
+        favoritesError?.let { throw it }
+        return favoritesAnswer
+    }
     /** What `artwork` answers (the item's id is recorded in [artworkCalls]); [artworkError] is thrown instead when set. */
     var artworkAnswer = ByteArray(0)
     var artworkError: Exception? = null
@@ -124,7 +134,34 @@ class FakeLarkApi : LarkApiProtocol {
         artworkError?.let { throw it }
         return artworkAnswer
     }
-    override suspend fun download(trackId: Long, quality: String, dir: File): File = TODO("not scripted")
+
+    // Downloads: each writes `downloadBytes[id] ?: 100` bytes to `<dir>/<id>.m4a`, as LarkApi does.
+    val downloadCalls = mutableListOf<Long>()
+    val downloadQualities = mutableListOf<String>()
+    val downloadBytes = mutableMapOf<Long, Int>()
+    val downloadErrors = mutableMapOf<Long, Exception>()
+    /** While true, downloads wait (after recording) until [releaseDownloads]; a cancel ends the wait. */
+    var holdDownloads = false
+    private val heldDownloads = mutableListOf<CancellableContinuation<Unit>>()
+    private var downloading = 0
+    var maxDownloading = 0
+        private set
+    var finishedDownloads = 0
+    val heldCount: Int get() = heldDownloads.size
+    fun releaseDownloads() { holdDownloads = false; heldDownloads.toList().also { heldDownloads.clear() }.forEach { if (it.isActive) it.resume(Unit) } }
+
+    override suspend fun download(trackId: Long, quality: String, dir: File): File {
+        downloadCalls.add(trackId); downloadQualities.add(quality)
+        downloading++; maxDownloading = maxOf(maxDownloading, downloading)
+        try {
+            if (holdDownloads) suspendCancellableCoroutine { c -> heldDownloads.add(c); c.invokeOnCancellation { heldDownloads.remove(c) } }
+            downloadErrors[trackId]?.let { throw it }
+            dir.mkdirs()
+            val dest = File(dir, "$trackId.m4a")
+            dest.writeBytes(ByteArray(downloadBytes[trackId] ?: 100) { 7 })
+            return dest
+        } finally { downloading--; finishedDownloads++ }
+    }
 }
 
 /** A favorite as the API sends it, with its raw JSON (iOS `trackModel`). */
