@@ -76,6 +76,10 @@ else
     done
     echo "$f"; }
 
+  # Published commits whose diff once matched and were fixed later (a protected main can't be rewritten): their
+  # history hits are skipped; the tree, messages and every other commit are still checked. Full SHAs, one per line.
+  allow="$work/allow"; sed -e 's/#.*//' -e 's/[[:space:]]//g' -e '/^$/d' scripts/oss-history-allow.txt > "$allow" 2>/dev/null || : > "$allow"
+  [ -s "$allow" ] || echo 0000000000000000000000000000000000000000 > "$allow"   # grep -f with an empty file matches nothing on some greps
   k=0
   for pat in "${pats[@]}"; do k=$((k+1))
     # File names. The path is never printed: only its index.
@@ -104,7 +108,7 @@ else
     if grep -qaiE -e "$pat" "$work/refs"; then echo "ref pattern#$k"; fail=1; fi
     # History: every commit whose diff adds or removes a matching line (catches words added then removed).
     if [ "$history" = 1 ]; then
-      git log --all -a -i -G "$pat" --format=%H > "$work/h.out"
+      git log --all -a -i -G "$pat" --format=%H | { grep -vxF -f "$allow" || [ $? = 1 ]; } > "$work/h.out"
       if [ -s "$work/h.out" ]; then while read -r sha; do echo "history ${sha:0:12} pattern#$k"; done < "$work/h.out"; fail=1; fi
     fi
   done

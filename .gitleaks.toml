@@ -1,0 +1,10 @@
+# gitleaks: the default rules, plus one known-public value.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public values that look like keys"
+# The Android release certificate's SHA-256 is public by design (android/signing-cert.sha256, docs/android.md);
+# F-Droid's recipe lists it as AllowedAPKSigningKeys.
+regexTarget = "line"
+regexes = ['''AllowedAPKSigningKeys:\s*[0-9a-f]{64}''']

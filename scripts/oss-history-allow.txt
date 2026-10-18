@@ -1,0 +1,4 @@
+# Commits on main whose diff matched the denylist once and were fixed by a later commit. main is protected
+# (no force push), so these stay in history; oss-check skips them in its history scan only. Full SHAs.
+b5711d3ad0bcff87c39036fa2344a49ccf6f0867  # docs(fdroid) README step 1; reworded in the next commit
+c9474cf00a017e3986d70b1dc3446f6e8712f655  # docs(fdroid) README step 1 reworded (its diff removes the line)
