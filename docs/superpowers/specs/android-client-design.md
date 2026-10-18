@@ -240,7 +240,8 @@ behaviour; the builder works through it as a checklist.
   asks `canAutoStart` first. In the foreground, or with the media service running (its notification is up),
   it plays at once. In the background with no service, Android 8+ refuses to start the service, so the
   engine does not try: it stays paused by the system (no error shown) and resumes when the Activity starts
-  again, or on a play (`AppServices.mayStartPlayback`; checked on the emulator in Task 14). Car autoplay is the one
+  again, or on a play (`AppServices.mayStartPlayback`; unit-tested: the emulator cannot stop the media service while
+  the engine waits for the network, so Task 14 could not reproduce it there). Car autoplay is the one
   background start that asks for the foreground itself (the companion exemption, below).
 - The background favorites sync (`FavoritesRefresh`) is scheduled after a sign-in and cancelled on sign-out;
   its `provider` is the services' `syncRun()` (null while signed out).
@@ -389,14 +390,29 @@ setup and test, background playback, about). Jetpack Compose, Material 3, dark t
 
 - **Unit tests** (JVM + Robolectric): the ported equivalents of every iOS test file, with the same
   fakes; the web's play-mode fixtures shared by path.
-- **Instrumented smoke test on the emulator**: launch against a local fake server (the e2e test
-  server from `web/e2e` started in demo mode, reachable from the emulator at `10.0.2.2`), sign in,
-  play a favorite, background the app and check it keeps playing (MediaSession state), lock-screen
-  controls through `MediaController`, offline favorites with networking turned off.
+- **Instrumented tests on the emulator** (`app/src/androidTest`, run by `android/scripts/emulator-smoke.sh`, which
+  starts the e2e server from `web/e2e` in demo mode on the host's `127.0.0.1:4700`, reachable from the emulator at
+  `10.0.2.2:4700`, with a made-up admin password passed as an instrumentation argument; it boots the AVD `lark_api35`
+  headless unless a device is attached, and runs `connectedDebugAndroidTest`; `remote.sh smoke` runs it on the build
+  Mac). The Android Test Orchestrator gives every test its own process and wiped app data (the app services are
+  process-wide). `SmokeFlowTest`: the server screen, sign-in in the page, a favorite played from the page, the session
+  through a `MediaController` (playing, still playing 10 s after Home, pause, play, next), the page's renderer killed
+  with playback going on and a new web view signed in again, `window.larkNative` frozen in the real page and its
+  `post` reaching native, then Wi-Fi and mobile data off and the next cached favorite playing from the phone. Beside
+  it: `KeystoreSecretStoreTest` (the real Keystore: restart, deleted or damaged file, lost key, the delete fallback),
+  `GainBoundaryTest` (an MP3 then the preloaded AAC at different gains through the real decoders and sink: every
+  buffer at its own item's level, `gainMisses` 0), `BackTest` (Back with nothing to close, started from the launcher:
+  the task moves back, the Activity is not finished), `ColdStartOfflineTest` (a media-button play offline with nothing
+  cached: the service stops, no notification left) and `ShortcutTest` (Shuffle Favorites from the shortcut with the
+  app not running). A failure leaves a screenshot and the page's text in the test outputs, copied to
+  `app/build/smoke` with the server log and logcat.
 - **Bridge contract**: the web's `nativeTransport.test.tsx` stays green; an Android test feeds the
   same message fixtures into the decoder and checks event JSON byte-for-byte against iOS fixtures.
 - **CI**: an `android` job (path filter `android/**`, `web/src/native/**`) on Ubuntu: unit tests,
-  lint, a debug build; the emulator test via an emulator action (x86_64 with KVM).
+  lint, a debug build; an `android-emulator` job (the same paths plus the e2e server files the smoke test starts,
+  45 min) on Ubuntu with KVM enabled: Go, Node (the web build), ffmpeg (the demo library), then
+  `reactivecircus/android-emulator-runner` (pinned, v2.38.0) boots an x86_64 API 35 `google_apis` emulator and runs
+  `android/scripts/emulator-smoke.sh`; a failure uploads `app/build/smoke` and the test report.
 - **Release**: a `apk` job in `release.yml` builds and signs `Melarka-X.Y.Z.apk`, verifies
   `versionName`/`versionCode`/package name and the signing certificate, and attaches it to the
   GitHub Release.
@@ -414,7 +430,7 @@ setup and test, background playback, about). Jetpack Compose, Material 3, dark t
 
 Module boundaries inside `android/`, exact library versions, whether per-item gain is an
 `AudioProcessor` or volume switching (decided in Task 6: `AudioProcessor`), the Compose structure of the native screens, the emulator test's exact steps, and
-the CI emulator action.
+the CI emulator action (both decided in Task 14: Testing, above).
 
 ## Questions settled with the owner (2026-10-17)
 

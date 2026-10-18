@@ -19,6 +19,10 @@ android {
         targetSdk = 35
         versionName = appVersion
         versionCode = larkVersionCode(appVersion)
+        // The instrumented tests (src/androidTest), run by android/scripts/emulator-smoke.sh against a local server.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Every test in its own process with the app's data wiped first: the app services are process-wide.
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
     }
 
     buildFeatures {
@@ -33,6 +37,7 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
     }
 
     sourceSets {
@@ -72,5 +77,17 @@ dependencies {
     testImplementation(libs.media3.test.utils.robolectric)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.core.ktx)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.espresso.web)
+    androidTestImplementation(libs.uiautomator)
+    androidTestImplementation(libs.androidx.test.storage)
+    androidTestImplementation(libs.okhttp)
+    androidTestUtil(libs.androidx.test.orchestrator)
+    androidTestUtil(libs.androidx.test.services)
     debugImplementation(libs.compose.ui.test.manifest)   // the test activity Robolectric's compose rule starts
 }

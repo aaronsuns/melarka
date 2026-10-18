@@ -31,6 +31,7 @@ jobs:
       ios: ${{ github.event.forced && 'true' || steps.f.outputs.ios }}
       docker: ${{ github.event.forced && 'true' || steps.f.outputs.docker }}
       android: ${{ github.event.forced && 'true' || steps.f.outputs.android }}
+      android-emulator: ${{ github.event.forced && 'true' || steps.f.outputs.android-emulator }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: ${{ !github.event.forced }}
@@ -47,6 +48,16 @@ jobs:
             android:
               - 'android/**'
               - 'web/src/native/**'
+              - 'ios/project.yml'
+              - 'docs/brand/**'
+              - '.github/workflows/ci.yml'
+            # The app plus the e2e server files the emulator smoke test starts (android/scripts/emulator-smoke.sh).
+            android-emulator:
+              - 'android/**'
+              - 'web/src/native/**'
+              - 'web/e2e/start-server.sh'
+              - 'web/e2e/fake-yt-dlp.sh'
+              - 'web/e2e/demo/**'
               - 'ios/project.yml'
               - 'docs/brand/**'
               - '.github/workflows/ci.yml'
@@ -246,6 +257,68 @@ jobs:
       # The runner image ships the Android SDK (platform 35 and its build tools are installed on ubuntu-latest).
       - uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
       - run: ./gradlew --console=plain testDebugUnitTest lintDebug assembleDebug
+
+  # The emulator smoke test (android/scripts/emulator-smoke.sh, the same script as on a development machine): the
+  # app's instrumented tests on an x86_64 API 35 emulator, against the e2e server with the demo library.
+  android-emulator:
+    needs: changes
+    if: needs.changes.outputs.android-emulator == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.26'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - id: distro # the .deb cache is per Ubuntu release, and refreshed monthly
+        run: . /etc/os-release && echo "id=$ID-$VERSION_ID-$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ffmpeg-debs
+          key: ffmpeg-debs-v1-${{ steps.distro.outputs.id }}-${{ runner.arch }}
+      - run: scripts/ci-install-ffmpeg.sh # the demo library's tones and covers
+        env:
+          DEB_CACHE: ~/.cache/ffmpeg-debs
+      - uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+      - name: The web app the server serves
+        working-directory: web
+        run: npm ci && npm run build
+      - name: Enable KVM (the emulator's hardware acceleration)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          # One line: the runner runs each line of a script on its own.
+          script: bash android/scripts/emulator-smoke.sh
+      # The server log, logcat, a failure's screenshot and page, and Gradle's test report, to see why without a rerun.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: android-emulator-results
+          path: |
+            android/app/build/smoke
+            android/app/build/reports/androidTests
+          retention-days: 7
 
   # Release gate: gitleaks over the full history + the private denylist (repository secret OSS_DENYLIST).
   # Fails closed everywhere except pull requests from forks, which get no secrets.
