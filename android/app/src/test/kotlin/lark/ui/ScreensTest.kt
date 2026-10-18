@@ -53,7 +53,6 @@ class ScreensTest : ServicesTestCase() {
 
     private val favorites = listOf(cachedFavorite(1, "Alpha"), cachedFavorite(2, "Beta"), cachedFavorite(3, "Gamma"))
 
-    /** Nothing playing with no favorites, then playing with a queue and lyrics, at twice the text size. */
     /**
      * Text with no colour of its own (titles, labels) takes the theme's text colour, not Compose's default black, which
      * was unreadable on the dark background (found on the emulator, Task 14).
@@ -65,6 +64,7 @@ class ScreensTest : ServicesTestCase() {
         org.junit.Assert.assertEquals(LarkColors.text, content)
     }
 
+    /** Nothing playing with no favorites, then playing with a queue and lyrics, at twice the text size. */
     @Test fun theOfflinePlayerLaysOutEmptyAndPlaying() {
         val player = Recorder()
         var shown = emptyList<lark.api.ApiTrack>()

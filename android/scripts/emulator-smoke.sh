@@ -53,7 +53,15 @@ if [[ "$("$ADB" devices | awk 'NR > 1 && $2 == "device"' | wc -l)" -eq 0 ]]; the
     >"$LOGS/emulator.log" 2>&1 &
   emulator_pid=$!
 fi
-"$ADB" wait-for-device
+# Bounded: an emulator that died while booting (or no device at all) fails here instead of hanging the run.
+for _ in $(seq 1 120); do
+  [[ "$("$ADB" get-state 2>/dev/null)" == device ]] && break
+  if [[ -n "$emulator_pid" ]] && ! kill -0 "$emulator_pid" 2>/dev/null; then
+    echo "the emulator exited:" >&2; tail -30 "$LOGS/emulator.log" >&2; exit 1
+  fi
+  sleep 2
+done
+[[ "$("$ADB" get-state 2>/dev/null)" == device ]] || { echo "no device came up" >&2; exit 1; }
 for _ in $(seq 1 180); do
   [[ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]] && break
   sleep 2

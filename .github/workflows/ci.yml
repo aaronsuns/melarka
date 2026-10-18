@@ -51,13 +51,25 @@ jobs:
               - 'ios/project.yml'
               - 'docs/brand/**'
               - '.github/workflows/ci.yml'
-            # The app plus the e2e server files the emulator smoke test starts (android/scripts/emulator-smoke.sh).
+            # The app plus the e2e server files the emulator smoke test starts (android/scripts/emulator-smoke.sh), and
+            # the narrow web and server parts it drives: the sign-in form, the tabs and Library list it finds by CSS
+            # selector, and the API handlers its DemoServer and the app call. Wider web/server changes are left to the
+            # web e2e and Go jobs.
             android-emulator:
               - 'android/**'
               - 'web/src/native/**'
               - 'web/e2e/start-server.sh'
               - 'web/e2e/fake-yt-dlp.sh'
               - 'web/e2e/demo/**'
+              - 'web/src/App.tsx'
+              - 'web/src/auth/LoginPage.tsx'
+              - 'web/src/pages/LibraryPage.tsx'
+              - 'web/src/components/TrackList.tsx'
+              - 'internal/api/server.go'
+              - 'internal/api/auth_handlers.go'
+              - 'internal/api/browse_handlers.go'
+              - 'internal/api/personal_handlers.go'
+              - 'internal/api/stream_handlers.go'
               - 'ios/project.yml'
               - 'docs/brand/**'
               - '.github/workflows/ci.yml'
