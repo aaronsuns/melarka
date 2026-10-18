@@ -206,6 +206,28 @@ behaviour; the builder works through it as a checklist.
   small file in credential-encrypted storage), not in plain SharedPreferences.
 - Sign-out, user switching, server change and 401 handling exactly as `AppServices.swift`.
 
+### App services
+
+- `AppServices` (port of iOS `AppServices.swift`) is application-scoped, built by `LarkApplication` on first
+  use (the Activity, the media service's first start, or the background work), and runs on the main thread:
+  auth, the API (its 401 hook clears the token at once, then runs the rest of sign-out on the main thread),
+  the engine (handed to the process's `PlaybackHost`), the signed-in user's cache, the network (behind the
+  Stay Offline switch) and the settings (server, cache cap, the web's last `setPrefs`, Stay Offline) in
+  `SharedPreferences`. The Activity only shows it.
+- Sign-out: flush (≤ 5 s, real time), reset, cache set aside, token cleared, background sync cancelled,
+  `authRequired`, session cookie deleted (written again expired through `CookieManager`, for the host and
+  for its domain). A user switch keeps the previous user's cache folder for their next sign-in (as iOS);
+  leaving a server signs out, drops the engine (`detach()`: its network observer goes inert), deletes the
+  server's cookies and `WebStorage` origin (the HTTP cache goes with the web view), and the next server's
+  `updateCache` prunes other servers' folders.
+- **Starting playback in the background**: when the network returns for a player stopped offline, the engine
+  asks `canAutoStart` first. In the foreground, or with the media service running (its notification is up),
+  it plays at once. In the background with no service, Android 8+ refuses to start the service, so the
+  engine does not try: it stays paused by the system (no error shown) and resumes when the Activity starts
+  again, or on a play (`AppServices.mayStartPlayback`; checked on the emulator in Task 14).
+- The background favorites sync (`FavoritesRefresh`) is scheduled after a sign-in and cancelled on sign-out;
+  its `provider` is the services' `syncRun()` (null while signed out).
+
 ### Playback (Media3)
 
 | iOS mechanism | Android mechanism |

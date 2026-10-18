@@ -158,6 +158,19 @@ class PlayerEngine(
     var willStartPlayback: (() -> Unit)? = null
 
     /**
+     * Asked before the engine starts playback on its own (the network came back for a player stopped offline). False
+     * (the app is in the background and its media service is not running, which Android would refuse to start) leaves
+     * the player paused by the system until [resumeDeferred] (the user is back) or a play. Null: always allowed.
+     */
+    var canAutoStart: (() -> Boolean)? = null
+
+    /** A resume [canAutoStart] refused, waiting for [resumeDeferred]. */
+    private var deferredResume = false
+
+    /** Dropped by the app services (another server): the network observer, which can't be removed, does nothing more. */
+    private var detached = false
+
+    /**
      * What was handed to the backend as the next item: loading that item again uses this same source, so the
      * backend takes the preloaded item over (gapless) even when the track reached the cache meanwhile.
      */
@@ -212,6 +225,8 @@ class PlayerEngine(
     private var lastProgress: Instant? = null
 
     private var refilling = false
+    /** Counts refills, so a cancelled refill's late end touches only its own [refilling]. */
+    private var refillCount = 0
     private var refillExhausted = false
     private var refillTimer: Cancellable? = null
     /** A refill was due while offline. */
@@ -604,7 +619,7 @@ class PlayerEngine(
         epoch += 1; musicGeneration += 1
         tasks.cancelAll(); sync.cancel()
         refillTimer?.cancel(); refillTimer = null; refillWanted = false
-        cancelRetry(); disarmStall(); stoppedOffline = false
+        cancelRetry(); disarmStall(); stoppedOffline = false; deferredResume = false
         clearSleep()
         backend.stop()
         loaded = null; listen = null; playing = false; buffering = false; error = null; pausedBySystem = false
@@ -1017,24 +1032,53 @@ class PlayerEngine(
     // MARK: - Network, stalls, fallbacks
 
     private fun networkChanged() {
-        if (!network.isOnline) return
+        if (detached || !network.isOnline) return
         sync.reconnected()
         if (refillTimer != null || refillWanted) {
             refillTimer?.cancel(); refillTimer = null
             refillWanted = false
             maybeRefill()
         }
-        if (stoppedOffline) {
-            stoppedOffline = false
-            error = null
-            when {
-                offlineResume == OfflineResume.shuffle -> tasks.run { shuffleFavorites() }
-                offlineResume == OfflineResume.advance && active == Kind.track && music.current != null -> advanceMusic(user = false)
-                offlineResume == OfflineResume.replay && active == Kind.track && music.current != null -> play()
-                else -> emitState(active)
+        if (!stoppedOffline) return
+        if (canAutoStart?.invoke() == false) {
+            // Not now: paused by the system (no longer "offline"), resumed when the user is back or presses play.
+            if (!deferredResume) {
+                deferredResume = true
+                pausedBySystem = true
+                error = null
+                emitState(active)
             }
-            offlineResume = OfflineResume.replay
+            return
         }
+        resumeAfterNetwork()
+    }
+
+    /** The user is back (the Activity started): a resume [canAutoStart] held back runs now, if it is still due. */
+    fun resumeDeferred() {
+        if (!deferredResume) return
+        deferredResume = false
+        if (detached || !stoppedOffline || !network.isOnline) return
+        resumeAfterNetwork()
+    }
+
+    /** The app services dropped this engine (a server change, after [reset]): it reacts to nothing more. */
+    fun detach() {
+        detached = true
+        deferredResume = false
+    }
+
+    /** What the network coming back does for a player [stoppedOffline] ([offlineResume]). */
+    private fun resumeAfterNetwork() {
+        stoppedOffline = false
+        deferredResume = false
+        error = null
+        when {
+            offlineResume == OfflineResume.shuffle -> tasks.run { shuffleFavorites() }
+            offlineResume == OfflineResume.advance && active == Kind.track && music.current != null -> advanceMusic(user = false)
+            offlineResume == OfflineResume.replay && active == Kind.track && music.current != null -> play()
+            else -> emitState(active)
+        }
+        offlineResume = OfflineResume.replay
     }
 
     /** Nothing on the phone to play and no network: stopped, and started again when the network is back. */
@@ -1398,6 +1442,7 @@ class PlayerEngine(
         if (!network.isOnline) { refillWanted = true; return }
         refillWanted = false
         refilling = true
+        val refill = ++refillCount
         val src = music.source
         val gen = musicGeneration
         // Favorites loop, so only what is still upcoming is excluded; radio and shuffle exclude the recent queue.
@@ -1415,8 +1460,11 @@ class PlayerEngine(
                 throw ex
             } catch (_: Exception) {
                 null
+            } finally {
+                // Also when cancelled: a refill that never ends must not block every later one. Only this refill's
+                // own flag: a newer refill may have started since a reset.
+                if (refillCount == refill) refilling = false
             }
-            refilling = false
             if (gen != musicGeneration) return@run maybeRefill()   // the queue was replaced meanwhile
             if (answer == null) {
                 refillTimer = scheduler.after(REFILL_RETRY) {
