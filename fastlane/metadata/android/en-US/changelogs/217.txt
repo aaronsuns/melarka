@@ -1,0 +1,1 @@
+The first Android release: the web app full screen with a native player. Background playback, offline favorites, car autoplay, launcher shortcuts, lyrics on the lock screen.

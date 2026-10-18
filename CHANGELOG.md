@@ -7,6 +7,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.17] - 2026-10-18
+
+### Changed
+
+- **The Android app is ready for F-Droid**: the build is reproducible (F-Droid's build matches the
+  GitHub APK byte for byte, so both install as the same app and update each other), the store texts
+  sit where F-Droid reads them, and the signed APK no longer carries Google's dependency-metadata block.
+
 ## [0.2.16] - 2026-10-18
 
 ### Added
@@ -332,7 +340,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.16...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.17...HEAD
+[0.2.17]: https://github.com/aaronsuns/melarka/compare/v0.2.16...v0.2.17
 [0.2.16]: https://github.com/aaronsuns/melarka/compare/v0.2.15...v0.2.16
 [0.2.15]: https://github.com/aaronsuns/melarka/compare/v0.2.14...v0.2.15
 [0.2.14]: https://github.com/aaronsuns/melarka/compare/v0.2.13...v0.2.14
