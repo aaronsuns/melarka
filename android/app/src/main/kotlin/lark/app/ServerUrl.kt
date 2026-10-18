@@ -1,7 +1,14 @@
 package lark.app
 
 import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.CacheControl
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.IOException
 import java.net.URI
+import java.util.concurrent.TimeUnit
 
 /** The server address the user types: `https://host[:port]/`, normalised. */
 object ServerUrl {
@@ -28,4 +35,17 @@ object ServerUrl {
     }
 
     fun infoUrl(server: Uri): Uri = server.buildUpon().path("/api/v1/info").build()
+
+    /** True when `GET /api/v1/info` answers 200 (it is unauthenticated): the server screen's check before it is kept. */
+    suspend fun check(server: Uri, client: OkHttpClient = LarkHttp.client): Boolean = withContext(Dispatchers.IO) {
+        val c = client.newBuilder().callTimeout(10, TimeUnit.SECONDS).build()
+        val request = Request.Builder().url(infoUrl(server).toString()).cacheControl(CacheControl.FORCE_NETWORK).get().build()
+        try {
+            c.newCall(request).execute().use { it.code == 200 }
+        } catch (_: IOException) {
+            false
+        } catch (_: IllegalArgumentException) {
+            false
+        }
+    }
 }

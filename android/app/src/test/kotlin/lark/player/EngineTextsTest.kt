@@ -32,7 +32,7 @@ class EngineTextsTest {
 
     /** Every string of the Traditional Chinese locale is written in Traditional characters (the iOS zh-Hant entries are not). */
     @Test @Config(qualifiers = "zh-rTW") fun traditionalChineseUsesNoSimplifiedCharacters() {
-        val simplified = "离缓网络还随无获请没节为关环单来时个这们设务确开对应载钮复读写听页门间点长发现"
+        val simplified = lark.ui.LocalizationTest.SIMPLIFIED_ONLY
         val texts = lark.app.R.string::class.java.fields.map { it.name to context.getString(it.getInt(null)) }
         for ((name, text) in texts) {
             val bad = text.filter { it in simplified }

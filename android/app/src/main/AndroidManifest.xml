@@ -15,6 +15,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <!-- Below Android 12: the car's Bluetooth connection broadcast (car autoplay's fallback). -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <!-- Settings' battery guide: the system's "always run in the background" dialog for Melarka. A media player that must
+         keep playing with the screen off is one of the uses Android's policy accepts; F-Droid accepts it for media apps. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-feature android:name="android.software.companion_device_setup" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
 
@@ -25,7 +28,10 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:localeConfig="@xml/locales_config"
+        android:theme="@style/Theme.Melarka"
+        tools:targetApi="33">
         <!-- Safe Browsing for every web view (also set in WebShell.applySettings). -->
         <meta-data android:name="android.webkit.WebView.EnableSafeBrowsing" android:value="true" />
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark, no action bar, in the web app's background colour (web/src/styles.css, bg): the native screens draw
+         the rest (lark.ui.LarkTheme). -->
+    <style name="Theme.Melarka" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/lark_bg</item>
+        <item name="android:colorBackground">@color/lark_bg</item>
+        <item name="android:colorAccent">@color/lark_accent</item>
+    </style>
+</resources>

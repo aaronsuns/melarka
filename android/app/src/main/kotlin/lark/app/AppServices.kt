@@ -41,6 +41,8 @@ import lark.player.NowPlayingSink
 import lark.player.PlayEventQueue
 import lark.player.PlayerEngine
 import lark.player.QueueStore
+import lark.ui.EngineControl
+import lark.ui.OfflinePlayerModel
 import okhttp3.OkHttpClient
 import java.io.File
 import java.time.Duration
@@ -677,8 +679,14 @@ class AppServices(
 
     // MARK: - The offline player
 
-    /** Builds the offline player on the engine (the native screen, Task 12). */
-    var makeOfflinePlayer: (PlayerEngine) -> OfflinePlayer = { OfflinePlayer.Placeholder }
+    /**
+     * Builds the offline player on the engine: the cached favorites, covers and lyrics of the signed-in user, and the
+     * page's retry. Nothing in it touches the network.
+     */
+    var makeOfflinePlayer: (PlayerEngine) -> OfflinePlayer = { e ->
+        OfflinePlayerModel(EngineControl(e), favorites = { this.cache.cachedFavorites() }, retry = { retryPage() },
+            artwork = { cachedArtwork(it) }, lyrics = { this.cache.cachedLyrics(it) })
+    }
 
     /**
      * The native offline player over the failed page; null when it is closed. It stays open through failed retries and

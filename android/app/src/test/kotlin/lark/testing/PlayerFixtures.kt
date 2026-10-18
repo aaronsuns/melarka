@@ -4,6 +4,8 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import lark.api.ApiTrack
+import lark.api.Track
 import lark.bridge.Item
 import lark.bridge.QueueSource
 import lark.bridge.WebMessage
@@ -31,3 +33,11 @@ fun pq(ids: List<Int>, index: Int = 0, positionMs: Long = 0, source: QueueSource
     PlaybackQueue(ids.map(::track), index, positionMs, source)
 
 fun PlaybackQueue.ids(): List<String> = items.map { it.id }
+
+/** iOS `cachedFavorite`: a cached favorite with its own title and artist (the offline player's list is in title order). */
+fun cachedFavorite(id: Int, title: String, artist: String = "A", durationMs: Long = 200_000): ApiTrack {
+    val json = buildJsonObject {
+        put("id", id); put("title", title); put("artist", artist); put("album", "B"); put("duration_ms", durationMs); put("favorite", true)
+    }
+    return ApiTrack(Track(id.toLong(), title, artist, "B", durationMs, true), json)
+}

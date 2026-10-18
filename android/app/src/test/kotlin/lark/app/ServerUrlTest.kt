@@ -1,6 +1,11 @@
 package lark.app
 
+import kotlinx.coroutines.runBlocking
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -43,5 +48,22 @@ class ServerUrlTest {
 
     @Test fun infoUrl() {
         assertEquals("https://music.example.com/api/v1/info", ServerUrl.infoUrl(ServerUrl.normalize("https://music.example.com/")!!).toString())
+    }
+
+    /** The server screen keeps an address only when its `/api/v1/info` answers 200. */
+    @Test fun theCheckAsksTheInfoEndpoint() = runBlocking {
+        val server = MockWebServer()
+        server.start()
+        try {
+            val url = ServerUrl.normalize("http://localhost:${server.port}/")!!
+            server.enqueue(MockResponse().setBody("""{"name":"x"}"""))
+            assertTrue(ServerUrl.check(url))
+            assertEquals("/api/v1/info", server.takeRequest().path)
+            server.enqueue(MockResponse().setResponseCode(404))
+            assertFalse(ServerUrl.check(url))
+        } finally {
+            server.shutdown()
+        }
+        assertFalse(ServerUrl.check(ServerUrl.normalize("http://localhost:${server.port}/")!!))   // nothing listening
     }
 }

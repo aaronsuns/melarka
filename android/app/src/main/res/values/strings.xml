@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <string name="app_name" translatable="false">Melarka</string>
     <!-- The player engine's notices and errors (EngineTexts), the iOS wording. -->
     <string name="engine_offline_notice">Offline: playing cached favorites</string>
@@ -28,16 +28,89 @@
     <string name="intent_background_start_refused">Android didn\'t allow Melarka to start playing in the background</string>
     <!-- The media service's notification while a play from the car or a headset is starting. -->
     <string name="cold_start_notification">Starting playback…</string>
-    <!-- Car autoplay: shown by the Settings screen (Task 12); the hints by phone maker come from CarAutoplay.vendorHint. -->
-    <string name="car_autoplay_title" tools:ignore="UnusedResources">Car autoplay</string>
-    <string name="car_autoplay_explain" tools:ignore="UnusedResources">When your car\'s Bluetooth connects, Melarka shuffles your favorites, even in the background. If music is already playing, nothing changes. Android asks you once to confirm the car.</string>
-    <string name="car_autoplay_choose" tools:ignore="UnusedResources">Choose your car</string>
-    <string name="car_autoplay_permission" tools:ignore="UnusedResources">To list the cars paired with this phone, Melarka needs the Nearby devices permission.</string>
-    <string name="car_autoplay_old_android" tools:ignore="UnusedResources">On this Android version, Melarka notices the car only while it is allowed to run in the background. If autoplay doesn\'t start, set Melarka\'s battery usage to Unrestricted.</string>
-    <string name="car_autoplay_hint_generic" tools:ignore="UnusedResources">If autoplay doesn\'t start or music stops with the screen off, set Melarka\'s battery usage to Unrestricted: Settings › Apps › Melarka › Battery.</string>
+    <!-- Car autoplay, in Settings; the hints by phone maker come from CarAutoplay.vendorHint. -->
+    <string name="car_autoplay_title">Car autoplay</string>
+    <string name="car_autoplay_explain">When your car\'s Bluetooth connects, Melarka shuffles your favorites, even in the background. If music is already playing, nothing changes. Android asks you once to confirm the car.</string>
+    <string name="car_autoplay_choose">Choose your car</string>
+    <string name="car_autoplay_permission">To list the cars paired with this phone, Melarka needs the Nearby devices permission.</string>
+    <string name="car_autoplay_old_android">On this Android version, Melarka notices the car only while it is allowed to run in the background. If autoplay doesn\'t start, set Melarka\'s battery usage to Unrestricted.</string>
+    <string name="car_autoplay_hint_generic">If autoplay doesn\'t start or music stops with the screen off, set Melarka\'s battery usage to Unrestricted: Settings › Apps › Melarka › Battery.</string>
     <string name="car_autoplay_hint_xiaomi">On Xiaomi, Redmi and POCO phones, also turn on Autostart for Melarka (Settings › Apps › Manage apps › Melarka) and set its Battery saver to No restrictions.</string>
     <string name="car_autoplay_hint_huawei">On Huawei and Honor phones, open Settings › Battery › App launch, set Melarka to Manage manually and turn on all three switches.</string>
     <string name="car_autoplay_hint_oppo">On OPPO, realme and OnePlus phones, allow Melarka to auto-launch and allow its background activity (Settings › Apps › Melarka › Battery).</string>
     <string name="car_autoplay_hint_vivo">On vivo and iQOO phones, allow Autostart for Melarka and allow its high background power consumption (Settings › Battery).</string>
     <string name="car_autoplay_hint_samsung">On Samsung phones, add Melarka to Never sleeping apps: Settings › Battery › Background usage limits.</string>
+    <!-- The server screen (first launch). -->
+    <string name="server_address">Server Address</string>
+    <string name="server_connect">Connect</string>
+    <string name="server_invalid">Enter an address that starts with https:// (for development, http://…local or localhost also works)</string>
+    <string name="server_unreachable">Can\'t connect to this server</string>
+    <!-- The can't-connect screen over a page that could not load. -->
+    <string name="cant_connect_title">Can\'t Connect to the Server</string>
+    <string name="retry">Retry</string>
+    <string name="settings">Settings</string>
+    <string name="play_offline_favorites">Play Offline Favorites</string>
+    <string name="stay_offline">Stay Offline</string>
+    <string name="stay_offline_explain">Melarka won\'t try to reconnect until you turn this off. Saves battery on a flight.</string>
+    <!-- The offline player. -->
+    <string name="offline_mode">Offline Mode</string>
+    <string name="offline_connecting">Connecting…</string>
+    <string name="offline_still_unreachable">Still can\'t connect to the server</string>
+    <string name="retry_connection">Retry Connection</string>
+    <string name="close">Close</string>
+    <string name="up_next">Up Next</string>
+    <string name="offline_favorites">Offline Favorites</string>
+    <string name="offline_no_favorites">No favorites are cached on this phone yet.</string>
+    <string name="nothing_playing">Nothing playing</string>
+    <string name="tap_a_song">Tap a song to play it.</string>
+    <string name="lyrics">Lyrics</string>
+    <string name="playback_position">Playback position</string>
+    <string name="position_of">%1$s of %2$s</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="now_playing">Now Playing</string>
+    <string name="plays_this_song">Plays this song</string>
+    <string name="done">Done</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <!-- Settings. -->
+    <string name="settings_title">Melarka Settings</string>
+    <string name="settings_server">Server</string>
+    <string name="settings_address">Address</string>
+    <string name="settings_not_set">Not set</string>
+    <string name="change_server">Change Server</string>
+    <string name="change_server_confirm">Change server?</string>
+    <string name="change_server_explain">Playback stops and you are signed out; then you enter the server address again.</string>
+    <string name="signing_out">Signing out…</string>
+    <string name="offline_cache">Offline Cache</string>
+    <string name="cache">Cache</string>
+    <string name="cache_limit">Cache Limit</string>
+    <string name="cache_used">Used %1$s / limit %2$s</string>
+    <string name="cache_not_signed_in">Not signed in · limit %1$s</string>
+    <string name="sync_now">Sync Favorites Now</string>
+    <string name="syncing">Syncing favorites (downloads only on Wi‑Fi)</string>
+    <string name="clear_cache">Clear Cache</string>
+    <string name="clear_cache_confirm">Clear the offline cache?</string>
+    <string name="clear_cache_explain">Cached songs are deleted; favorites are cached again on Wi‑Fi.</string>
+    <string name="cache_cleared">Cache cleared</string>
+    <string name="cache_footer">Favorites are cached automatically on Wi‑Fi and play without a network.</string>
+    <string name="car_autoplay_car">Car: %1$s</string>
+    <string name="car_autoplay_change">Choose Another Car</string>
+    <string name="car_autoplay_nearby">Search Nearby</string>
+    <string name="car_autoplay_no_paired">No paired Bluetooth devices found.</string>
+    <string name="car_autoplay_test">Test: Shuffle Favorites</string>
+    <string name="car_autoplay_last">Last time the car connected: %1$s</string>
+    <string name="car_autoplay_played">Melarka started playing</string>
+    <!-- The battery guide (Settings). -->
+    <string name="battery_title">Background Playback</string>
+    <string name="battery_explain">If music stops when the screen is off, let Melarka run in the background: otherwise Android\'s battery optimization may stop it.</string>
+    <string name="battery_allow">Allow Background Playback</string>
+    <string name="battery_allowed">Melarka may run in the background.</string>
+    <string name="battery_docs">Steps for Your Phone</string>
+    <string name="about">About</string>
+    <string name="version">Version</string>
 </resources>

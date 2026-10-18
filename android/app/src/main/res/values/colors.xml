@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#121212</color>
+    <!-- The web app's colour tokens (web/src/styles.css): bg and accent. -->
+    <color name="lark_bg">#121212</color>
+    <color name="lark_accent">#1ED760</color>
 </resources>

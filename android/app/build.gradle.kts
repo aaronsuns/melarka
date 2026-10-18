@@ -4,6 +4,7 @@ import lark.build.versionCode as larkVersionCode
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
 val appVersion = larkVersion(rootProject.projectDir.parentFile, providers.gradleProperty("larkVersion").orNull)
@@ -21,7 +22,8 @@ android {
     }
 
     buildFeatures {
-        buildConfig = true   // ServerUrl: the emulator host is allowed in debug builds only
+        buildConfig = true   // ServerUrl: the emulator host is allowed in debug builds only; Settings: the version
+        compose = true       // the native screens (lark.ui)
     }
 
     compileOptions {
@@ -54,6 +56,11 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.webkit)
     implementation(libs.androidx.core)
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.material3)
+    implementation(libs.activity.compose)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
@@ -63,4 +70,7 @@ dependencies {
     testImplementation(libs.androidx.work.testing)
     testImplementation(libs.media3.test.utils)
     testImplementation(libs.media3.test.utils.robolectric)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)   // the test activity Robolectric's compose rule starts
 }
