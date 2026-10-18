@@ -15,8 +15,8 @@ import java.security.KeyStore
 
 /**
  * The real Android Keystore (Robolectric has none): a first write, a read after a restart (a new store on the same
- * file), a file that was deleted or damaged reading as empty and taking new writes, and a delete that still erases when
- * the file cannot be rewritten.
+ * file), a file that was deleted or damaged reading as empty and taking new writes, a delete that still erases when
+ * the file cannot be rewritten, and a write that cannot be saved leaving the old value.
  */
 @RunWith(AndroidJUnit4::class)
 class KeystoreSecretStoreTest {
@@ -85,6 +85,24 @@ class KeystoreSecretStoreTest {
         assertFalse("the ciphertext file is deleted instead", file.exists())
         assertNull(store().get("token"))
         assertNull(s.get("token"))
+    }
+
+    /** A write that cannot be saved is not kept in memory either: neither read back nor persisted by the next write. */
+    @Test fun aFailedWriteLeavesTheOldValue() {
+        val s = store()
+        s.set("token", "tok-1")
+        val tmp = File(file.path + ".tmp")
+        assertTrue(tmp.mkdirs())                                                 // the rewrite fails
+        assertTrue(runCatching { s.set("token", "tok-2") }.isFailure)
+        assertTrue(runCatching { s.set("userId", "7") }.isFailure)
+        assertEquals("tok-1", s.get("token"))
+        assertNull(s.get("userId"))
+        assertTrue(tmp.delete())
+        s.set("server", "x")                                                     // the next save that works
+        val restarted = store()
+        assertEquals("tok-1", restarted.get("token"))
+        assertNull(restarted.get("userId"))
+        assertEquals("x", restarted.get("server"))
     }
 
     @Test fun deletingAMissingKeyWritesNothing() {

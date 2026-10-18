@@ -29,8 +29,8 @@ class KeystoreSecretStore(private val file: File, private val alias: String = "l
             // Erasing must not fail: if the rewrite does, delete the ciphertext file (the other secrets go with it).
             try { save(m) } catch (e: Exception) { file.delete(); File(file.path + ".tmp").delete() }
         } else {
+            save(m + (key to value))     // the memory copy changes only once the file has it: a failed save keeps neither
             m[key] = value
-            save(m)
         }
     } }
 
