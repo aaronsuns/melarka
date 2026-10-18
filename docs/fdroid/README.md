@@ -32,8 +32,7 @@ and check that the release's GitHub page has `Melarka-X.Y.Z.apk` (the `Binaries:
 
 ## Steps
 
-1. A GitLab account: sign up at <https://gitlab.com/users/sign_up> if you have none (GitHub sign-in
-   works). Use a public username; it shows on the merge request.
+1. A GitLab.com account. Use a public username; it shows on the merge request.
 2. Fork <https://gitlab.com/fdroid/fdroiddata> (**Fork**, into your namespace, visibility **Public**).
    F-Droid needs the fork public and the branch unprotected.
 3. Clone the fork and add the recipe on a new branch:
