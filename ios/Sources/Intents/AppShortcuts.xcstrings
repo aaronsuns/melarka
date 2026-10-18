@@ -18,7 +18,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "${applicationName} 随机播放收藏"
+            "value" : "${applicationName} 隨機播放收藏"
           }
         }
       }
@@ -40,7 +40,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用${applicationName}继续播放"
+            "value" : "用${applicationName}繼續播放"
           }
         }
       }
@@ -62,7 +62,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用${applicationName}随机播放收藏"
+            "value" : "用${applicationName}隨機播放收藏"
           }
         }
       }

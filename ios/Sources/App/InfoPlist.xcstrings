@@ -19,7 +19,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开发时连接局域网中的 Melarka 服务器"
+            "value" : "開發時連線至區域網路中的 Melarka 伺服器"
           }
         }
       }

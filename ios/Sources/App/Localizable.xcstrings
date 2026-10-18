@@ -42,7 +42,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关于"
+            "value" : "關於"
           }
         }
       }
@@ -65,7 +65,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "地址"
+            "value" : "位址"
           }
         }
       }
@@ -111,7 +111,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "缓存"
+            "value" : "快取"
           }
         }
       }
@@ -134,7 +134,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "缓存上限"
+            "value" : "快取上限"
           }
         }
       }
@@ -157,7 +157,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "缓存已清空"
+            "value" : "快取已清除"
           }
         }
       }
@@ -180,7 +180,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已缓存的歌曲会被删除，收藏会在连上 Wi‑Fi 时重新缓存。"
+            "value" : "已快取的歌曲會被刪除，收藏會在連上 Wi‑Fi 時重新快取。"
           }
         }
       }
@@ -203,7 +203,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法连接服务器"
+            "value" : "無法連線至伺服器"
           }
         }
       }
@@ -226,7 +226,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法连接到这个服务器"
+            "value" : "無法連線至這個伺服器"
           }
         }
       }
@@ -249,7 +249,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法播放"
+            "value" : "無法播放"
           }
         }
       }
@@ -295,7 +295,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "车载自动播放"
+            "value" : "車用自動播放"
           }
         }
       }
@@ -318,7 +318,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更换服务器"
+            "value" : "更換伺服器"
           }
         }
       }
@@ -341,7 +341,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更换服务器？"
+            "value" : "要更換伺服器嗎？"
           }
         }
       }
@@ -364,7 +364,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "清空缓存"
+            "value" : "清除快取"
           }
         }
       }
@@ -387,7 +387,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "清空离线缓存？"
+            "value" : "要清除離線快取嗎？"
           }
         }
       }
@@ -410,7 +410,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关闭"
+            "value" : "關閉"
           }
         }
       }
@@ -433,7 +433,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连接"
+            "value" : "連線"
           }
         }
       }
@@ -456,7 +456,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在连接…"
+            "value" : "正在連線…"
           }
         }
       }
@@ -479,7 +479,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法获取收藏，请稍后再试"
+            "value" : "無法取得收藏，請稍後再試"
           }
         }
       }
@@ -525,7 +525,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请输入 https:// 开头的地址（开发时可用 http://…local 或 localhost）"
+            "value" : "請輸入以 https:// 開頭的位址（開發時可用 http://…local 或 localhost）"
           }
         }
       }
@@ -548,7 +548,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "节目无法播放：改为播放音乐"
+            "value" : "節目無法播放：改為播放音樂"
           }
         }
       }
@@ -571,7 +571,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "收藏的歌会在连上 Wi‑Fi 时自动缓存，没有网络也能播放。"
+            "value" : "收藏的歌曲會在連上 Wi‑Fi 時自動快取，沒有網路也能播放。"
           }
         }
       }
@@ -594,7 +594,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "如何设置"
+            "value" : "如何設定"
           }
         }
       }
@@ -617,7 +617,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "歌词"
+            "value" : "歌詞"
           }
         }
       }
@@ -640,7 +640,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Melarka 设置"
+            "value" : "Melarka 設定"
           }
         }
       }
@@ -663,7 +663,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "网络太慢：先播放已缓存的歌曲"
+            "value" : "網路太慢：先播放已快取的歌曲"
           }
         }
       }
@@ -709,7 +709,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这台 iPhone 上还没有已缓存的收藏。"
+            "value" : "這支 iPhone 上還沒有已快取的收藏。"
           }
         }
       }
@@ -732,7 +732,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "还没有收藏：随机播放全部歌曲"
+            "value" : "還沒有收藏：隨機播放所有歌曲"
           }
         }
       }
@@ -755,7 +755,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未设置"
+            "value" : "未設定"
           }
         }
       }
@@ -778,7 +778,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未登录"
+            "value" : "未登入"
           }
         }
       }
@@ -801,7 +801,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未登录 · 上限 %@"
+            "value" : "未登入 · 上限 %@"
           }
         }
       }
@@ -893,7 +893,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关"
+            "value" : "關"
           }
         }
       }
@@ -916,7 +916,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "离线缓存"
+            "value" : "離線快取"
           }
         }
       }
@@ -939,7 +939,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "离线收藏"
+            "value" : "離線收藏"
           }
         }
       }
@@ -962,7 +962,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "离线模式"
+            "value" : "離線模式"
           }
         }
       }
@@ -985,7 +985,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "离线且没有已缓存的收藏"
+            "value" : "離線且沒有已快取的收藏"
           }
         }
       }
@@ -1008,7 +1008,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "离线且没有缓存的歌曲"
+            "value" : "離線且沒有快取的歌曲"
           }
         }
       }
@@ -1031,7 +1031,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "离线：没有已缓存的歌曲可播放"
+            "value" : "離線：沒有已快取的歌曲可播放"
           }
         }
       }
@@ -1054,7 +1054,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "离线：正在播放已缓存的收藏"
+            "value" : "離線：正在播放已快取的收藏"
           }
         }
       }
@@ -1077,7 +1077,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开"
+            "value" : "開"
           }
         }
       }
@@ -1100,7 +1100,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请先打开 Melarka 并设置服务器"
+            "value" : "請先開啟 Melarka 並設定伺服器"
           }
         }
       }
@@ -1123,7 +1123,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂停"
+            "value" : "暫停"
           }
         }
       }
@@ -1169,7 +1169,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "播放离线收藏"
+            "value" : "播放離線收藏"
           }
         }
       }
@@ -1192,7 +1192,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "播放进度"
+            "value" : "播放進度"
           }
         }
       }
@@ -1215,7 +1215,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "会停止播放并退出登录，然后重新输入服务器地址。"
+            "value" : "會停止播放並登出，然後重新輸入伺服器位址。"
           }
         }
       }
@@ -1238,7 +1238,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "播放这首歌"
+            "value" : "播放這首歌"
           }
         }
       }
@@ -1284,7 +1284,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "列表循环"
+            "value" : "全部重複"
           }
         }
       }
@@ -1307,7 +1307,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "单曲循环"
+            "value" : "單曲重複"
           }
         }
       }
@@ -1330,7 +1330,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "循环：关"
+            "value" : "重複：關"
           }
         }
       }
@@ -1353,7 +1353,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "继续播放"
+            "value" : "繼續播放"
           }
         }
       }
@@ -1376,7 +1376,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在后台从上次的位置继续播放；队列为空时随机播放收藏。"
+            "value" : "在背景從上次的位置繼續播放；播放佇列為空時隨機播放收藏。"
           }
         }
       }
@@ -1399,7 +1399,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重试"
+            "value" : "重試"
           }
         }
       }
@@ -1422,7 +1422,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重试连接"
+            "value" : "重試連線"
           }
         }
       }
@@ -1445,7 +1445,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "服务器"
+            "value" : "伺服器"
           }
         }
       }
@@ -1468,7 +1468,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "服务器地址"
+            "value" : "伺服器位址"
           }
         }
       }
@@ -1491,7 +1491,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "设置"
+            "value" : "設定"
           }
         }
       }
@@ -1514,7 +1514,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "随机播放"
+            "value" : "隨機播放"
           }
         }
       }
@@ -1537,7 +1537,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "随机播放收藏"
+            "value" : "隨機播放收藏"
           }
         }
       }
@@ -1560,7 +1560,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在后台随机播放收藏的歌曲；没有网络时播放已缓存的收藏。"
+            "value" : "在背景隨機播放收藏的歌曲；沒有網路時播放已快取的收藏。"
           }
         }
       }
@@ -1583,7 +1583,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在随机播放收藏"
+            "value" : "正在隨機播放收藏"
           }
         }
       }
@@ -1606,7 +1606,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在退出登录…"
+            "value" : "正在登出…"
           }
         }
       }
@@ -1629,7 +1629,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保持离线"
+            "value" : "保持離線"
           }
         }
       }
@@ -1652,7 +1652,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仍无法连接服务器"
+            "value" : "仍無法連線至伺服器"
           }
         }
       }
@@ -1698,7 +1698,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在同步收藏（仅在 Wi‑Fi 下下载）"
+            "value" : "正在同步收藏（僅在 Wi‑Fi 下下載）"
           }
         }
       }
@@ -1721,7 +1721,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "轻点一首歌即可播放。"
+            "value" : "輕點一首歌即可播放。"
           }
         }
       }
@@ -1744,7 +1744,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "测试：随机播放收藏"
+            "value" : "測試：隨機播放收藏"
           }
         }
       }
@@ -1767,7 +1767,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关闭前不会尝试重新连接，乘飞机时更省电。"
+            "value" : "關閉前不會嘗試重新連線，搭飛機時更省電。"
           }
         }
       }
@@ -1790,7 +1790,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "播放队列"
+            "value" : "播放佇列"
           }
         }
       }
@@ -1859,7 +1859,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连上车载蓝牙就自动播放 Melarka 收藏\n\n方式一（大多数车不用设置）：用 Melarka 播放过音乐后，连上车载蓝牙时，车机通常会发送\"播放\"命令，iPhone 会把它交给最后播放的 App——Melarka 会在后台直接从缓存播放上次的队列；队列为空时随机播放收藏。注意：如果在多任务界面里把 Melarka 划掉，iOS 可能不会再唤醒它。\n\n方式二（快捷指令自动化，最可靠）：\n1. 打开\"快捷指令\" App，点底部的\"自动化\"。\n2. 点右上角\"+\"，选择\"蓝牙\"。\n3. 在\"设备\"里选你的车（例如 \"My Car\"），勾选\"已连接\"。\n4. 选择\"立即运行\"，并关闭\"运行时通知\"（可选）。\n5. 点\"下一步\"（如果先看到\"新建空白自动化\"，点它，再点\"添加操作\"）→ 搜索\"Melarka\" → 选择\"随机播放收藏\"（想接着上次听，就选\"继续播放\"）。\n6. 点\"完成\"。以后一连上车载蓝牙，Melarka 就会在后台开始播放，不用解锁、不用点。\n\n小贴士：收藏的歌会在连上 Wi‑Fi 时自动缓存到手机，没有网络也能播放；缓存大小在\"设置 → 离线缓存\"里调整。"
+            "value" : "連上車用藍牙就自動播放 Melarka 收藏\n\n方式一（大多數車款不用設定）：用 Melarka 播放過音樂後，連上車用藍牙時，車機通常會傳送\"播放\"指令，iPhone 會把它交給最後播放的 App——Melarka 會在背景直接從快取播放上次的播放佇列；佇列為空時隨機播放收藏。注意：如果在 App 切換器裡把 Melarka 往上滑掉，iOS 可能不會再喚醒它。\n\n方式二（捷徑自動化，最可靠）：\n1. 開啟\"捷徑\" App，點底部的\"自動化\"。\n2. 點右上角\"+\"，選擇\"藍牙\"。\n3. 在\"裝置\"裡選你的車（例如 \"My Car\"），勾選\"已連線\"。\n4. 選擇\"立即執行\"，並關閉\"執行時通知\"（可選）。\n5. 點\"下一步\"（如果先看到\"新增空白自動化\"，點它，再點\"加入動作\"）→ 搜尋\"Melarka\" → 選擇\"隨機播放收藏\"（想接著上次聽，就選\"繼續播放\"）。\n6. 點\"完成\"。以後一連上車用藍牙，Melarka 就會在背景開始播放，不用解鎖、不用點。\n\n小秘訣：收藏的歌曲會在連上 Wi‑Fi 時自動快取到手機，沒有網路也能播放；快取大小可在\"設定 → 離線快取\"裡調整。"
           }
         }
       }
