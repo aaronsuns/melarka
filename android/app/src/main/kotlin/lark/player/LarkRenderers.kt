@@ -10,6 +10,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter
@@ -30,10 +31,19 @@ class LarkRenderersFactory(
 ) : DefaultRenderersFactory(context) {
 
     override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioOutputPlaybackParams: Boolean): AudioSink =
+        audioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams)
+
+    /**
+     * The sink, PCM only: its output provider has no context, so it assumes the default capabilities (no encoded audio
+     * passthrough). An AC-3 or E-AC-3 item is decoded like any other instead of being sent as is to an HDMI or optical
+     * output, where [GainProcessor] could not touch it: no item ever bypasses its gain.
+     */
+    fun audioSink(context: Context, enableFloatOutput: Boolean, enableAudioOutputPlaybackParams: Boolean): AudioSink =
         wrapSink(DefaultAudioSink.Builder(context)
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
             .setAudioProcessors((listOf<AudioProcessor>(gain) + tail).toTypedArray())
+            .setAudioOutputProvider(AudioTrackAudioOutputProvider.Builder(null).build())
             .build())
 
     override fun buildAudioRenderers(

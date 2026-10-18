@@ -13,6 +13,12 @@ interface BackendDelegate {
 
     /** Only a pause the engine did not ask for (an interruption, a route change). */
     fun backendPaused(generation: Int)
+
+    /**
+     * The output went away (headphones unplugged, a Bluetooth device disconnecting: "audio becoming noisy"). The player
+     * has paused; for the engine this is the user's pause, which nothing resumes by itself.
+     */
+    fun backendRouteLost(generation: Int)
     fun backendFinished(generation: Int)
     fun backendFailed(network: Boolean, generation: Int)
     fun backendBuffering(on: Boolean, generation: Int)

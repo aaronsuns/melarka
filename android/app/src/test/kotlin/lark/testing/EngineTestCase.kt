@@ -52,9 +52,13 @@ abstract class EngineTestCase {
         scope = this
         dir = folder.newFolder("engine")
         store = QueueStore(dir).also { it.user = 1 }
+        beforeEngine()
         makeEngine()
         body()
     }
+
+    /** Runs inside [engineTest] once [scope] is set, before the first engine is built (a sink that needs the scope). */
+    open fun beforeEngine() {}
 
     /** A fresh engine on the same store, as after a process launch. The old one says nothing more. */
     fun makeEngine() {

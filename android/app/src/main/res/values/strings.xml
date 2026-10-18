@@ -10,4 +10,11 @@
     <string name="engine_episode_fallback_notice">Episode can\'t play: playing music instead</string>
     <string name="engine_nothing_cached_notice">Offline, and no favorites are cached</string>
     <string name="engine_shuffle_failed_notice">Couldn\'t get favorites; try again later</string>
+    <!-- The media notification's buttons: shuffle and repeat (the iOS wording), episode skips (the web's). -->
+    <string name="media_shuffle">Shuffle</string>
+    <string name="media_repeat_off">Repeat: Off</string>
+    <string name="media_repeat_all">Repeat All</string>
+    <string name="media_repeat_one">Repeat One</string>
+    <string name="media_back_15">Back 15 seconds</string>
+    <string name="media_forward_30">Forward 30 seconds</string>
 </resources>

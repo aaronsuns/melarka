@@ -1,9 +1,9 @@
 package lark.player
 
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.launch
 import lark.api.RandomFavorites
 import lark.bridge.WebMessage
+import lark.service.RemoteCommands
 import lark.testing.EngineTestCase
 import lark.testing.q
 import lark.testing.trackModel
@@ -20,17 +20,8 @@ class ReconnectEngineTest : EngineTestCase() {
     /** The shuffle's own server call (a refill asks for 20, the shuffle for SHUFFLE_SIZE). */
     private val shuffleCalls get() = api.randomFavoritesCalls.count { it.n == PlayerEngine.SHUFFLE_SIZE }
 
-    /**
-     * What the media session's play command runs (iOS `RemoteCommands.handlePlay`, ported with the session in
-     * Task 8): play, else the saved queue from disk, else audio focus first and then the server's favorites.
-     */
-    private fun TestScope.handlePlay() {
-        if (engine.isLoaded) engine.play()
-        else if (!engine.resumeFromDisk()) {
-            engine.prepareForPlayback()
-            launch { engine.shuffleFavorites() }
-        }
-    }
+    /** What the media session's play command runs: iOS `RemoteCommands.handlePlay`. */
+    private fun TestScope.handlePlay() { RemoteCommands.handlePlay(engine, this) }
 
     /** iOS `IntentRun.shuffleFavorites` (the shortcut, Task 11): a no-op while playing, else focus, then the shuffle. */
     private suspend fun shuffleIntent(): String {

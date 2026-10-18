@@ -1,6 +1,7 @@
 package lark.testing
 
 import android.content.Context
+import android.media.AudioManager
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
@@ -19,6 +20,7 @@ import okhttp3.OkHttpClient
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import org.robolectric.Shadows.shadowOf
 
 /** Records every callback with its generation. `onFinished` lets a test answer like the engine does. */
 class RecordingDelegate : BackendDelegate {
@@ -28,6 +30,7 @@ class RecordingDelegate : BackendDelegate {
 
     override fun backendStarted(generation: Int) { events += "started:$generation" }
     override fun backendPaused(generation: Int) { events += "paused:$generation" }
+    override fun backendRouteLost(generation: Int) { events += "routeLost:$generation" }
     override fun backendFinished(generation: Int) { events += "finished:$generation"; onFinished?.invoke(generation) }
     override fun backendFailed(network: Boolean, generation: Int) { events += "failed:$network:$generation" }
     override fun backendBuffering(on: Boolean, generation: Int) { events += "buffering:$on:$generation" }
@@ -106,4 +109,13 @@ class BackendRig(context: Context, val scheduler: FakeScheduler = FakeScheduler(
     fun waitUntil(condition: () -> Boolean) = RobolectricUtil.runMainLooperUntil { condition() }
 
     fun release() = backend.release()
+}
+
+/** The listener ExoPlayer's audio focus manager registered with the (shadow) AudioManager: what the system calls on a focus change. */
+fun focusListener(context: Context): AudioManager.OnAudioFocusChangeListener {
+    val request = shadowOf(context.getSystemService(AudioManager::class.java)).lastAudioFocusRequest
+    val field = generateSequence<Class<*>>(request.javaClass) { it.superclass }
+        .flatMap { it.declaredFields.asSequence() }.first { AudioManager.OnAudioFocusChangeListener::class.java.isAssignableFrom(it.type) }
+    field.isAccessible = true
+    return field.get(request) as AudioManager.OnAudioFocusChangeListener
 }

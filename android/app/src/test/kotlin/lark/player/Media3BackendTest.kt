@@ -2,13 +2,16 @@ package lark.player
 
 import android.net.Uri
 import android.media.AudioManager
+import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.HttpDataSource
-import org.robolectric.Shadows.shadowOf
 import androidx.media3.datasource.DataSpec
 import androidx.test.core.app.ApplicationProvider
 import lark.testing.BackendRig
+import lark.testing.focusListener
 import lark.testing.silentWav
 import lark.testing.wavBytes
 import okhttp3.mockwebserver.Dispatcher
@@ -198,6 +201,32 @@ class Media3BackendTest {
         assertEquals(1f, player.playbackParameters.pitch, 0f)
         load(tone(2.0), 2, rate = 1f)
         assertEquals(1f, player.playbackParameters.speed, 0f)
+    }
+
+    /** The Wi-Fi is kept awake only while a stream is loaded; a file on the phone needs the CPU alone. */
+    @Test fun theWakeModeFollowsTheSource() {
+        assertEquals(C.WAKE_MODE_LOCAL, backend.wakeMode)
+        val server = serverServing(wavBytes(1.0, 100))
+        try {
+            load(MediaSource.Remote(Uri.parse(server.url("/s").toString()), "T"), 1)
+            assertEquals(C.WAKE_MODE_NETWORK, backend.wakeMode)
+            rig.waitUntil { d.started }
+            load(tone(1.0), 2)
+            assertEquals(C.WAKE_MODE_LOCAL, backend.wakeMode)
+        } finally { server.shutdown() }
+    }
+
+    /** No encoded passthrough (AC-3 and the like to an HDMI or optical output): every item is PCM, so its gain applies. */
+    @Test fun theSinkDecodesEverythingSoTheGainCannotBeBypassed() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val sink = LarkRenderersFactory(context, GainProcessor()).audioSink(context, enableFloatOutput = false, enableAudioOutputPlaybackParams = false)
+        val ac3 = Format.Builder().setSampleMimeType(MimeTypes.AUDIO_AC3).setChannelCount(6).setSampleRate(48_000).build()
+        val eac3 = Format.Builder().setSampleMimeType(MimeTypes.AUDIO_E_AC3).setChannelCount(6).setSampleRate(48_000).build()
+        val pcm = Format.Builder().setSampleMimeType(MimeTypes.AUDIO_RAW).setPcmEncoding(C.ENCODING_PCM_16BIT).setChannelCount(2).setSampleRate(44_100).build()
+        assertFalse(sink.supportsFormat(ac3))
+        assertFalse(sink.supportsFormat(eac3))
+        assertTrue(sink.supportsFormat(pcm))
+        sink.release()
     }
 
     // -- the token
@@ -393,15 +422,6 @@ class Media3BackendTest {
     }
 
     // -- interruptions
-
-    /** The listener ExoPlayer's audio focus manager registered with the (shadow) AudioManager: what the system calls on a focus change. */
-    private fun focusListener(context: android.content.Context): AudioManager.OnAudioFocusChangeListener {
-        val request = shadowOf(context.getSystemService(AudioManager::class.java)).lastAudioFocusRequest
-        val field = generateSequence<Class<*>>(request.javaClass) { it.superclass }
-            .flatMap { it.declaredFields.asSequence() }.first { AudioManager.OnAudioFocusChangeListener::class.java.isAssignableFrom(it.type) }
-        field.isAccessible = true
-        return field.get(request) as AudioManager.OnAudioFocusChangeListener
-    }
 
     /** A phone call: ExoPlayer keeps playWhenReady and suppresses playback, so the pause is reported from the suppression reason and the system's resume is a start. */
     @Test fun aTransientFocusLossIsReportedAsAPauseAndTheResumeAsAStart() {

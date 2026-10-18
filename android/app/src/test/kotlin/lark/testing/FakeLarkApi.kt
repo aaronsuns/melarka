@@ -105,14 +105,25 @@ class FakeLarkApi : LarkApiProtocol {
         return lyricsAnswers[trackId] ?: throw LarkError.BadResponse
     }
 
+    /** Where streams point; a test that really plays one sets a MockWebServer's address. */
+    var streamBase = "https://lark.test"
+
     override fun streamUrl(item: Item, quality: String): Uri = when (item.kind) {
-        Item.Kind.track -> Uri.parse("https://lark.test/api/v1/tracks/${item.id}/stream?quality=$quality")
-        Item.Kind.episode -> Uri.parse("https://lark.test/api/v1/episodes/${item.id}/stream?kind=audio")
+        Item.Kind.track -> Uri.parse("$streamBase/api/v1/tracks/${item.id}/stream?quality=$quality")
+        Item.Kind.episode -> Uri.parse("$streamBase/api/v1/episodes/${item.id}/stream?kind=audio")
     }
 
     override suspend fun info(): ServerInfo = TODO("not scripted")
     override suspend fun favorites(): List<ApiTrack> = TODO("not scripted")
-    override suspend fun artwork(item: Item): ByteArray = TODO("not scripted")
+    /** What `artwork` answers (the item's id is recorded in [artworkCalls]); [artworkError] is thrown instead when set. */
+    var artworkAnswer = ByteArray(0)
+    var artworkError: Exception? = null
+    val artworkCalls = mutableListOf<String>()
+    override suspend fun artwork(item: Item): ByteArray {
+        artworkCalls.add(item.id)
+        artworkError?.let { throw it }
+        return artworkAnswer
+    }
     override suspend fun download(trackId: Long, quality: String, dir: File): File = TODO("not scripted")
 }
 

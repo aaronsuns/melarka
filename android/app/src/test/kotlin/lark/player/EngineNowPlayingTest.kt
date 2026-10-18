@@ -16,8 +16,8 @@ import org.junit.Test
 
 /**
  * Port of the engine cases of ios/Tests/NowPlayingTests.swift ("MARK: Engine"): what the engine shows on the lock
- * screen and the car, and the car-lyrics line as the title. The controller cases (artwork, the media session's
- * fields) are ported with the session in Task 8.
+ * screen and the car, and the car-lyrics line as the title. The controller and remote-command cases (artwork, the
+ * media session's fields) are in `lark.service.NowPlayingTest`.
  */
 class EngineNowPlayingTest : EngineTestCase() {
     private val sink = FakeNowPlayingSink().also { nowPlaying = it }

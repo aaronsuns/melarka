@@ -34,9 +34,9 @@ import java.net.UnknownHostException
  *
  * - [BackendDelegate.backendTick] comes from a 0.5 s timer on the scheduler while playing.
  * - `isPlaying` is `backendStarted`, a buffering state while the engine wants playback is `backendBuffering`, and a
- *   pause the engine did not ask for is `backendPaused`: headphones unplugged, a permanent focus loss or a media-session
- *   controller (playWhenReady false), and a transient focus loss, a call (playback suppressed). After the latter ExoPlayer
- *   resumes by itself, and the engine hears `backendStarted` again.
+ *   pause the engine did not ask for is `backendPaused`: a permanent focus loss (playWhenReady false), and a transient
+ *   focus loss, a call (playback suppressed). After the latter ExoPlayer resumes by itself, and the engine hears
+ *   `backendStarted` again. Headphones unplugged (playWhenReady false, "becoming noisy") is `backendRouteLost`.
  * - A failed item reports `network: true` only for a stream and only for a connection-level failure; a file, and a
  *   server that answers with an error status, never.
  * - Gapless: when the player moves to the preloaded item by itself, `backendFinished` tells the engine, whose `load` of
@@ -64,6 +64,18 @@ class Media3Backend(
 
     /** Streams whose item's gain could not be found (they kept the previous factor). Always 0; a smoke test asserts it. */
     val gainMisses: Int get() = gain.cellMisses.get()
+
+    /**
+     * What the player keeps awake while it plays: the CPU and Wi-Fi for a stream ([C.WAKE_MODE_NETWORK]), only the CPU
+     * for a file on the phone ([C.WAKE_MODE_LOCAL]). Set by each `load` (a gapless change is the engine's `load` of the
+     * preloaded item, so it follows too).
+     */
+    var wakeMode: Int = C.WAKE_MODE_LOCAL
+        private set(value) {
+            if (value == field) return
+            field = value
+            player.setWakeMode(value)
+        }
 
     /** Preloaded items taken over by a `load` (tests). */
     var adoptedPreloads = 0
@@ -127,7 +139,8 @@ class Media3Backend(
             if (!wantsPlay) return                               // a pause the engine asked for
             wantsPlay = false
             reportedStarted = null
-            delegate?.backendPaused(g)
+            if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) delegate?.backendRouteLost(g)
+            else delegate?.backendPaused(g)
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -146,6 +159,7 @@ class Media3Backend(
 
     override fun load(src: MediaSource, startMs: Long, autoplay: Boolean, rate: Float, gain: Float, generation: Int) {
         wantsPlay = autoplay
+        wakeMode = if (src is MediaSource.Remote) C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL
         setRate(rate)
         reportedStarted = null; reportedBuffering = null
         val p = preloaded
@@ -336,13 +350,20 @@ class Media3Backend(
     companion object {
         private const val TICK_S = 0.5
 
-        /** The production player: music audio attributes with audio focus, pause when the headphones are unplugged, a wake lock while streaming. */
+        /** The production player, [configure]d. */
         fun create(context: Context, scheduler: Scheduler, http: OkHttpClient): Media3Backend = Media3Backend(scheduler, http) { gain ->
-            ExoPlayer.Builder(context, LarkRenderersFactory(context, gain))
-                .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
-                .setHandleAudioBecomingNoisy(true)
-                .setWakeMode(C.WAKE_MODE_NETWORK)
-                .build()
+            ExoPlayer.Builder(context, LarkRenderersFactory(context, gain)).build().also(::configure)
+        }
+
+        /**
+         * Music audio attributes with audio focus handled by the player (a call pauses and its end resumes; the media
+         * service switches to speech while an episode is the active kind), a pause when the output becomes noisy
+         * (headphones unplugged), and a wake lock for the CPU only until a stream is loaded ([wakeMode]).
+         */
+        fun configure(player: ExoPlayer) {
+            player.setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
+            player.setHandleAudioBecomingNoisy(true)
+            player.setWakeMode(C.WAKE_MODE_LOCAL)
         }
 
         /** A stream sends `Authorization: Bearer <token>` with every request; a file needs nothing. The token is in no URL. */

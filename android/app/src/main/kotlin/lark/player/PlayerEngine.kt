@@ -151,7 +151,10 @@ class PlayerEngine(
     /** The active kind changed (the media session: skip buttons for episodes). */
     var onActiveChange: ((Kind) -> Unit)? = null
 
-    /** Called synchronously right before sound starts (the media service takes audio focus there). */
+    /**
+     * Called synchronously right before sound starts: the media service is brought up there (`PlaybackHost`), so it
+     * is in the foreground from the first second. The player itself takes audio focus as it starts.
+     */
     var willStartPlayback: (() -> Unit)? = null
 
     /**
@@ -401,7 +404,7 @@ class PlayerEngine(
         pausedBySystem = true
     }
 
-    /** The remote play's cold start: audio focus is taken now, before the async resume or shuffle. */
+    /** The remote play's cold start: playback is prepared now ([willStartPlayback]), before the async shuffle. */
     fun prepareForPlayback() { willStartPlayback?.invoke() }
 
     /** The backend holds an item (playing or paused); false after a launch until something is played. */
@@ -409,6 +412,9 @@ class PlayerEngine(
 
     /** The active queue's current item. */
     val current: Item? get() = queue(active).current
+
+    /** Where the active item is now (the player's position while it is loaded): the media session's position. */
+    val activePositionMs: Long get() = position(active)
 
     fun next() {
         cancelRetry()
@@ -873,6 +879,15 @@ class PlayerEngine(
         playing = false; buffering = false; pausedBySystem = true
         if (active == Kind.episode) saveOutgoingEpisode()
         persist(); emitState(active)
+    }
+
+    /**
+     * The output went away (iOS `routeChange(.oldDeviceUnavailable)`): a user pause, so neither the end of an
+     * interruption nor anything else brings it back. Also after a system pause: that one stops counting as the system's.
+     */
+    override fun backendRouteLost(generation: Int) {
+        if (!isCurrent(generation)) return
+        if (playing || pausedBySystem) pause()
     }
 
     override fun backendBuffering(on: Boolean, generation: Int) {

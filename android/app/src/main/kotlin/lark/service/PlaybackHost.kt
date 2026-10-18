@@ -1,0 +1,118 @@
+package lark.service
+
+import android.content.Context
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import lark.bridge.Item
+import lark.core.Clock
+import lark.core.MainScheduler
+import lark.player.Media3Backend
+import lark.player.PlayerEngine
+import okhttp3.OkHttpClient
+
+/**
+ * The playback parts that live as long as the process, not the Activity or the media service: the ExoPlayer the engine
+ * drives, what is shown now ([nowPlaying], written by [nowPlayingSink], the engine's [lark.player.NowPlayingSink]),
+ * the remote commands, and the [engine] (built by the app services, Task 10, and rebuilt for another server). The
+ * media service shows them while it runs; destroying the Activity or the service stops none of them.
+ *
+ * The player's audio attributes follow the active kind: music is `CONTENT_TYPE_MUSIC` (ducks under a navigation
+ * prompt), an episode `CONTENT_TYPE_SPEECH` (pauses instead), both `USAGE_MEDIA` with audio focus handled by the player.
+ */
+@UnstableApi
+class PlaybackHost(
+    val player: Player,
+    val nowPlaying: NowPlayingHub,
+    val scope: CoroutineScope,
+    /** The engine's backend over [player] (null in tests that drive the engine with a fake). */
+    val backend: Media3Backend?,
+    sink: NowPlayingInfoSink = nowPlaying,
+    clock: Clock = Clock.system,
+    artwork: suspend (Item) -> ByteArray?,
+    remote: RemoteCommands? = null,
+    /** Brings the media service up: the engine runs it right before sound starts (its `willStartPlayback`). */
+    private val startService: () -> Unit = {},
+) {
+    /**
+     * The engine commands and the session go to. Setting it attaches the remote commands to it and takes its
+     * `willStartPlayback`: the media service is started right before sound starts, so playback the page starts has the
+     * service, its notification and the foreground from its first second.
+     */
+    var engine: PlayerEngine? = null
+        set(value) {
+            field?.willStartPlayback = null
+            field = value
+            if (value != null) {
+                remote.attach(value)
+                value.willStartPlayback = startService
+            } else {
+                remote.detach()
+            }
+        }
+
+    val remote: RemoteCommands = remote ?: RemoteCommands(scope) { engine }
+
+    /** The engine's now-playing sink. */
+    val nowPlayingSink = NowPlayingController(sink, artwork, scope, clock)
+
+    /**
+     * `MediaSession.Callback.onPlaybackResumption` for a play: the engine's synchronous resume from disk. The cold
+     * start's full behaviour (and its tests) belongs to Task 11.
+     */
+    var resumption: () -> Unit = { engine?.resumeFromDisk() }
+
+    private var kind: Item.Kind? = null
+
+    init {
+        this.remote.addListener { applyKind() }
+        applyKind()
+    }
+
+    private fun applyKind() {
+        val k = remote.kind
+        if (k == kind) return
+        kind = k
+        player.setAudioAttributes(audioAttributes(k), true)
+    }
+
+    companion object {
+        fun audioAttributes(kind: Item.Kind): AudioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(if (kind == Item.Kind.episode) C.AUDIO_CONTENT_TYPE_SPEECH else C.AUDIO_CONTENT_TYPE_MUSIC)
+            .build()
+
+        /** The production parts: a [Media3Backend] on the main thread, covers from the engine's server. */
+        fun create(context: Context, http: OkHttpClient): PlaybackHost {
+            val backend = Media3Backend.create(context, MainScheduler(), http)
+            lateinit var host: PlaybackHost
+            val app = context.applicationContext
+            host = PlaybackHost(backend.player, NowPlayingHub(), CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate), backend,
+                artwork = { item -> ArtworkLoader { host.engine?.client }.load(item) },
+                startService = { PlaybackService.start(app) })
+            return host
+        }
+    }
+}
+
+/**
+ * The process's playback host, built on first use (the media service's `onCreate`, or the app services). The stream
+ * client comes from [httpClient]: the app services (Task 10) set the one that trusts user-installed CAs before the first
+ * use; until then it is a plain client.
+ */
+@UnstableApi
+object Playback {
+    @Volatile var httpClient: () -> OkHttpClient = { OkHttpClient() }
+    private var host: PlaybackHost? = null
+
+    fun host(context: Context): PlaybackHost =
+        host ?: PlaybackHost.create(context.applicationContext, httpClient()).also { host = it }
+
+    /** Tests: the host the service is to use. */
+    fun install(host: PlaybackHost) { this.host = host }
+    fun uninstall() { host = null }
+}

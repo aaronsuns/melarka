@@ -47,6 +47,8 @@ class FakeBackend : MediaBackend {
     }
     /** A pause the engine did not ask for (an interruption). */
     fun interrupt(generation: Int? = null) { isPlaying = false; delegate?.backendPaused(generation ?: this.generation) }
+    /** The output went away (headphones out, a Bluetooth device gone). */
+    fun routeLost(generation: Int? = null) { isPlaying = false; delegate?.backendRouteLost(generation ?: this.generation) }
     fun buffering(on: Boolean, generation: Int? = null) { delegate?.backendBuffering(on, generation ?: this.generation) }
     /** Plays on to `ms` in 500 ms ticks, as the periodic tick would. */
     fun playTo(ms: Long) {

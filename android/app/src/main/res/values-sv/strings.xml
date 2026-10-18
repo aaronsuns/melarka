@@ -8,4 +8,10 @@
     <string name="engine_episode_fallback_notice">Avsnittet kan inte spelas upp: spelar musik i stället</string>
     <string name="engine_nothing_cached_notice">Offline, och inga favoriter är cachade</string>
     <string name="engine_shuffle_failed_notice">Kunde inte hämta favoriter; försök igen senare</string>
+    <string name="media_shuffle">Blanda</string>
+    <string name="media_repeat_off">Upprepa: av</string>
+    <string name="media_repeat_all">Upprepa alla</string>
+    <string name="media_repeat_one">Upprepa en</string>
+    <string name="media_back_15">Bakåt 15 sekunder</string>
+    <string name="media_forward_30">Framåt 30 sekunder</string>
 </resources>

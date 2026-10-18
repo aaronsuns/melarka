@@ -8,4 +8,10 @@
     <string name="engine_episode_fallback_notice">节目无法播放：改为播放音乐</string>
     <string name="engine_nothing_cached_notice">离线且没有已缓存的收藏</string>
     <string name="engine_shuffle_failed_notice">无法获取收藏，请稍后再试</string>
+    <string name="media_shuffle">随机播放</string>
+    <string name="media_repeat_off">循环：关</string>
+    <string name="media_repeat_all">列表循环</string>
+    <string name="media_repeat_one">单曲循环</string>
+    <string name="media_back_15">後退 15 秒</string>
+    <string name="media_forward_30">前進 30 秒</string>
 </resources>

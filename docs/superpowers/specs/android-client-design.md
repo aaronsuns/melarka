@@ -138,19 +138,21 @@ pages (they come from the server), the same reliable playback.
 
 ```
  Activity (single)                         MediaSessionService (foreground while playing)
- ├─ WebView: the server's web app          ├─ ExoPlayer (gapless playlist, per-item gain)
- │    window.larkNative  ── bridge ──────► ├─ PlayerEngine (port of ios/Sources/Player)
- │    "lark-native" events ◄────────────── ├─ MediaSession (lock screen, notification, AVRCP,
- ├─ Server URL screen (native)             │   car lyrics line as title, playback resumption)
- ├─ Can't-connect screen (native)          └─ owned by AppServices (process-wide)
+ ├─ WebView: the server's web app          ├─ MediaSession (lock screen, notification, AVRCP,
+ │    window.larkNative  ── bridge ──────► │   car lyrics line as title, playback resumption)
+ │    "lark-native" events ◄────────────── └─ shows PlaybackHost (process-wide):
+ ├─ Server URL screen (native)                ExoPlayer (gapless playlist, per-item gain),
+ ├─ Can't-connect screen (native)             PlayerEngine (port of ios/Sources/Player)
  ├─ Offline player (native, Compose)
  └─ Settings (native, Compose)           AppServices: API client, AuthStore, UserCache,
                                            QueueStore, PlayEventQueue, QueueSync, FavoritesSync
 ```
 
-The engine and everything it needs live outside the Activity (in an application-scoped
-`AppServices` and the media service), so playback, the car and lock-screen controls work with no
-UI, after the Activity is destroyed, and on a cold start from a Bluetooth play button.
+The engine and everything it needs live outside the Activity and the service (in the
+process-wide `PlaybackHost` and the application-scoped `AppServices`); the media service only
+shows them, so playback, the car and lock-screen controls work with no UI, after the Activity is
+destroyed, and on a cold start from a Bluetooth play button. The stream `OkHttpClient` comes from
+`Playback.httpClient`, which `AppServices` sets to the client that trusts user-installed CAs.
 
 ### Port, don't redesign
 
@@ -211,11 +213,15 @@ behaviour; the builder works through it as a checklist.
 | `@MainActor`, `Task`, `TaskBag` | decided: the engine and everything it owns run on the main thread; async work is coroutines in one application-scoped `CoroutineScope` on `Dispatchers.Main` (passed in, so tests run it on a test dispatcher), the engine's own jobs in a `TaskBag` that sign-out cancels; timers on the `Scheduler`. `PlayerEngine.mediaServicesReset` is not ported (see the row above) |
 | `String(localized:)` engine notices | `EngineTexts.from(context)`: the engine's notices and errors from string resources in the four locales (the iOS wording; Swedish added) |
 | `CacheProviding.localURL` | `CacheProviding.localFile(trackId): File?` (the player is handed a file); the rest of the protocol keeps the iOS names |
-| AVAudioSession interruptions | audio focus via `AudioAttributes` + `handleAudioFocus=true`; transient loss pauses and resumes |
-| route `oldDeviceUnavailable` | `setHandleAudioBecomingNoisy(true)` |
-| MPNowPlayingInfo + remote commands | MediaSession metadata/state + commands; custom commands for skip ±, shuffle, repeat |
-| car lyrics as title | the same: the current line as the MediaSession title, "song · artist" as the artist, updated only when the line changes |
-| cold start from the car (remote play) | `MediaSession.Callback.onPlaybackResumption` + media button receiver; the synchronous resume-from-disk logic of `PlayerEngine.resumeFromDisk` |
+| AVAudioSession interruptions | decided: audio focus handled by the player (`setAudioAttributes(…, handleAudioFocus=true)`): a transient loss (a call) pauses (`backendPaused`, a system pause) and ExoPlayer resumes by itself when it ends; a permanent loss pauses for good; a pause by the user in between is not undone. `USAGE_MEDIA` always; the content type follows the active kind (`PlaybackHost`): `CONTENT_TYPE_MUSIC` for music (ducks under a navigation prompt), `CONTENT_TYPE_SPEECH` for episodes (pauses instead of ducking) |
+| AVAudioSession activation (`willStartPlayback`) | decided: the engine's `willStartPlayback` starts the media service (`PlaybackService.start`) right before sound starts, so playback the page starts has its service and notification from the first second; launching the app or building the session never takes audio focus |
+| route `oldDeviceUnavailable` | decided: `setHandleAudioBecomingNoisy(true)`; the backend reports "becoming noisy" as `backendRouteLost`, which the engine takes as the user's pause (as iOS: `pausedBySystem` cleared, nothing resumes it) |
+| AVPlayer's own wake behaviour | decided: wake mode per source, set by each `load`: `WAKE_MODE_NETWORK` (CPU and Wi-Fi) only while a stream is loaded, `WAKE_MODE_LOCAL` for a file on the phone |
+| (no iOS equivalent) encoded passthrough | decided: disabled (the sink's output provider has no context, so it assumes PCM-only capabilities): an AC-3/E-AC-3 item is decoded like any other and never bypasses its gain |
+| MPNowPlayingInfo + remote commands | decided: a Media3 `MediaSessionService` (`PlaybackService`) whose session player is `SessionPlayer`, a `ForwardingSimpleBasePlayer` over the app-wide ExoPlayer that shows the engine's view: one item (the current one, from `NowPlayingController`), the engine's position and `playing`, no player errors (the engine handles them). Its commands go to `RemoteCommands` (port of iOS `RemoteCommands`): play/pause, seek, next, previous always; seek back 15 s / forward 30 s for episodes; shuffle and repeat for music; never set items, volume (the sleep fade's) or speed. The notification's own buttons are custom commands: `SKIP_BACK_15`/`SKIP_FORWARD_30` in place of previous/next for episodes, `SHUFFLE`/`REPEAT` (showing their state) for music. Releasing the session player only detaches it: the ExoPlayer and the engine live in the process-wide `PlaybackHost`, so the service ending (swiped away while paused) stops nothing |
+| MPMediaItemArtwork | decided: `MediaMetadata.artworkData` (bytes from `LarkApiProtocol.artwork`, the token only in its header), never an artwork URI; kept for the last 20 items, the same array on every write, "no cover" (404) remembered, a failed fetch asked again after 30 s doubling up to 10 min |
+| car lyrics as title | the same: the current line as the MediaSession title, "song · artist" as the artist, updated only when the line changes (the session item's own metadata keeps the song, so only the shown metadata changes) |
+| cold start from the car (remote play) | decided: a session play with nothing current reaches `RemoteCommands.handlePlay` (the iOS steps: play, else `resumeFromDisk`, else prepare and shuffle favorites); the session player takes no media items, so Media3 never asks for resumption on a play. `MediaSession.Callback.onPlaybackResumption` is wired to the host's resumption hook (`resumeFromDisk`) for when it is asked; Task 11 owns the cold start's behaviour. `MediaButtonReceiver` in the manifest |
 | Shortcuts "car connects → shuffle favorites" | CompanionDeviceManager association with the car (picked in Settings; the system confirms once); its connect callback runs the same path as the iOS ShuffleFavorites intent; launcher shortcuts "Shuffle favorites" and "Resume" |
 | BGAppRefreshTask | WorkManager periodic work (6 h, unmetered network) for the favorites sync |
 | NWPathMonitor (+ expensive / Low Data) | `ConnectivityManager.NetworkCallback` (NOT_METERED; `isRestrictBackgroundStatus`), keeping the "answered" semantics; online = INTERNET capability only (not VALIDATED), so a LAN-only self-hosted server stays reachable, as with `NWPath.satisfied` |
