@@ -34,6 +34,7 @@ AllowedAPKSigningKeys: 42c929f4f00f837e74df5be81a43d59829704b1e136654445ea183699
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
-UpdateCheckData: android/version.properties|versionCode=(\d+)|ios/project.yml|MARKETING_VERSION:\s*"([0-9.]+)"
+UpdateCheckData: 
+  android/version.properties|versionCode=(\d+)|ios/project.yml|MARKETING_VERSION:\s*"([0-9.]+)"
 CurrentVersion: 0.2.17
 CurrentVersionCode: 217
