@@ -71,7 +71,7 @@ class SmokeFlowTest {
         val q = e?.music
         val ids = q?.items?.map { it.id }.orEmpty()
         val cached = ids.associateWith { id -> id.toLongOrNull()?.let { services().cache.localFile(it) } != null }
-        return "engine playing=${e?.playing} current=${e?.current?.id}/${e?.current?.title} index=${q?.index} of ${ids.size} " +
+        return "engine playing=${e?.playing} current=${e?.current?.id}/${e?.current?.title} index=${q?.index} of $ids " +
             "failure=${e?.failureText}; player pwr=${p.playWhenReady} state=${p.playbackState} " +
             "suppression=${p.playbackSuppressionReason} isPlaying=${p.isPlaying} error=${p.playerError?.errorCodeName}; " +
             "controller mediaId=${c.currentMediaItem?.mediaId} (was $first) isPlaying=${c.isPlaying}; cached=$cached"

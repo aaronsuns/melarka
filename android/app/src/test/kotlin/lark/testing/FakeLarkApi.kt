@@ -33,6 +33,11 @@ class FakeLarkApi : LarkApiProtocol {
 
     // Canned answers
     var randomFavoritesAnswer = RandomFavorites("favorites", emptyList())
+    /**
+     * When set, `randomFavorites` answers as the server does from these favorites, in this order: those not in
+     * `exclude`, or all of them when `exclude` uses them up ([randomFavoritesAnswer] is not used).
+     */
+    var favoritesLibrary: List<ApiTrack>? = null
     var randomTracksAnswer: List<ApiTrack> = emptyList()
     var radioAnswer: List<ApiTrack> = emptyList()
     var queueAnswer = QueueAnswer(ServerQueue(emptyList(), 0, 0, 0, "", 0), emptyList())
@@ -86,6 +91,9 @@ class FakeLarkApi : LarkApiProtocol {
         randomFavoritesCalls.add(ExcludeCall(n, exclude))
         randomFavoritesGate?.await()
         refillError?.let { throw it }
+        favoritesLibrary?.let { all ->
+            return RandomFavorites("favorites", all.filter { it.track.id !in exclude }.ifEmpty { all })
+        }
         return randomFavoritesAnswer
     }
 

@@ -126,10 +126,25 @@ class NeverStopTest : EngineTestCase() {
         assertTrue(api.randomFavoritesCalls.isEmpty())       // 3 upcoming: not yet
         backend.start(); backend.finish()                     // 2 upcoming
         idle()
-        assertEquals(listOf(ExcludeCall(20, listOf(7, 8))), api.randomFavoritesCalls)
+        assertEquals(listOf(ExcludeCall(20, listOf(6, 7, 8))), api.randomFavoritesCalls)
         assertEquals(listOf("5", "6", "7", "8", "30", "31"), ids)   // 8 is still upcoming: not twice
         assertEquals(6, queues(Item.Kind.track).last().items.size)
         assertEquals(JsonPrimitive("T31"), engine.music.items.last().meta["title"])
+    }
+
+    /**
+     * The page plays one favorite (`playList([track], 0, source: favorites)`): the refill must not queue that same song
+     * right after itself, or Next (the car's, the lock screen's) plays the song again (SmokeFlowTest's flake: the
+     * server's shuffle of all favorites, the current one first, appended as is).
+     */
+    @Test fun aOneSongFavoritesQueueNeverRefillsWithTheCurrentSongNext() = engineTest {
+        api.favoritesLibrary = listOf(trackModel(5), trackModel(6), trackModel(7))   // the shuffle put the current first
+        engine.handle(q(listOf(5), 0, 0, true, QueueSource.favorites))
+        idle()
+        assertEquals(listOf(ExcludeCall(20, listOf(5))), api.randomFavoritesCalls)
+        assertEquals(listOf("5", "6", "7"), ids)
+        engine.next()
+        assertEquals("6", engine.current?.id)
     }
 
     @Test fun favoritesRefillThatFellBackBecomesAShuffle() = engineTest {
@@ -217,7 +232,7 @@ class NeverStopTest : EngineTestCase() {
         api.randomFavoritesAnswer = RandomFavorites("favorites", listOf(trackModel(30), trackModel(31)))
         engine.handle(q(listOf(5, 6, 7), 0, 0, true, QueueSource.favorites))
         idle()
-        assertEquals(listOf(ExcludeCall(20, listOf(6, 7))), api.randomFavoritesCalls)
+        assertEquals(listOf(ExcludeCall(20, listOf(5, 6, 7))), api.randomFavoritesCalls)
         assertEquals(listOf("5", "6", "7", "30", "31"), ids)
 
         // The end of a list offline: a cached favorite is put after it (never a wrap, never a stop).

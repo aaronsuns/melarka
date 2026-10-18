@@ -1451,8 +1451,11 @@ class PlayerEngine(
         val refill = ++refillCount
         val src = music.source
         val gen = musicGeneration
-        // Favorites loop, so only what is still upcoming is excluded; radio and shuffle exclude the recent queue.
-        val exclude = (if (src == QueueSource.favorites) upcoming else music.items.takeLast(REFILL_EXCLUDE_MAX)).mapNotNull { it.trackId }
+        // Favorites loop, so only the current item and what is still upcoming are excluded (the current one too: else
+        // a one-song queue, the page's played favorite, could get that song again right after itself, and Next would
+        // play it again); radio and shuffle exclude the recent queue.
+        val exclude = (if (src == QueueSource.favorites) listOfNotNull(music.current) + upcoming
+            else music.items.takeLast(REFILL_EXCLUDE_MAX)).mapNotNull { it.trackId }
         tasks.run {
             val answer: Pair<List<ApiTrack>, QueueSource>? = try {
                 when (src) {
