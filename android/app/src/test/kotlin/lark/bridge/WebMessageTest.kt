@@ -2,6 +2,8 @@ package lark.bridge
 
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -167,5 +169,12 @@ class WebMessageTest {
         // Brackets inside strings are text, not nesting.
         assertNotNull(decode("""{"type":"openSettings","x":"${"[{".repeat(1000)}"}"""))
         assertNotNull(decode("""{"type":"openSettings","x":"\\\"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["}"""))
+        // More closing than opening brackets is not JSON: refused by the scan itself, never counted below zero (so
+        // leading closers can't buy extra nesting).
+        assertFalse(WebMessage.withinLimits("]["))
+        assertFalse(WebMessage.withinLimits("]]]]" + "[".repeat(WebMessage.MAX_DEPTH + 3)))
+        assertFalse(WebMessage.withinLimits("""}{"type":"openSettings"}"""))
+        assertTrue(WebMessage.withinLimits("""{"type":"openSettings","x":"]]}}"}"""))
+        assertNull(decode("""}{"type":"openSettings"}"""))
     }
 }

@@ -2,9 +2,6 @@ package lark.app
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
@@ -26,6 +23,8 @@ class MainActivity : Activity(), WebShell.Host {
     private lateinit var root: FrameLayout
     private var shell: WebShell? = null
     private var fullscreen: Pair<View, WebChromeClient.CustomViewCallback>? = null
+    /** The page's open `alert`/`confirm` dialogs. */
+    private val dialogs = LinkedHashMap<AlertDialog, () -> Unit>()
     private val render: () -> Unit = { render() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,6 +52,9 @@ class MainActivity : Activity(), WebShell.Host {
     }
 
     override fun onDestroy() {
+        // Answered (false) now, as the dismiss listener runs only later: the page's alert()/confirm() never waits forever.
+        dialogs.toList().forEach { (dialog, cancel) -> cancel(); dialog.dismiss() }
+        dialogs.clear()
         services.removeObserver(render)
         dropShell(clearData = false)
         super.onDestroy()
@@ -89,11 +91,7 @@ class MainActivity : Activity(), WebShell.Host {
     }
 
     override fun openExternally(url: String) {
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE))
-        } catch (_: ActivityNotFoundException) {
-            // Nothing on the phone opens it: the tap does nothing, as on iOS.
-        }
+        ExternalLink.open(url) { startActivity(it) }
     }
 
     /** A new web view and the server's page again (iOS reloads; Android needs a new web view after a renderer crash). */
@@ -106,12 +104,14 @@ class MainActivity : Activity(), WebShell.Host {
         if (isFinishing || isDestroyed) return done(false)
         var answered = false
         fun answer(ok: Boolean) { if (!answered) { answered = true; done(ok) } }
-        AlertDialog.Builder(this)
+        lateinit var shown: AlertDialog
+        shown = AlertDialog.Builder(this)
             .setMessage(message)
             .setPositiveButton(android.R.string.ok) { _, _ -> answer(true) }
             .apply { if (cancellable) setNegativeButton(android.R.string.cancel) { _, _ -> answer(false) } }
-            .setOnDismissListener { answer(false) }
+            .setOnDismissListener { dialogs.remove(shown); answer(false) }
             .show()
+        dialogs[shown] = { answer(false) }
     }
 
     override fun showFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) {

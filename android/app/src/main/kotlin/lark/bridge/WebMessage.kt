@@ -70,7 +70,7 @@ sealed interface WebMessage {
          * Checked before any parsing, so an oversized or deeply nested body never reaches the parser (whose recursion
          * a deep one could exhaust): [MAX_MESSAGE_CHARS], and [MAX_DEPTH] counted over `{`/`[` outside strings.
          */
-        private fun withinLimits(json: String): Boolean {
+        internal fun withinLimits(json: String): Boolean {
             if (json.length > MAX_MESSAGE_CHARS) return false
             var depth = 0
             var inString = false
@@ -87,7 +87,7 @@ sealed interface WebMessage {
                 when (c) {
                     '"' -> inString = true
                     '{', '[' -> if (++depth > MAX_DEPTH) return false
-                    '}', ']' -> depth--
+                    '}', ']' -> if (--depth < 0) return false     // a closer with nothing open: not JSON
                 }
             }
             return true

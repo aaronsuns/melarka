@@ -121,4 +121,52 @@ class WebShellTest {
         assertEquals(listOf(true, false, false, false), answers)
         assertEquals(listOf("dialog Unfollow? true", "dialog Sure? true"), host.log)
     }
+
+    private val context: android.content.Context get() = androidx.test.core.app.ApplicationProvider.getApplicationContext()
+
+    /** Every setting that keeps the page inside its own origin and off the phone's files. */
+    @Suppress("DEPRECATION")   // the file-URL switches are deprecated, and still read
+    @Test fun securitySettings() {
+        val settings = android.webkit.WebView(context).settings
+        WebShell.applySettings(settings, "1.2.3")
+        assertTrue(settings.javaScriptEnabled)
+        assertTrue(settings.domStorageEnabled)
+        assertFalse(settings.allowFileAccess)
+        assertFalse(settings.allowContentAccess)
+        assertFalse(settings.allowFileAccessFromFileURLs)
+        assertFalse(settings.allowUniversalAccessFromFileURLs)
+        assertEquals(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW, settings.mixedContentMode)
+        // Safe Browsing: Robolectric's WebSettings does not keep the flag, so the manifest's switch is checked.
+        assertTrue(java.io.File("src/main/AndroidManifest.xml").readText()
+            .contains("""android:name="android.webkit.WebView.EnableSafeBrowsing" android:value="true""""))
+        assertFalse(settings.javaScriptCanOpenWindowsAutomatically)
+        assertTrue(settings.supportMultipleWindows())
+        assertTrue(settings.userAgentString.endsWith(" LarkAndroid/1.2.3"))
+    }
+
+    private fun openWindow(parent: android.webkit.WebView): android.webkit.WebView {
+        val transport = parent.WebViewTransport()
+        val msg = android.os.Message.obtain(android.os.Handler(android.os.Looper.getMainLooper())).apply { obj = transport }
+        assertTrue(chrome.onCreateWindow(parent, false, true, msg))
+        return transport.webView!!
+    }
+
+    /** A new window that never navigates (or that the page closes) does not leak its throwaway web view. */
+    @Test fun popupsThatNeverNavigateAreDestroyed() {
+        val parent = android.webkit.WebView(context)
+        val a = openWindow(parent)
+        assertEquals(1, chrome.openPopups)
+        org.robolectric.shadows.ShadowLooper.idleMainLooper(WebShell.POPUP_TIMEOUT_MS + 1, java.util.concurrent.TimeUnit.MILLISECONDS)
+        assertTrue(org.robolectric.Shadows.shadowOf(a).wasDestroyCalled())
+        assertEquals(0, chrome.openPopups)
+
+        val b = openWindow(parent)
+        chrome.onCloseWindow(b)                                    // window.close()
+        assertTrue(org.robolectric.Shadows.shadowOf(b).wasDestroyCalled())
+
+        val c = openWindow(parent)
+        chrome.destroyPopups()                                     // the shell goes
+        assertTrue(org.robolectric.Shadows.shadowOf(c).wasDestroyCalled())
+        assertEquals(0, chrome.openPopups)
+    }
 }

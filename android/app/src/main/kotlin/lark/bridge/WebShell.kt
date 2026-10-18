@@ -3,6 +3,8 @@ package lark.bridge
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.os.Message
 import android.util.Log
 import android.view.View
@@ -14,6 +16,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.webkit.WebViewCompat
@@ -53,21 +56,12 @@ class WebShell(context: Context, val server: String, private val bridge: BridgeC
     private val client = Client(server, host)
     private val chrome = Chrome(server, host, client)
     private val pageView = object : BridgeView {
-        override val hasPage: Boolean get() = view.url != null
+        override val url: String? get() = view.url
         override fun evaluate(script: String) = view.evaluateJavascript(script, null)
     }
 
     init {
-        view.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            mediaPlaybackRequiresUserGesture = false      // previews start from the page's own controls
-            setSupportMultipleWindows(true)               // target=_blank and window.open reach onCreateWindow
-            javaScriptCanOpenWindowsAutomatically = false // only on a tap, as WKWebView
-            allowFileAccess = false
-            allowContentAccess = false
-            userAgentString = "$userAgentString LarkAndroid/${BuildConfig.VERSION_NAME}"
-        }
+        applySettings(view.settings, BuildConfig.VERSION_NAME)
         view.webViewClient = client
         view.webChromeClient = chrome
         val origin = setOf(BridgeController.allowedOrigin(server))
@@ -96,7 +90,8 @@ class WebShell(context: Context, val server: String, private val bridge: BridgeC
 
     /** The Activity is going ([clearData]: the server too, so its HTTP cache and history go). The bridge stays the app's. */
     fun destroy(clearData: Boolean) {
-        bridge.attach(null)
+        bridge.detach(pageView)     // only this shell's view: a newer shell may have attached already
+        chrome.destroyPopups()
         (view.parent as? ViewGroup)?.removeView(view)
         view.stopLoading()
         if (clearData) { view.clearCache(true); view.clearHistory() }
@@ -167,13 +162,16 @@ class WebShell(context: Context, val server: String, private val bridge: BridgeC
             val parent = view ?: return false
             val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
             val popup = WebView(parent.context)
+            popups += popup
             var decided = false
             fun decide(url: String) {
                 if (decided) return
                 decided = true
                 newWindow(url, isUserGesture) { parent.loadUrl(it) }
-                popup.post { popup.destroy() }
+                main.post { destroyPopup(popup) }
             }
+            // A window that never navigates (window.open() with no URL) is not kept.
+            main.postDelayed({ destroyPopup(popup) }, POPUP_TIMEOUT_MS)
             popup.webViewClient = @SuppressLint("MissingOnRenderProcessGone") object : WebViewClient() {   // it has one, below
                 override fun shouldOverrideUrlLoading(v: WebView?, request: WebResourceRequest): Boolean {
                     decide(request.url.toString()); return true
@@ -183,7 +181,7 @@ class WebShell(context: Context, val server: String, private val bridge: BridgeC
                     url?.let { decide(it) }
                 }
                 override fun onRenderProcessGone(v: WebView, detail: RenderProcessGoneDetail): Boolean {
-                    popup.destroy()     // a throwaway: nothing to recover
+                    destroyPopup(popup)     // a throwaway: nothing to recover
                     return true
                 }
             }
@@ -191,6 +189,25 @@ class WebShell(context: Context, val server: String, private val bridge: BridgeC
             resultMsg.sendToTarget()
             return true
         }
+
+        private val popups = mutableListOf<WebView>()
+        /** Not the parent view's own queue: a view not attached to a window holds its posts until it is. */
+        private val main = Handler(Looper.getMainLooper())
+
+        /** Throwaway new-window web views not yet destroyed. */
+        val openPopups: Int get() = popups.size
+
+        private fun destroyPopup(popup: WebView) {
+            if (popups.remove(popup)) popup.destroy()
+        }
+
+        /** The page closed its new window (`window.close()`). */
+        override fun onCloseWindow(window: WebView?) {
+            window?.let { destroyPopup(it) }
+        }
+
+        /** The shell is going: every new window still open goes with it. */
+        fun destroyPopups() = popups.toList().forEach { destroyPopup(it) }
 
         internal fun newWindow(url: String, gesture: Boolean, loadInMainFrame: (String) -> Unit) {
             client.navigate(null, url, NavigationPolicy.Target.newWindow, gesture, loadInMainFrame)
@@ -226,5 +243,29 @@ class WebShell(context: Context, val server: String, private val bridge: BridgeC
         override fun onHideCustomView() = host.hideFullscreen()
     }
 
-    private companion object { const val TAG = "WebShell" }
+    companion object {
+        private const val TAG = "WebShell"
+        /** A new window that has not navigated by then is given up (its throwaway web view destroyed). */
+        const val POPUP_TIMEOUT_MS = 10_000L
+
+        /**
+         * The page's settings: JavaScript and DOM storage for the web app; nothing from the phone's files or content
+         * providers; no http content inside the https page; Safe Browsing on; new windows only on a tap.
+         */
+        @Suppress("DEPRECATION")   // the file-URL switches are deprecated (off by default since API 30), set off anyway
+        fun applySettings(settings: WebSettings, version: String) {
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.mediaPlaybackRequiresUserGesture = false      // previews start from the page's own controls
+            settings.setSupportMultipleWindows(true)               // target=_blank and window.open reach onCreateWindow
+            settings.javaScriptCanOpenWindowsAutomatically = false // only on a tap, as WKWebView
+            settings.allowFileAccess = false
+            settings.allowContentAccess = false
+            settings.allowFileAccessFromFileURLs = false
+            settings.allowUniversalAccessFromFileURLs = false
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            settings.safeBrowsingEnabled = true                    // also declared in the manifest (meta-data)
+            settings.userAgentString = "${settings.userAgentString} LarkAndroid/$version"
+        }
+    }
 }

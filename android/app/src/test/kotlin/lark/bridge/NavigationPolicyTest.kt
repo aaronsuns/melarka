@@ -75,6 +75,17 @@ class NavigationPolicyTest {
         assertEquals(NavigationPolicy.cancel, d("blob:https://lark.test/abc", Target.newWindow))
         assertEquals(NavigationPolicy.cancel, d("about:blank", Target.newWindow))
         assertEquals(NavigationPolicy.cancel, d("tel:123", Target.newWindow, tapped = false))
+        // Local schemes never leave the page, in any frame, tapped or not: no file, content provider or browser page.
+        for (target in Target.entries) for (tapped in listOf(true, false)) {
+            for (local in listOf("file:///sdcard/Download/x.html", "FILE:///data/data/x", "content://media/external/1",
+                                 "chrome://settings", "chrome-extension://abc/x.html", "android.resource://pkg/raw/x",
+                                 "view-source:https://lark.test/", "filesystem:https://lark.test/temporary/x")) {
+                assertEquals("$local $target $tapped", NavigationPolicy.cancel, d(local, target, tapped))
+            }
+        }
+        // An intent: URL is only ever a plain view of the URL (the opener never parses it into an Intent).
+        assertEquals(NavigationPolicy.openExternally, d("intent://scan/#Intent;scheme=zxing;package=x;end"))
+        assertEquals(NavigationPolicy.cancel, d("intent://scan/#Intent;end", Target.subframe, tapped = false))
     }
 
     /** URLs a parser could read two ways: the origin is the host after the user info, and `\` ends it as `/` does. */

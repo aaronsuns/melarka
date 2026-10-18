@@ -10,7 +10,7 @@ import org.junit.Test
  * emulator smoke test (Task 14); here its text is checked.
  */
 class BridgeControllerTest {
-    private class FakeView(override var hasPage: Boolean = true) : BridgeView {
+    private class FakeView(override var url: String? = "https://lark.test/library") : BridgeView {
         val scripts = mutableListOf<String>()
         override fun evaluate(script: String) { scripts += script }
     }
@@ -60,12 +60,36 @@ class BridgeControllerTest {
     }
 
     @Test fun sendIsANoOpWithNoPageOrNoView() {
-        view.hasPage = false
+        view.url = null
         bridge.send(NativeEvent.AuthRequired)
         assertTrue(view.scripts.isEmpty())
         bridge.attach(null)
         bridge.send(NativeEvent.AuthRequired)                 // the Activity is gone: nothing to evaluate in
         assertTrue(view.scripts.isEmpty())
+    }
+
+    /** The web view went somewhere else (an error page, about:blank, another origin): nothing is dispatched there. */
+    @Test fun eventsGoOnlyToTheServersPage() {
+        for (url in listOf("https://evil.test/", "about:blank", "http://lark.test/", "data:text/html,x", "chrome-error://chromewebdata/")) {
+            view.url = url
+            bridge.send(NativeEvent.AuthRequired)
+        }
+        assertTrue(view.scripts.isEmpty())
+        view.url = "https://lark.test:443/x?y"
+        bridge.send(NativeEvent.AuthRequired)
+        assertEquals(1, view.scripts.size)
+    }
+
+    /** A shell going away detaches only its own view: a newer shell (after a renderer crash) keeps the bridge. */
+    @Test fun detachingAnOldViewKeepsTheNewOne() {
+        val newer = FakeView()
+        bridge.attach(newer)
+        bridge.detach(view)
+        bridge.send(NativeEvent.AuthRequired)
+        assertEquals(1, newer.scripts.size)
+        bridge.detach(newer)
+        bridge.send(NativeEvent.AuthRequired)
+        assertEquals(1, newer.scripts.size)
     }
 
     /** `window.larkNative = {version:1, platform:"android", post}`, frozen, not replaceable, the main frame only. */

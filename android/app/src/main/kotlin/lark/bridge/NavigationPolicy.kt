@@ -17,10 +17,13 @@ enum class NavigationPolicy {
          *   so no page content an attacker controls can replace the Melarka UI.
          * - new window (`target=_blank`, `window.open`): only same-origin http(s) loads, in the main frame.
          * - subframes (the 视频 YouTube embed): web and in-page schemes stay in the page; app schemes need a tap.
-         * A string with no scheme is dropped.
+         * A string with no scheme, and the local schemes (`file:`, `content:`, `chrome:`…), are dropped in every frame.
+         * An `intent:` URL is an app scheme like any other: the opener only ever views it as a URL.
          */
         fun decide(url: String, server: String, target: Target, userActivated: Boolean): NavigationPolicy {
             val scheme = schemeOf(url) ?: return cancel
+            // The phone's own files, content providers and browser pages: never loaded, never handed to another app.
+            if (scheme in LOCAL) return cancel
             val isWeb = scheme == "http" || scheme == "https"
             val inPage = scheme in IN_PAGE
             val sameOrigin = isWeb && webOrigin(url)?.let { BridgeController.originMatches(it.scheme, it.host, it.port, server) } == true
@@ -51,6 +54,7 @@ enum class NavigationPolicy {
         }
 
         private val IN_PAGE = setOf("about", "blob", "data", "javascript")
+        private val LOCAL = setOf("file", "content", "chrome", "chrome-extension", "android.resource", "view-source", "filesystem")
         private val SCHEME = Regex("^[A-Za-z][A-Za-z0-9+.-]*$")
 
         /** The lowercased scheme, or null when the string has none. */

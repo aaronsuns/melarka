@@ -241,8 +241,8 @@ class AppServicesTest : ServicesTestCase() {
 
     // MARK: The bridge
 
-    private class FakeView : BridgeView {
-        override val hasPage = true
+    private inner class FakeView : BridgeView {
+        override val url: String get() = serverUrl
         val scripts = mutableListOf<String>()
         override fun evaluate(script: String) { scripts += script }
     }

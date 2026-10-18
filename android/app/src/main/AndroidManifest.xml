@@ -16,6 +16,9 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true">
+        <!-- Safe Browsing for every web view (also set in WebShell.applySettings). -->
+        <meta-data android:name="android.webkit.WebView.EnableSafeBrowsing" android:value="true" />
+
         <!-- Not recreated on rotation, resizing or a keyboard: the web view (and the page's state) stays. -->
         <activity
             android:name="lark.app.MainActivity"

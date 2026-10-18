@@ -4,8 +4,8 @@ import java.net.URI
 
 /** The web view as the bridge needs it: [WebShell] adapts a `WebView`; tests use a fake. Main thread only. */
 interface BridgeView {
-    /** A page is loaded (or loading): an event has somewhere to go. */
-    val hasPage: Boolean
+    /** The page's URL (`WebView.url`), null before the first load. */
+    val url: String?
 
     /** `WebView.evaluateJavascript(script, null)`. */
     fun evaluate(script: String)
@@ -32,11 +32,18 @@ class BridgeController(val serverUrl: String, private val router: (WebMessage) -
     /** The web view of this server's page, or null when the Activity let it go. */
     fun attach(view: BridgeView?) { this.view = view }
 
-    /** Dispatches [event] to the page. A no-op with no page, no view, or while inactive. */
+    /** [view] is going: let it go, unless another view (a newer shell) has been attached since. */
+    fun detach(view: BridgeView) { if (this.view === view) this.view = null }
+
+    /**
+     * Dispatches [event] to the page. A no-op with no view, while inactive, or while the web view shows anything but
+     * the server's own page (an error page, `about:blank`, another origin): events are for the Melarka page only.
+     */
     fun send(event: NativeEvent) {
         if (!isActive) return
         val v = view ?: return
-        if (!v.hasPage) return
+        val url = v.url ?: return
+        if (!originMatches(url, serverUrl)) return
         v.evaluate(dispatchScript(event))
     }
 

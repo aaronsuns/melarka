@@ -186,8 +186,14 @@ behaviour; the builder works through it as a checklist.
   allowed in subframes, a main-frame 5xx counts as a load failure (`net::ERR_ABORTED`, a load
   replaced by another, does not), a renderer crash gets a new web view on the server's page.
   `target=_blank`/`window.open` reach `onCreateWindow`; the new window's first URL is caught in a
-  throwaway web view and decided as a new window. `alert`/`confirm` show native dialogs only for the
-  server's own frames; `prompt` is refused. The user agent gains `LarkAndroid/<version>` (unused, as
+  throwaway web view and decided as a new window (destroyed after 10 s if it never navigates, on
+  `window.close()`, or with the shell). Local schemes (`file:`, `content:`, `chrome:`,
+  `chrome-extension:`, `android.resource:`, `view-source:`, `filesystem:`) are cancelled in every frame.
+  Opening outside is always a plain `ACTION_VIEW` + `CATEGORY_BROWSABLE` of the URL (an `intent:` URL is
+  never parsed into an Intent), and nothing it throws escapes. Events are dispatched only while the web
+  view shows the server's own origin. Settings: no file or content access (file-URL access off too), no
+  mixed content, Safe Browsing on, new windows only on a tap. `alert`/`confirm` show native dialogs only
+  for the server's own frames and are answered (false) if the Activity goes; `prompt` is refused. The user agent gains `LarkAndroid/<version>` (unused, as
   iOS's `LarkiOS/<version>`).
 - The web view belongs to the Activity (made in `onCreate`, destroyed in `onDestroy`; the Activity is
   not recreated on rotation or resizing), unlike iOS, where the app services keep the `WKWebView`:
