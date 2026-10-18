@@ -394,7 +394,9 @@ setup and test, background playback, about). Jetpack Compose, Material 3, dark t
   (`EngineControl`: `WebMessage`s in, `NativeEvent`s out, no network). The theme takes `web/src/styles.css`'s tokens;
   the few icons are Material paths in code (no icon library).
 - **Server screen**: `ServerUrl.normalize`, then `ServerUrl.check` (`GET /api/v1/info` answers 200) before
-  `setServerUrl`. Changing the server later asks for confirmation, then runs `AppServices.changeServer`.
+  `setServerUrl`. Changing the server later asks for confirmation, then runs `AppServices.changeServer`, which first
+  closes the old page's bridge (`BridgeController.close`: what the page posts during the sign-out flush, its shell still
+  on screen, reaches nothing, and no event goes to it).
 - **Car autoplay in Settings**: the switch asks for Nearby devices only when turned on, then lists the paired cars
   (or the system's search nearby) and calls `CarAutoplay.associate`; the car's name, another car, Test: Shuffle
   Favorites (the shortcut's `IntentRun`), what the last connection did (`lastResult`), and below Android 12 the

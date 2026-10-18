@@ -390,13 +390,17 @@ class AppServices(
 
     /**
      * Settings → change server: sign out of this server (pending play events sent while the token works; playback
-     * stopped, queues wiped, the token and the session cookie gone), drop the engine and the bridge, remove the server's
+     * stopped, queues wiped, the token and the session cookie gone), drop the engine and the bridge (closed first, so the
+     * old page reaches nothing meanwhile), remove the server's
      * web data, and forget the server, so the server screen shows again. Re-entry returns.
      */
     suspend fun changeServer() {
         val old = serverUrl ?: return
         if (changingServer) return
         changingServer = true
+        // The old page is cut off first: what it posts while the sign-out flush runs (its shell is still on screen)
+        // must not reach the services being torn down.
+        bridgeStorage?.close()
         try {
             if (engineStorage == null && auth.token != null) engine   // so the pending events on disk are sent too
             signOut()
@@ -419,7 +423,7 @@ class AppServices(
         auth.clear()
         dropEngine()
         apiClient = null
-        bridgeStorage?.attach(null)
+        bridgeStorage?.close()
         bridgeStorage = null
     }
 

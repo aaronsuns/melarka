@@ -30,17 +30,26 @@ class BridgeController(val serverUrl: String, private val router: (WebMessage) -
     var isActive = true
 
     /** The web view of this server's page, or null when the Activity let it go. */
-    fun attach(view: BridgeView?) { this.view = view }
+    fun attach(view: BridgeView?) { if (!closed) this.view = view }
 
     /** [view] is going: let it go, unless another view (a newer shell) has been attached since. */
     fun detach(view: BridgeView) { if (this.view === view) this.view = null }
+
+    /**
+     * Dropped for good (a server change): the view goes, and from now on the page's messages reach nothing and no event
+     * is sent, though the old shell may still be on screen until the Activity replaces it.
+     */
+    var closed = false
+        private set
+
+    fun close() { closed = true; view = null }
 
     /**
      * Dispatches [event] to the page. A no-op with no view, while inactive, or while the web view shows anything but
      * the server's own page (an error page, `about:blank`, another origin): events are for the Melarka page only.
      */
     fun send(event: NativeEvent) {
-        if (!isActive) return
+        if (!isActive || closed) return
         val v = view ?: return
         val url = v.url ?: return
         if (!originMatches(url, serverUrl)) return
@@ -49,7 +58,7 @@ class BridgeController(val serverUrl: String, private val router: (WebMessage) -
 
     /** A message from `lark.postMessage`: [sourceOrigin] and [isMainFrame] as the web view reports them. */
     fun onMessage(data: String?, sourceOrigin: String, isMainFrame: Boolean) {
-        if (!isMainFrame || !originMatches(sourceOrigin, serverUrl)) return
+        if (closed || !isMainFrame || !originMatches(sourceOrigin, serverUrl)) return
         val msg = WebMessage.decode(data ?: return) ?: return
         router(msg)
     }

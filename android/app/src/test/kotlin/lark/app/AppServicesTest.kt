@@ -325,6 +325,30 @@ class AppServicesTest : ServicesTestCase() {
         assertFalse(s.changingServer)
     }
 
+    /**
+     * The old page's bridge is cut off when a server change starts: what the page posts while the sign-out flush is
+     * still sending (the old shell is still on screen) or after reaches nothing.
+     */
+    @Test fun theDroppedBridgeRoutesNothing() = servicesTest {
+        val release = java.util.concurrent.CountDownLatch(1)
+        handler = { release.await(5, TimeUnit.SECONDS); accepted() }   // the flush's POST waits for the test
+        val s = makeServices()
+        val b = s.bridge(serverUrl)
+        s.handle(q(listOf(7), 0, 0, true))
+        backend.start(); backend.playTo(40_000)
+        val change = launch { s.changeServer() }
+        advanceUntilIdle()
+        assertTrue(s.changingServer)                           // in the flush
+        b.onMessage("""{"type":"openSettings"}""", serverUrl.trimEnd('/'), isMainFrame = true)
+        assertFalse(s.showSettings)
+        release.countDown()
+        waitUntil { change.isCompleted }
+        assertNull(s.serverUrl)
+        b.onMessage("""{"type":"openSettings"}""", serverUrl.trimEnd('/'), isMainFrame = true)
+        assertFalse(s.showSettings)
+        assertNull(s.bridge)
+    }
+
     /** A dropped engine is inert: the network coming back does not make it play. */
     @Test fun aDroppedEngineIgnoresTheNetwork() = servicesTest {
         val s = makeServices()
