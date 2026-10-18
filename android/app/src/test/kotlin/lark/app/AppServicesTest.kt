@@ -37,6 +37,23 @@ class AppServicesTest : ServicesTestCase() {
 
     private fun accepted() = ok("""{"accepted":1}""")
 
+    // MARK: Intents
+
+    /** What the media service's cold-start hold asks: a shortcut's or car autoplay's run is still preparing playback. */
+    @Test fun intentRunningWhileARunIsPreparing() = servicesTest {
+        val s = makeServices()
+        assertFalse(s.intentRunning)
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        s.runIntent { gate.await() }                 // a shuffle waiting for the server
+        assertTrue(s.intentRunning)
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertFalse(s.intentRunning)
+        s.runIntent { }                              // nothing to wait for
+        advanceUntilIdle()
+        assertFalse(s.intentRunning)
+    }
+
     // MARK: Sign-out
 
     @Test fun signOutDeletesTheSessionCookieSoItCannotBeHarvestedAgain() = servicesTest {

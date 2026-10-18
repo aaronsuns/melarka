@@ -425,6 +425,50 @@ class ColdStartServiceTest {
         assertTrue(shadow.isStoppedBySelf)
     }
 
+    /**
+     * A shortcut's or car autoplay's run still preparing playback (its shuffle asking the server after the shortcut's
+     * activity has gone) keeps the foreground too; when it ends with nothing playing, it is let go.
+     */
+    @Test fun anIntentRunStillPreparingKeepsTheForeground() {
+        var preparing = true
+        rig.host.intentStarting = { preparing }
+        val intent = Intent(context, PlaybackService::class.java).putExtra(PlaybackService.EXTRA_FOREGROUND_START, true)
+        val controller = start(intent)
+        val shadow = shadowOf(controller.get())
+        idleMain()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(20))
+        assertFalse(shadow.isForegroundStopped)
+        assertFalse(shadow.isStoppedBySelf)
+        preparing = false                                               // the run ended, nothing plays
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2))
+        assertTrue(shadow.isForegroundStopped)
+        assertTrue(shadow.isStoppedBySelf)
+    }
+
+    /**
+     * The shortcut's activity runs in a task of its own, which goes as it finishes: Android tells the service its task
+     * was removed. That is not the user swiping Melarka away: the playback the shortcut is starting goes on (Media3's
+     * default would pause it and stop, as the session does not show it as playing yet). Melarka's own task swiped away
+     * with nothing playing still stops the service.
+     */
+    @Test fun theShortcutsTaskGoingDoesNotStopTheService() {
+        var preparing = true
+        rig.host.intentStarting = { preparing }
+        val intent = Intent(context, PlaybackService::class.java).putExtra(PlaybackService.EXTRA_FOREGROUND_START, true)
+        val controller = start(intent)
+        val shadow = shadowOf(controller.get())
+        idleMain()
+        controller.get().onTaskRemoved(Intent(ShortcutActivity.ACTION_SHUFFLE_FAVORITES).setClassName(context, ShortcutActivity::class.java.name))
+        idleMain()
+        assertFalse(shadow.isStoppedBySelf)
+        assertFalse(shadow.isForegroundStopped)
+
+        preparing = false
+        controller.get().onTaskRemoved(Intent(Intent.ACTION_MAIN).setClassName(context, lark.app.MainActivity::class.java.name))
+        idleMain()
+        assertTrue(shadow.isStoppedBySelf)
+    }
+
     /** Waiting for the network's first answer keeps it too, but only up to the 30 s cap. */
     @Test fun waitingForTheNetworkKeepsTheForegroundUpToTheCap() {
         rig.network.answered = false

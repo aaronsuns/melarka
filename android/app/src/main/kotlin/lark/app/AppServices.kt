@@ -199,7 +199,23 @@ class AppServices(
      * started it (Settings' server change and test button). The scope's dispatcher is immediate: [body] runs now up to
      * its first suspension, so playback is prepared before this returns (while a shortcut is still visible).
      */
-    fun runIntent(body: suspend () -> Unit): Job = scope.launch { body() }
+    fun runIntent(body: suspend () -> Unit): Job {
+        // Lazily started: a run that ends at once must find itself in `intentRuns` to leave it.
+        val job = scope.launch(start = CoroutineStart.LAZY) { body() }
+        intentRuns += job
+        job.invokeOnCompletion { intentRuns -= job }
+        job.start()
+        return job
+    }
+
+    private val intentRuns = mutableSetOf<Job>()
+
+    /**
+     * A [runIntent] run has not finished yet: a shortcut's or car autoplay's shuffle may still be asking the server. The
+     * media service's cold-start hold waits for it (`PlaybackHost.intentStarting`), so the service is still there,
+     * in the foreground, when the playback starts after the shortcut's activity has gone.
+     */
+    val intentRunning: Boolean get() = intentRuns.any { it.isActive }
 
     /**
      * At launch: builds the player when a server is known, so the car's play finds its engine even when Android

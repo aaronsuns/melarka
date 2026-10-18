@@ -73,6 +73,13 @@ class PlaybackHost(
      */
     var resumption: () -> Unit = { (engine ?: engineProvider?.invoke())?.resumeFromDisk() }
 
+    /**
+     * A shortcut's or car autoplay's run is still preparing playback (`AppServices.intentRunning`, set by the
+     * application): its shuffle may be asking the server after the shortcut's activity has gone. The media service's
+     * cold-start hold waits for it.
+     */
+    var intentStarting: () -> Boolean = { false }
+
     private var kind: Item.Kind? = null
 
     init {

@@ -32,6 +32,7 @@ import lark.app.MainActivity
 import lark.app.R
 import lark.bridge.Item
 import lark.bridge.RepeatMode
+import lark.car.ShortcutActivity
 
 /**
  * The media service: the MediaSession over the app-wide player ([Playback]'s host), the notification and lock screen
@@ -105,15 +106,15 @@ class PlaybackService : MediaSessionService() {
 
     /**
      * Until Media3 takes over (its notification put the service in the foreground) or nothing is going to play: playing,
-     * a shuffle from the server still running, or a cold start waiting for the network's first answer keep it (the
-     * waits for at most [HOLD_MAX_MS]).
+     * a shuffle from the server still running (a play command's, or a shortcut's or car autoplay's run), or a cold start
+     * waiting for the network's first answer keep it (the waits for at most [HOLD_MAX_MS]).
      */
     private val checkHold: Runnable = object : Runnable {
         override fun run() {
             if (!holding) return
             if (isPlaybackOngoing) { holding = false; return }
             val engine = host.engine
-            val waiting = host.remote.starting || engine?.awaitingNetworkAnswer == true
+            val waiting = host.remote.starting || host.intentStarting() || engine?.awaitingNetworkAnswer == true
             if (engine?.playing == true || (waiting && SystemClock.elapsedRealtime() - holdSince < HOLD_MAX_MS)) {
                 handler.postDelayed(this, HOLD_CHECK_MS)
                 return
@@ -122,6 +123,17 @@ class PlaybackService : MediaSessionService() {
             ServiceCompat.stopForeground(this@PlaybackService, ServiceCompat.STOP_FOREGROUND_REMOVE)
             if (engine?.playing != true) stopSelf()
         }
+    }
+
+    /**
+     * The shortcuts' activity (`ShortcutActivity`) runs in a task of its own that goes as soon as it finishes, and Android
+     * tells every started service of the app: that is not the user swiping Melarka away. Media3's default would pause
+     * the playback the shortcut is starting (the session does not show it as playing yet) and stop the service. Any
+     * other task (Melarka's own, swiped away) gets Media3's default: the service stops unless something is playing.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        if (rootIntent?.component?.className == ShortcutActivity::class.java.name) return
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {

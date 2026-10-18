@@ -91,6 +91,7 @@ class LarkApplication : Application() {
             )
             s.serviceRunning = { PlaybackService.running }
             host.engineProvider = { s.engine }
+            host.intentStarting = { s.intentRunning }
             built = s
             s.start()
             return s

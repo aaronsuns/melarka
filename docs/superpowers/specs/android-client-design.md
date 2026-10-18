@@ -293,16 +293,23 @@ ports as is.
   main-thread scope, synchronously up to the first suspension, and starts the media service into the foreground
   (`PlaybackService.startInForeground`, as car autoplay does) while the activity is still visible, then finishes: the
   cold-start notification holds the foreground until playback starts, so a shuffle from the server that answers after
-  the activity is gone still gets its media notification. The result shows as a toast (iOS's Shortcuts dialog; a
-  Resume that played says nothing); with no server or signed out, Melarka opens instead of only saying so.
+  the activity is gone still gets its media notification. The activity's own task (`taskAffinity=""`) goes as it
+  finishes, and Android tells the app's started services (`onTaskRemoved`): `PlaybackService` ignores it for that task
+  (Media3's default would pause the shuffle that is just starting and stop the service; any other task, Melarka's own
+  swiped away, keeps Media3's default). The result shows as a toast (iOS's Shortcuts dialog; a Resume that played says
+  nothing); with no server or signed out, Melarka opens instead of only saying so. Found on the emulator (Task 14):
+  Android 13+ drops a toast from an app in the background whose notifications are off, and Melarka has no
+  notification permission, so a result that comes after the activity finished (a shuffle answered by the server) is
+  not shown there; open with the owner.
 - **The cold start's foreground**: a media button with the app not running reaches `MediaButtonReceiver`, which starts
   the service with `startForegroundService`; car autoplay does the same (`PlaybackService.startInForeground`). Android
   requires `startForeground` within 5 s even when nothing turns out to be playable (no server, signed out, offline with
   nothing cached), and Media3 only does it once something plays. So `PlaybackService.onStartCommand` goes into the
   foreground at once with a plain "Starting playback…" notification on Media3's channel and id (Media3's media
-  notification replaces it), keeps it while the engine plays, a shuffle from the server runs, or a cold start waits for
-  the network's first answer (at most 30 s), and otherwise removes it and stops the service. A cold start offline with
-  nothing cached therefore ends with the service stopped; when the network comes back later in the background, the
+  notification replaces it), keeps it while the engine plays, a shuffle from the server runs (a play command's, or a
+  shortcut's or car autoplay's `AppServices.runIntent` run: `intentRunning`, through `PlaybackHost.intentStarting`),
+  or a cold start waits for the network's first answer (at most 30 s), and otherwise removes it and stops the service.
+  A cold start offline with nothing cached therefore ends with the service stopped; when the network comes back later in the background, the
   background-start rule (App services) applies (the engine waits for the user).
 - **Car autoplay** (`CarAutoplay`, `CarAutoplaySettings`): Settings turns it on; only then is the Nearby devices
   permission asked (`BLUETOOTH_CONNECT`, Android 12+), to list the paired cars. The user picks one and
@@ -333,9 +340,11 @@ ports as is.
   vivo/iQOO (Autostart, high background power use), Samsung (Never sleeping apps). Stock-like phones (Pixel, Motorola,
   Nokia, Sony, …) get only the generic battery text. Car autoplay and playback with the screen off can still fail on
   those phones until the user follows the guidance; `docs/android.md` gives the steps (dontkillmyapp.com).
-- Checked on the emulator and by first users only (Task 14): the shortcut's foreground start for a server shuffle
-  that returns after the activity finished (Android records the start's permission when the service is started, while
-  the activity is visible), CDM presence for a classic-Bluetooth car on Android 12/12L, and the vendor menu paths.
+- Checked on the emulator (Task 14, `ShortcutTest`): the shortcut's foreground start for a server shuffle that returns
+  after the activity finished (it plays, with Media3's notification, no screen opened; this found the two holes fixed
+  above: the hold let go while the shuffle asked the server, and the shortcut's task removal paused it). Left to first
+  users: CDM presence for a classic-Bluetooth car on Android 12/12L (the emulator pairs no car; its picker and the
+  Nearby devices prompt were seen), and the vendor menu paths.
 
 ### Native screens
 
