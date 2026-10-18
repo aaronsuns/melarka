@@ -2,13 +2,8 @@ package lark.app
 
 import android.app.Application
 import android.content.Context
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import lark.auth.KeystoreSecretStore
 import lark.auth.WebViewData
 import lark.cache.CacheLayout
@@ -20,6 +15,7 @@ import lark.car.SystemCompanion
 import lark.core.AndroidNetworkStatus
 import lark.core.Clock
 import lark.core.MainScheduler
+import lark.core.loggingMainScope
 import lark.player.EngineTexts
 import lark.service.Playback
 import lark.service.PlaybackService
@@ -68,9 +64,7 @@ class LarkApplication : Application() {
         building = true
         try {
             val host = Playback.host(this)
-            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + CoroutineExceptionHandler { _, e ->
-                Log.e(TAG, "an app task failed: ${e.javaClass.name}")    // the class only: a message is never logged
-            })
+            val scope = loggingMainScope(TAG)                   // a failed task logged by its class only
             val s = AppServices(
                 prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE),
                 secrets = KeystoreSecretStore(File(filesDir, "secrets.bin")),

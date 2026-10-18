@@ -6,11 +6,10 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import lark.bridge.Item
 import lark.core.Clock
 import lark.core.MainScheduler
+import lark.core.loggingMainScope
 import lark.player.Media3Backend
 import lark.player.PlayerEngine
 import okhttp3.OkHttpClient
@@ -108,12 +107,17 @@ class PlaybackHost(
             .setContentType(if (kind == Item.Kind.episode) C.AUDIO_CONTENT_TYPE_SPEECH else C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
 
-        /** The production parts: a [Media3Backend] on the main thread, covers from the engine's server. */
+        private const val TAG = "PlaybackHost"
+
+        /**
+         * The production parts: a [Media3Backend] on the main thread, covers from the engine's server, and a main-thread
+         * scope that logs a failed task (the remote commands' cold-start shuffle runs there) as the app services' does.
+         */
         fun create(context: Context, http: OkHttpClient): PlaybackHost {
             val backend = Media3Backend.create(context, MainScheduler(), http)
             lateinit var host: PlaybackHost
             val app = context.applicationContext
-            host = PlaybackHost(backend.player, NowPlayingHub(), CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate), backend,
+            host = PlaybackHost(backend.player, NowPlayingHub(), loggingMainScope(TAG), backend,
                 artwork = { item -> ArtworkLoader { host.engine?.client }.load(item) },
                 startService = { PlaybackService.start(app) })
             return host
