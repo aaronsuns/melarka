@@ -52,6 +52,7 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         running = true
         foregroundStartPending = false
+        firstStart = true
         host = Playback.host(this)
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -74,6 +75,8 @@ class PlaybackService : MediaSessionService() {
     /** The cold-start notification is up and Media3's own has not taken over yet. */
     private var holding = false
     private var holdSince = 0L
+    /** No start has reached [onStartCommand] since [onCreate]: only that one can be a cold start. */
+    private var firstStart = false
 
     /**
      * A start with `startForegroundService` (a media button with the app not running, or car autoplay from the
@@ -81,9 +84,16 @@ class PlaybackService : MediaSessionService() {
      * signed out, offline with nothing cached). The service goes into the foreground at once with a plain notification
      * on Media3's channel and id, which Media3's media notification replaces when playback starts; when nothing plays,
      * it is removed and the service stops.
+     *
+     * Only the first start after [onCreate] is such a cold start. Later `MEDIA_BUTTON` starts come to a service that is
+     * already running, most of them from Media3's own notification buttons (Android 8-12 sends them as service starts):
+     * they go to Media3 alone, so a paused notification's Previous or Play neither swaps the notification nor stops
+     * the service.
      */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val coldStart = intent != null && !isPlaybackOngoing &&
+        val first = firstStart
+        firstStart = false
+        val coldStart = first && intent != null && !isPlaybackOngoing &&
             (intent.action == Intent.ACTION_MEDIA_BUTTON || intent.getBooleanExtra(EXTRA_FOREGROUND_START, false))
         if (coldStart) hold()
         val r = super.onStartCommand(intent, flags, startId)

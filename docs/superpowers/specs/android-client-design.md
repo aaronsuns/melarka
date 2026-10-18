@@ -338,7 +338,10 @@ ports as is.
   shortcut's or car autoplay's `AppServices.runIntent` run: `intentRunning`, through `PlaybackHost.intentStarting`),
   or a cold start waits for the network's first answer (at most 30 s), and otherwise removes it and stops the service.
   A cold start offline with nothing cached therefore ends with the service stopped; when the network comes back later in the background, the
-  background-start rule (App services) applies (the engine waits for the user).
+  background-start rule (App services) applies (the engine waits for the user). Only the first start after the
+  service's `onCreate` is a cold start: later `MEDIA_BUTTON` starts reach a running service, most of them from Media3's
+  own notification buttons (Android 8-12 sends those as service starts), and go to Media3 alone, so a paused
+  notification's Previous or Play neither swaps the notification nor stops the service.
 - **Car autoplay** (`CarAutoplay`, `CarAutoplaySettings`): Settings turns it on; only then is the Nearby devices
   permission asked (`BLUETOOTH_CONNECT`, Android 12+), to list the paired cars. The user picks one and
   `CarAutoplay.associate(activity, address)` asks CompanionDeviceManager (a `BluetoothDeviceFilter` for that address);

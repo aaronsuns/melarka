@@ -465,8 +465,10 @@ class ColdStartServiceTest {
 
         preparing = false
         controller.get().onTaskRemoved(Intent(Intent.ACTION_MAIN).setClassName(context, lark.app.MainActivity::class.java.name))
-        idleMain()
+        idleMain()                                                      // no time passes: the hold's check is not due
+        // Media3's task-removed stop, not the hold letting go (that would have stopped the foreground first).
         assertTrue(shadow.isStoppedBySelf)
+        assertFalse(shadow.isForegroundStopped)
     }
 
     /** Waiting for the network's first answer keeps it too, but only up to the 30 s cap. */
@@ -482,6 +484,53 @@ class ColdStartServiceTest {
         assertTrue(rig.engine.awaitingNetworkAnswer)                   // still no answer: the cap let it go
         assertTrue(shadow.isForegroundStopped)
         assertTrue(shadow.isStoppedBySelf)
+    }
+
+    private fun mediaButton(keyCode: Int) = Intent(Intent.ACTION_MEDIA_BUTTON)
+        .putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+
+    private fun isHold(n: android.app.Notification?) =
+        n?.extras?.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString() == context.getString(lark.app.R.string.cold_start_notification)
+
+    /**
+     * Media3's own notification buttons (Android 8-12) reach the running service as `MEDIA_BUTTON` starts: that is no
+     * cold start. Paused (past Media3's foreground timeout), Previous (a paused restart) and Play neither show the cold-start notification nor stop the
+     * service; the session stays.
+     */
+    @Test fun notificationButtonsOnARunningServiceAreNoColdStart() {
+        rig.cache.local[1] = lark.testing.silentWav(tmp.root, 30.0, 8000)
+        rig.engine.handle(q(listOf(1), 0, 0, false))
+        rig.makeEngine()
+        val controller = start(mediaButtonPlay())                       // the real cold start
+        val shadow = shadowOf(controller.get())
+        idleMain()
+        rig.waitUntil { rig.player.isPlaying }
+        rig.settle()
+        rig.engine.pause()
+        rig.settle()
+        // Paused long enough for Media3 to let the foreground go (its 10 min timeout): its notification stays.
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMinutes(11))
+        assertFalse(rig.engine.playing)
+        assertFalse(controller.get().isPlaybackOngoing)
+        assertFalse("still running, paused", shadow.isStoppedBySelf)
+        val before = shadow.lastForegroundNotification
+
+        controller.get().onStartCommand(mediaButton(KeyEvent.KEYCODE_MEDIA_PREVIOUS), 0, 2)
+        assertTrue("no cold-start notification for Previous", shadow.lastForegroundNotification === before ||
+            !isHold(shadow.lastForegroundNotification))
+        rig.settle()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(3))
+        assertFalse(rig.engine.playing)
+        assertFalse(shadow.isStoppedBySelf)
+        assertNotNull(controller.get().session)
+
+        val beforePlay = shadow.lastForegroundNotification
+        controller.get().onStartCommand(mediaButton(KeyEvent.KEYCODE_MEDIA_PLAY), 0, 3)
+        assertTrue("no cold-start notification for Play", shadow.lastForegroundNotification === beforePlay ||
+            !isHold(shadow.lastForegroundNotification))
+        idleMain()
+        assertFalse(shadow.isStoppedBySelf)
+        assertNotNull(controller.get().session)
     }
 
     /** Car autoplay's start ([PlaybackService.startInForeground]) holds the foreground the same way. */
