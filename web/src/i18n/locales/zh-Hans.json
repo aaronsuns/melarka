@@ -9,7 +9,7 @@
   "settings.onOpen": "打开 Melarka 时", "settings.onOpen.shuffle_favorites": "随机播放我的收藏",
   "settings.onOpen.resume": "继续上次播放", "settings.onOpen.nothing": "什么都不做",
   "settings.languageServerDefault": "服务器默认（{name}）",
-  "settings.nativeApp": "Melarka App 设置", "settings.nativeAppIos": "iPhone App 设置", "settings.nativeAppAndroid": "Android App 设置", "settings.nativeAppHint": "本机 Melarka App 的离线缓存和服务器。",
+  "settings.nativeApp": "Melarka App 设置", "settings.nativeAppIos": "iPhone App 设置", "settings.nativeAppAndroid": "Android App 设置", "settings.nativeAppHint": "本机 Melarka App 的离线缓存和服务器。", "settings.nativeAppHintIos": "本机 Melarka App 的离线缓存、服务器和快捷指令。",
   "settings.version": "版本 {v}", "settings.source": "源代码",
   "settings.carLyrics": "车载歌词（蓝牙）", "settings.carLyricsHint": "在车载屏幕和锁屏上，把当前这句歌词显示为歌名。",
   "settings.loudness": "音量均衡", "settings.loudnessHint": "让每首歌的响度相近：只把太响的歌调低，不放大安静的歌。",

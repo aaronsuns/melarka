@@ -107,4 +107,19 @@ describe("the native app's settings entry names the platform", () => {
       n.uninstall();
     }
   });
+
+  // The iPhone app has Shortcuts in its settings; the Android app and an old iPhone build (no platform) get the neutral hint.
+  test.each([
+    ["ios", "本机 Melarka App 的离线缓存、服务器和快捷指令。"],
+    ["android", "本机 Melarka App 的离线缓存和服务器。"],
+    [null, "本机 Melarka App 的离线缓存和服务器。"],
+  ] as const)("hint for platform %s", async (platform, hint) => {
+    const n = installFakeNative(platform);
+    try {
+      renderWithApp(<SettingsPage />);
+      expect(await screen.findByRole("button", { description: hint })).toBeInTheDocument();
+    } finally {
+      n.uninstall();
+    }
+  });
 });

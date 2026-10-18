@@ -28,6 +28,8 @@ export default function SettingsPage() {
   const [native] = useState(hasNative);
   const platform = nativePlatform();
   const nativeLabelKey = platform === "ios" ? "settings.nativeAppIos" : platform === "android" ? "settings.nativeAppAndroid" : "settings.nativeApp";
+  // The iPhone app's settings have Shortcuts too; an old iPhone build (no platform) gets the neutral hint.
+  const nativeHintKey = platform === "ios" ? "settings.nativeAppHintIos" : "settings.nativeAppHint";
   // The server's version, for the footer; the line is hidden without one.
   const [version, setVersion] = useState<string>();
   useEffect(() => {
@@ -131,7 +133,7 @@ export default function SettingsPage() {
           <button type="button" className="settings-link" aria-describedby={nativeHint} onClick={() => nativePost({ type: "openSettings" })}>
             {t(nativeLabelKey)}
           </button>
-          <span id={nativeHint} className="small">{t("settings.nativeAppHint")}</span>
+          <span id={nativeHint} className="small">{t(nativeHintKey)}</span>
         </div>
       ) : (
         <OfflineSettings />

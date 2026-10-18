@@ -423,7 +423,9 @@ setup and test, background playback, about). Jetpack Compose, Material 3, dark t
 
 - `larkNative.platform` ("ios" from the iPhone app too) so the web can say "Android app settings"
   instead of "iPhone app settings" (`settings.nativeAppAndroid` / `settings.nativeAppIos`); an iPhone app older
-  than this sends none, and the web then shows the neutral "Melarka app settings" (`settings.nativeApp`).
+  than this sends none, and the web then shows the neutral "Melarka app settings" (`settings.nativeApp`). The hint
+  under it keeps the Shortcuts mention for the iPhone app (`settings.nativeAppHintIos`); Android and an old iPhone
+  build get the neutral `settings.nativeAppHint`.
 - Comments and the Settings label in the web; `docs/android.md` linked from the README.
 
 ## Testing
