@@ -73,6 +73,14 @@ class PlaybackHost(
         applyKind()
     }
 
+    /**
+     * The new kind's attributes, focus still handled by the player. Not toggled off and on to force a new focus request:
+     * Media3 1.9.4's `AudioFocusManager` builds its platform request once and never rebuilds it, so a toggle would only
+     * abandon and re-request the same request (and let another app's audio blip in between). What makes an episode
+     * pause rather than duck is current anyway: the player's own duck handling reads the current content type, and the
+     * platform's automatic ducking skips players whose track is speech (the renderer's track gets the new attributes).
+     * A kind change also reloads the player (stop, prepare), which abandons and requests the focus again.
+     */
     private fun applyKind() {
         val k = remote.kind
         if (k == kind) return

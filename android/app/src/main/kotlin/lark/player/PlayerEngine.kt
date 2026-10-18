@@ -882,10 +882,11 @@ class PlayerEngine(
     }
 
     /**
-     * The output went away (iOS `routeChange(.oldDeviceUnavailable)`): a user pause, so neither the end of an
-     * interruption nor anything else brings it back. Also after a system pause: that one stops counting as the system's.
+     * The output went away or the focus was lost for good (iOS `routeChange(.oldDeviceUnavailable)`, an interruption
+     * ending without `.shouldResume`): a user pause, so nothing brings it back. Also after a system pause (a call, then
+     * the focus lost for good): that one stops counting as the system's.
      */
-    override fun backendRouteLost(generation: Int) {
+    override fun backendPausedForGood(generation: Int) {
         if (!isCurrent(generation)) return
         if (playing || pausedBySystem) pause()
     }

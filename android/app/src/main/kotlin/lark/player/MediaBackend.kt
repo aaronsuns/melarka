@@ -15,10 +15,11 @@ interface BackendDelegate {
     fun backendPaused(generation: Int)
 
     /**
-     * The output went away (headphones unplugged, a Bluetooth device disconnecting: "audio becoming noisy"). The player
-     * has paused; for the engine this is the user's pause, which nothing resumes by itself.
+     * A pause nothing resumes: the output went away (headphones unplugged, a Bluetooth device disconnecting: "audio
+     * becoming noisy"), or another app took the audio focus for good. The player has paused; for the engine this is the
+     * user's pause (iOS: a route change to `oldDeviceUnavailable`, an interruption ending without `.shouldResume`).
      */
-    fun backendRouteLost(generation: Int)
+    fun backendPausedForGood(generation: Int)
     fun backendFinished(generation: Int)
     fun backendFailed(network: Boolean, generation: Int)
     fun backendBuffering(on: Boolean, generation: Int)

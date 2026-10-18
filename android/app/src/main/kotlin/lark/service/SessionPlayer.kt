@@ -19,7 +19,8 @@ import lark.bridge.RepeatMode
  *   there is one (the item's own metadata keeps the song, so only the shown metadata changes, once per line). The cover
  *   is image data, never a URI. With nothing current the playlist is empty.
  * - The position is the engine's (`activePositionMs`), the state READY or BUFFERING (meant to play but not playing yet,
- *   a network retry included); `playWhenReady` is the engine's `playing`. The player's own errors are the engine's to
+ *   a network retry included); `playWhenReady` is the engine's `playing`, or true during a transient focus loss (a
+ *   call: paused by the system, the player's suppression reason passed through so `isPlaying` is false). The player's own errors are the engine's to
  *   handle (it retries, skips or stops), so none is shown.
  * - Commands go to [RemoteCommands]: play/pause, seek, next, previous always; seek back 15 s and forward 30 s for an
  *   episode; shuffle and repeat for music. A controller can never set items, the volume (the sleep fade's) or the speed.
@@ -63,13 +64,17 @@ class SessionPlayer(
                 .build()
         }
         val playing = engine?.playing ?: false
+        // During a call the engine is paused by the system while the player still means to play (suppressed, isPlaying
+        // false): shown as meant to play, so Media3 keeps the service in the foreground for the automatic resume.
+        val meantToPlay = playing || (engine?.pausedBySystem == true && base.playWhenReady)
         val buffering = base.playbackState == Player.STATE_BUFFERING ||
             (playing && (base.playbackState == Player.STATE_IDLE || base.playbackState == Player.STATE_ENDED))
         val elapsed = info.elapsedMs
         return state.setPlaylist(listOf(item(info)))
             .setCurrentMediaItemIndex(0)
             .setPlaybackState(if (buffering) Player.STATE_BUFFERING else Player.STATE_READY)
-            .setPlayWhenReady(playing, base.playWhenReadyChangeReason)
+            .setPlayWhenReady(meantToPlay, base.playWhenReadyChangeReason)
+            .setPlaybackSuppressionReason(base.playbackSuppressionReason)
             .setContentPositionMs { remote.engine?.activePositionMs ?: elapsed }
             .build()
     }

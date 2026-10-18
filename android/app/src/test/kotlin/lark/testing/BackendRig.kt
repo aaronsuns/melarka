@@ -30,7 +30,7 @@ class RecordingDelegate : BackendDelegate {
 
     override fun backendStarted(generation: Int) { events += "started:$generation" }
     override fun backendPaused(generation: Int) { events += "paused:$generation" }
-    override fun backendRouteLost(generation: Int) { events += "routeLost:$generation" }
+    override fun backendPausedForGood(generation: Int) { events += "pausedForGood:$generation" }
     override fun backendFinished(generation: Int) { events += "finished:$generation"; onFinished?.invoke(generation) }
     override fun backendFailed(network: Boolean, generation: Int) { events += "failed:$network:$generation" }
     override fun backendBuffering(on: Boolean, generation: Int) { events += "buffering:$on:$generation" }

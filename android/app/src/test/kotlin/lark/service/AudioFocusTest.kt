@@ -2,7 +2,9 @@ package lark.service
 
 import android.content.Context
 import android.media.AudioManager
+import android.os.Looper
 import androidx.media3.common.C
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import lark.bridge.Item
@@ -24,6 +26,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.time.Duration
 
 /**
  * Port of the interruption cases of ios/Tests/AudioSessionTests.swift onto Android's audio focus: the app-wide player
@@ -71,10 +74,44 @@ class AudioFocusTest {
         focus(AudioManager.AUDIOFOCUS_LOSS)
         rig.waitUntil { !engine.playing }
         assertFalse(player.playWhenReady)
+        assertFalse(engine.pausedBySystem)                     // the user's pause now: nothing resumes it
         focus(AudioManager.AUDIOFOCUS_GAIN)
         rig.settle()
         assertFalse(engine.playing)
         assertFalse(player.isPlaying)
+    }
+
+    /**
+     * During a call the session still means to play (paused by the system, suppressed), so Media3 keeps the service
+     * in the foreground past its user-engaged timeout and the automatic resume after the call plays in the foreground.
+     */
+    @Test fun aTransientLossKeepsTheServiceInTheForeground() {
+        val service = rig.startService()
+        rig.playTrack(1)
+        rig.waitUntil { shadowOf(service.get()).lastForegroundNotification != null }
+        service.get().setForegroundServiceTimeoutMs(1_000)
+        focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+        rig.waitUntil { !engine.playing }
+        val session = service.get().session!!.player
+        assertTrue(session.playWhenReady)
+        assertEquals(Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS, session.playbackSuppressionReason)
+        assertFalse(session.isPlaying)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
+        assertFalse(shadowOf(service.get()).isForegroundStopped)
+        focus(AudioManager.AUDIOFOCUS_GAIN)
+        rig.waitUntil { engine.playing && player.isPlaying }
+        assertTrue(session.isPlaying)
+        service.destroy()
+    }
+
+    /** A pause by the user is not the system's: the session shows it paused. */
+    @Test fun aUserPauseShowsPaused() {
+        val service = rig.startService()
+        rig.playTrack(1)
+        engine.pause()
+        rig.settle()
+        assertFalse(service.get().session!!.player.playWhenReady)
+        service.destroy()
     }
 
     /** The user paused during the interruption (the lock screen): its end must not start playback. */
@@ -114,6 +151,18 @@ class AudioFocusTest {
         rig.playEpisode()
         focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK)
         rig.waitUntil { !engine.playing }
+        focus(AudioManager.AUDIOFOCUS_GAIN)
+        rig.waitUntil { engine.playing && player.isPlaying }
+    }
+
+    /** Music playing, then an episode: the focus follows the new kind, so a navigation prompt pauses the episode. */
+    @Test fun anEpisodeAfterMusicPausesInsteadOfDucking() {
+        rig.playTrack(1)
+        rig.playEpisode()
+        assertEquals(C.AUDIO_CONTENT_TYPE_SPEECH, player.audioAttributes.contentType)
+        focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK)
+        rig.waitUntil { !engine.playing }
+        assertTrue(engine.pausedBySystem)
         focus(AudioManager.AUDIOFOCUS_GAIN)
         rig.waitUntil { engine.playing && player.isPlaying }
     }

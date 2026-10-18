@@ -26,7 +26,18 @@ class EngineTextsTest {
     }
 
     @Test @Config(qualifiers = "zh-rTW") fun traditionalChineseHasItsOwnTexts() {
-        assertEquals("无法获取收藏，请稍后再试", EngineTexts.from(context).shuffleFailedNotice)   // the iOS zh-Hant entries
+        assertEquals("無法取得收藏，請稍後再試", EngineTexts.from(context).shuffleFailedNotice)
+        assertEquals("離線：正在播放已快取的收藏", EngineTexts.from(context).offlineNotice)
+    }
+
+    /** Every string of the Traditional Chinese locale is written in Traditional characters (the iOS zh-Hant entries are not). */
+    @Test @Config(qualifiers = "zh-rTW") fun traditionalChineseUsesNoSimplifiedCharacters() {
+        val simplified = "离缓网络还随无获请没节为关环单来时个这们设务确开对应载钮复读写听页门间点长发现"
+        val texts = lark.app.R.string::class.java.fields.map { it.name to context.getString(it.getInt(null)) }
+        for ((name, text) in texts) {
+            val bad = text.filter { it in simplified }
+            assertEquals("$name: $text", "", bad)
+        }
     }
 
     @Test @Config(qualifiers = "sv") fun swedish() {

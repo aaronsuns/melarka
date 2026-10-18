@@ -42,7 +42,7 @@ class NoisyTest {
     @Before fun setUp() { rig = ServiceRig(context, tmp.newFolder("rig")) }
     @After fun tearDown() { rig.release() }
 
-    private fun unplug() = context.sendBroadcast(Intent(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
+    private fun unplug() = broadcast(context, Intent(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
 
     @Test fun headphonesOutPausesAndStaysPaused() {
         rig.playTrack(1)
@@ -73,8 +73,8 @@ class NoisyTest {
 
     @Test fun otherAudioChangesKeepPlaying() {
         rig.playTrack(1)
-        context.sendBroadcast(Intent(AudioManager.ACTION_HEADSET_PLUG).putExtra("state", 1))
-        context.sendBroadcast(Intent(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED))
+        broadcast(context, Intent(AudioManager.ACTION_HEADSET_PLUG).putExtra("state", 1))
+        broadcast(context, Intent(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED))
         rig.settle()
         assertTrue(engine.playing)
         assertTrue(rig.player.isPlaying)
@@ -93,21 +93,30 @@ class NoisyBackendTest {
     @Before fun setUp() { rig = BackendRig(context).also { Media3Backend.configure(it.player) } }
     @After fun tearDown() { rig.release() }
 
-    @Test fun becomingNoisyIsARouteLossNotAPause() {
+    @Test fun becomingNoisyIsAPauseForGood() {
         rig.backend.load(MediaSource.File(silentWav(tmp.root, 10.0, 8000)), 0, true, 1f, 1f, 1)
         rig.waitUntil { rig.delegate.started }
-        context.sendBroadcast(Intent(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
-        rig.waitUntil { rig.delegate.has("routeLost:1") }
+        broadcast(context, Intent(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
+        rig.waitUntil { rig.delegate.has("pausedForGood:1") }
+        assertFalse(rig.delegate.events.toString(), rig.delegate.events.any { it.startsWith("paused:") })
+    }
+
+    /** Another app took the focus for good (iOS: an interruption that ends without `.shouldResume`): nothing resumes it. */
+    @Test fun aPermanentFocusLossIsAPauseForGood() {
+        rig.backend.load(MediaSource.File(silentWav(tmp.root, 10.0, 8000)), 0, true, 1f, 1f, 1)
+        rig.waitUntil { rig.delegate.started }
+        focusListener(context).onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS)
+        rig.waitUntil { rig.delegate.has("pausedForGood:1") }
         assertFalse(rig.delegate.events.toString(), rig.delegate.events.any { it.startsWith("paused:") })
     }
 }
 
-/** The engine side: a lost output is the user's pause (iOS `routeChange(.oldDeviceUnavailable)`). */
+/** The engine side: a pause for good (a lost output, a permanent focus loss) is the user's pause (iOS `routeChange(.oldDeviceUnavailable)`). */
 class RouteLossEngineTest : EngineTestCase() {
     @Test fun headphonesOutPauses() = engineTest {
         engine.handle(q(listOf(1, 2), 0, 0, true))
         backend.start()
-        backend.routeLost()
+        backend.pausedForGood()
         assertFalse(engine.playing)
         assertFalse(engine.pausedBySystem)
         assertEquals("pause", backend.calls.last())
@@ -118,7 +127,7 @@ class RouteLossEngineTest : EngineTestCase() {
         backend.start()
         backend.interrupt()
         assertTrue(engine.pausedBySystem)
-        backend.routeLost()
+        backend.pausedForGood()
         assertFalse(engine.pausedBySystem)
     }
 
@@ -127,7 +136,7 @@ class RouteLossEngineTest : EngineTestCase() {
         backend.start()
         engine.pause()
         val events = sent.size
-        backend.routeLost()
+        backend.pausedForGood()
         assertEquals(events, sent.size)
     }
 
@@ -135,7 +144,17 @@ class RouteLossEngineTest : EngineTestCase() {
         engine.handle(q(listOf(7, 8), 0, 0, true))
         val old = backend.generation
         backend.start(); engine.next(); backend.start()
-        backend.routeLost(generation = old)
+        backend.pausedForGood(generation = old)
         assertTrue(engine.playing)
     }
+}
+
+/**
+ * Sends a broadcast without Robolectric's line on stderr ("Intent = …; Matching wrappers: …", printed unconditionally
+ * while it looks for receivers), so test output stays clean.
+ */
+internal fun broadcast(context: Context, intent: Intent) {
+    val err = System.err
+    System.setErr(java.io.PrintStream(java.io.OutputStream.nullOutputStream()))
+    try { context.sendBroadcast(intent) } finally { System.setErr(err) }
 }

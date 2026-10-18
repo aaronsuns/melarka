@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="engine_offline_notice">离线：正在播放已缓存的收藏</string>
-    <string name="engine_no_favorites_notice">还没有收藏：随机播放全部歌曲</string>
-    <string name="engine_cannot_play">无法播放</string>
-    <string name="engine_stall_notice">网络太慢：先播放已缓存的歌曲</string>
-    <string name="engine_offline_stopped">离线：没有已缓存的歌曲可播放</string>
-    <string name="engine_episode_fallback_notice">节目无法播放：改为播放音乐</string>
-    <string name="engine_nothing_cached_notice">离线且没有已缓存的收藏</string>
-    <string name="engine_shuffle_failed_notice">无法获取收藏，请稍后再试</string>
-    <string name="media_shuffle">随机播放</string>
-    <string name="media_repeat_off">循环：关</string>
-    <string name="media_repeat_all">列表循环</string>
-    <string name="media_repeat_one">单曲循环</string>
+    <string name="engine_offline_notice">離線：正在播放已快取的收藏</string>
+    <string name="engine_no_favorites_notice">還沒有收藏：隨機播放全部歌曲</string>
+    <string name="engine_cannot_play">無法播放</string>
+    <string name="engine_stall_notice">網路太慢：先播放已快取的歌曲</string>
+    <string name="engine_offline_stopped">離線：沒有已快取的歌曲可播放</string>
+    <string name="engine_episode_fallback_notice">節目無法播放：改為播放音樂</string>
+    <string name="engine_nothing_cached_notice">離線且沒有已快取的收藏</string>
+    <string name="engine_shuffle_failed_notice">無法取得收藏，請稍後再試</string>
+    <string name="media_shuffle">隨機播放</string>
+    <string name="media_repeat_off">循環：關</string>
+    <string name="media_repeat_all">列表循環</string>
+    <string name="media_repeat_one">單曲循環</string>
     <string name="media_back_15">後退 15 秒</string>
     <string name="media_forward_30">前進 30 秒</string>
 </resources>

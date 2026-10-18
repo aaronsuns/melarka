@@ -34,9 +34,9 @@ import java.net.UnknownHostException
  *
  * - [BackendDelegate.backendTick] comes from a 0.5 s timer on the scheduler while playing.
  * - `isPlaying` is `backendStarted`, a buffering state while the engine wants playback is `backendBuffering`, and a
- *   pause the engine did not ask for is `backendPaused`: a permanent focus loss (playWhenReady false), and a transient
- *   focus loss, a call (playback suppressed). After the latter ExoPlayer resumes by itself, and the engine hears
- *   `backendStarted` again. Headphones unplugged (playWhenReady false, "becoming noisy") is `backendRouteLost`.
+ *   pause the engine did not ask for is `backendPaused`: a transient focus loss, a call (playback suppressed), after
+ *   which ExoPlayer resumes by itself and the engine hears `backendStarted` again. Headphones unplugged ("becoming
+ *   noisy") and a permanent focus loss (playWhenReady false) are `backendPausedForGood`: nothing resumes them.
  * - A failed item reports `network: true` only for a stream and only for a connection-level failure; a file, and a
  *   server that answers with an error status, never.
  * - Gapless: when the player moves to the preloaded item by itself, `backendFinished` tells the engine, whose `load` of
@@ -139,7 +139,9 @@ class Media3Backend(
             if (!wantsPlay) return                               // a pause the engine asked for
             wantsPlay = false
             reportedStarted = null
-            if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) delegate?.backendRouteLost(g)
+            // Headphones out, or the focus lost for good: the user's pause. Anything else (a controller): the system's.
+            if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY ||
+                reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) delegate?.backendPausedForGood(g)
             else delegate?.backendPaused(g)
         }
 
