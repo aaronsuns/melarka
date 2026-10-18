@@ -102,7 +102,7 @@ Port `ios/Sources/API/{LarkAPI,Models}.swift`, `Bridge/{AuthStore,SecretStore}.s
 
 ### Task 5: Persistence and sync: queue store, play events, queue sync, play modes
 
-Port `Player/{QueueStore,PlayEventQueue,QueueSync,PlayModes}.swift` and tests (`QueueStoreTests`, `PlayEventTests`, `QueueSyncTests`, `PlayModesTests` — the web's fixtures from `web/src/player/modes*.json` read by path).
+Port `Player/{QueueStore,PlayEventQueue,QueueSync,PlayModes}.swift` and tests (`QueueStoreTests`, `PlayEventTests`, `QueueSyncTests`, `PlayModesTests` — the web's fixtures from `web/src/player/modes*.json` read by path). As built: the web keeps those fixtures inline in `web/src/player/modes.test.ts` (there is no `modes*.json`), so `PlayModesTest` ports them inline.
 
 **Files:**
 - Create: `lark/player/{QueueStore.kt,QueueSnapshot.kt,PlayEventQueue.kt,QueueSync.kt,PlayModes.kt}`
@@ -223,7 +223,7 @@ Port `App/{ServerURLView,RootView,OfflinePlayerView}.swift`, `Player/OfflinePlay
 
 **Files:**
 - Create: `android/app/src/androidTest/kotlin/lark/SmokeFlowTest.kt`, `android/scripts/emulator-smoke.sh` (starts `web/e2e/start-server.sh` in demo mode on the private Mac, boots AVD `lark_api35`, runs `connectedDebugAndroidTest`)
-- Modify: `.github/workflows/ci.yml` (`android-emulator` job: ubuntu, KVM, `reactivecircus/android-emulator-runner`, x86_64 API 35, runs on `android/**` changes)
+- Modify: `.github/workflows/ci.yml` (`android-emulator` job: ubuntu, KVM, `reactivecircus/android-emulator-runner`, x86_64 API 35, runs on `android/**` changes; as built, also on the e2e server files and the narrow web/server files the smoke test drives)
 
 **Interfaces:**
 - Consumes: the e2e server at `http://10.0.2.2:<port>` with demo data.
@@ -237,11 +237,12 @@ Port `App/{ServerURLView,RootView,OfflinePlayerView}.swift`, `Player/OfflinePlay
 - Modify: `.github/workflows/release.yml` (`apk` job: build release with `-PlarkVersion=$VERSION`, sign with secrets `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; `apksigner verify --print-certs` matches the stored certificate SHA-256; `aapt2 dump badging` shows package, versionName, versionCode; attach `Melarka-X.Y.Z.apk`), `README.md` (Android section, screenshots row), `CHANGELOG.md`, `docs/superpowers/specs/android-client-design.md` (as built)
 
 - [ ] **Step 1:** On the private Mac: `keytool -genkeypair -v -keystore ~/melarka-release/melarka-release.jks -alias melarka -keyalg RSA -keysize 4096 -validity 36500` with generated passwords; record the certificate SHA-256 in `android/signing-cert.sha256` (public). Set the four GitHub secrets from the private Mac with `gh secret set`. Hand the owner the passwords on the private Mac for Apple Passwords, and ask them to email the `.jks` (without the passwords) to themselves. Verify: `gh secret list` shows the four names.
-- [ ] **Step 2:** Add a `workflow_dispatch` input `dry_run` to `release.yml` that builds and signs the APK without publishing; run it; download the artifact; on the emulator, `adb install` it fresh (debug and release keys differ, so uninstall any debug build first) and check it launches and connects to the e2e server. Expected: install succeeds, `apksigner` certificate SHA-256 equals `android/signing-cert.sha256`.
+- [ ] **Step 2:** (As built: no `dry_run` input; a manual `workflow_dispatch` run builds and signs the APK and never publishes, the publishing jobs run on a tag push only; the signing secrets live in the `release` environment.) Add a `workflow_dispatch` input `dry_run` to `release.yml` that builds and signs the APK without publishing; run it; download the artifact; on the emulator, `adb install` it fresh (debug and release keys differ, so uninstall any debug build first) and check it launches and connects to the e2e server. Expected: install succeeds, `apksigner` certificate SHA-256 equals `android/signing-cert.sha256`.
 - [ ] **Step 3:** Write docs; commit `feat(android): signed release APK, docs and store metadata`.
 
 ### Task 16: First release and F-Droid
 
+- [ ] **Step 0 (merge gate, final review):** before merging to `main` (or the next tag): the `release` environment exists with its four signing secrets, and one manual `workflow_dispatch` run of `release.yml` from `main` is green. Without them the `apk` job fails its secret check and every tag release skips its GitHub Release (no IPA, notes or Pages update), while the image is still pushed.
 - [ ] **Step 1:** Release the next version (both versions bumped) through the gated script; check the APK on the GitHub Release installs on the emulator and connects to the live server.
 - [ ] **Step 2:** Make the release build reproducible (pinned JDK/build-tools in the F-Droid recipe; no timestamps); verify by building twice on the private Mac and comparing with `apksigcopier compare`.
 - [ ] **Step 3:** Open the fdroiddata merge request (`metadata/io.github.aaronsuns.melarka.yml` with `Binaries:`, `AllowedAPKSigningKeys:`, `AntiFeatures: NonFreeNet`); record the link in `docs/android.md`; commit `docs(android): F-Droid`.

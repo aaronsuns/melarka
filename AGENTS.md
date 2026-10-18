@@ -44,7 +44,7 @@ may not persist between your commands, so re-`cd "$DIR"` each time.
    `ID=$(curl -fsS -H @.lark-install-auth http://127.0.0.1:4600/api/v1/devices | grep -o '"id":[0-9]*,"name":"install-check"' | head -1 | sed 's/[^0-9]//g')`
    `curl -fsS -o /dev/null -w '%{http_code}\n' -X DELETE -H @.lark-install-auth "http://127.0.0.1:4600/api/v1/devices/$ID"; rm -f .lark-install-auth`
    Verify: `test ! -e .lark-install-auth && echo ok` (the DELETE printed `204`).
-8. Optional, needs the user: an HTTPS reverse proxy (README "Reverse proxy and HTTPS"), then open the site on a phone and Add to Home Screen, or install the iPhone app (docs/iphone.md).
+8. Optional, needs the user: an HTTPS reverse proxy (README "Reverse proxy and HTTPS"), then open the site on a phone and Add to Home Screen, or install the iPhone app (docs/iphone.md) or the Android app (docs/android.md).
 
 Upgrading later: back up `data/lark.db` (`sqlite3 data/lark.db ".backup lark-backup.db"`), then
 `docker compose pull && docker compose up -d` (the compose file runs `latest` unless `.env` sets `MELARKA_VERSION`) and repeat the step 4 verify.
@@ -60,8 +60,8 @@ The product is **Melarka** (internal code name `lark`).
 
 ## Working on the code
 
-- Layout: `cmd/lark` (main), `internal/<package>` (one job each; see docs/architecture.md), `web/` (React app, embedded at build time), `ios/` (the iPhone app, XcodeGen), `skills/` (agent skills), `deploy/` (compose and config examples), `docs/` (user docs).
-- Before every commit: `go vet ./... && go test ./...` and `cd web && npm test && npm run build`; for UI flows also `npm run e2e` (it serves the built `web/dist`, so build first).
+- Layout: `cmd/lark` (main), `internal/<package>` (one job each; see docs/architecture.md), `web/` (React app, embedded at build time), `ios/` (the iPhone app, XcodeGen), `android/` (the Android app, Gradle), `skills/` (agent skills), `deploy/` (compose and config examples), `docs/` (user docs).
+- Before every commit: `go vet ./... && go test ./...` and `cd web && npm test && npm run build`; for UI flows also `npm run e2e` (it serves the built `web/dist`, so build first). For `android/`: `LARK_BUILD_HOST=user@host android/scripts/remote.sh test` on a build host with JDK 17 and Android SDK 35 (`remote.sh smoke` for the emulator tests).
 - Design docs live in the repo: design specs in `docs/superpowers/specs/`, implementation plans in `docs/superpowers/plans/` (the iPhone app, the Android app, the native bridge, larger server features). A change to behaviour a spec describes updates that spec in the same commit; a new project gets a spec and a plan there first.
 - Tests never touch the network: external programs (ffmpeg, ffprobe, yt-dlp) and HTTP services (lyrics providers, Last.fm) sit behind interfaces; use fakes, `httptest`, and recorded fixtures under `testdata/`.
 - Never commit personal data: no email addresses, real tokens or real account names in code, fixtures or docs (`internal/config/hygiene_test.go` checks every tracked text file for email addresses; `scripts/oss-check.sh` is the release gate). Recorded fixtures replace keys with obviously fake ones.

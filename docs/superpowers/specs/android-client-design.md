@@ -431,7 +431,8 @@ setup and test, background playback, about). Jetpack Compose, Material 3, dark t
 ## Testing
 
 - **Unit tests** (JVM + Robolectric): the ported equivalents of every iOS test file, with the same
-  fakes; the web's play-mode fixtures shared by path.
+  fakes; the web's play-mode fixtures ported inline (`PlayModesTest`: the web keeps them inline in
+  `web/src/player/modes.test.ts`, there is no shared file to read).
 - **Instrumented tests on the emulator** (`app/src/androidTest`, run by `android/scripts/emulator-smoke.sh`, which
   starts the e2e server from `web/e2e` in demo mode on the host's `127.0.0.1:4700`, reachable from the emulator at
   `10.0.2.2:4700`, with a made-up admin password passed as an instrumentation argument; it boots the AVD `lark_api35`
@@ -448,10 +449,15 @@ setup and test, background playback, about). Jetpack Compose, Material 3, dark t
   cached: the service stops, no notification left) and `ShortcutTest` (Shuffle Favorites from the shortcut with the
   app not running). A failure leaves a screenshot and the page's text in the test outputs, copied to
   `app/build/smoke` with the server log and logcat.
-- **Bridge contract**: the web's `nativeTransport.test.tsx` stays green; an Android test feeds the
-  same message fixtures into the decoder and checks event JSON byte-for-byte against iOS fixtures.
-- **CI**: an `android` job (path filter `android/**`, `web/src/native/**`) on Ubuntu: unit tests,
-  lint, a debug build; an `android-emulator` job (the same paths plus the e2e server files the smoke test starts,
+- **Bridge contract**: the web's `nativeTransport.test.tsx` stays green; `WebMessageTest` feeds the
+  iOS tests' messages into the decoder, and `NativeEventTest` checks event JSON byte-for-byte against
+  expected strings in `src/test/resources/bridge`, hand-written from iOS `NativeEvent.swift`'s encoding
+  rules and its tests (Task 2 ruling; no Swift run). The emulator smoke test checks the real page's
+  bridge end to end.
+- **CI**: an `android` job (path filter `android/**`, `web/src/native/**`, `ios/project.yml` (the version),
+  `docs/brand/**` (the icon art) and the workflow file) on Ubuntu: unit tests, lint, a debug build; an
+  `android-emulator` job (the same paths plus the e2e server files the smoke test starts and the narrow web/server
+  files it drives: the sign-in form, `App.tsx`'s tabs, Library and `TrackList`, and the API handlers it calls;
   45 min) on Ubuntu with KVM enabled: Go, Node (the web build), ffmpeg (the demo library), then
   `reactivecircus/android-emulator-runner` (pinned, v2.38.0) boots an x86_64 API 35 `google_apis` emulator and runs
   `android/scripts/emulator-smoke.sh`; a failure uploads `app/build/smoke` and the test report.
