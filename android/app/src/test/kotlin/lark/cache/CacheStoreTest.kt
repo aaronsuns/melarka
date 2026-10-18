@@ -156,14 +156,87 @@ class CacheStoreTest : CacheTestCase() {
         assertFalse(root.exists())
     }
 
+    /** Nothing appears outside the user's folder (not beside it, not in a sibling user's folder) whatever the cache does. */
     @Test fun everythingTheCacheWritesIsInsideItsFolder() = cacheTest {
+        val sibling = File(root.parentFile, "6").also { File(it, "files").mkdirs(); File(it, "files/9.m4a").writeBytes(byteArrayOf(1)) }
+        fun outside(): Set<String> = folder.root.walkTopDown().filter {
+            !it.toPath().startsWith(root.toPath()) && !it.toPath().startsWith(scratch.toPath()) && it != root.parentFile
+        }.map { it.relativeTo(folder.root).path }.toSet()
+        val before = outside()
+        put(1, 100, true, t0); put(2, 100, false, at(1))
+        api.artworkAnswer = ByteArray(3) { 1 }
+        cache.cacheCover(1)
+        cache.updateLyrics(1, lark.testing.lyricsDoc())
+        cache.touch(1); cache.setFavorites(setOf(2)); cache.markFavorite(1, true)
+        cache.prefetch(listOf(track(3)))
+        settle()
+        cache.flush()
+        cache.capBytes = 100
+        cache.clear()
+        cache.close()
+        assertEquals(before, outside())
+        assertTrue(File(sibling, "files/9.m4a").exists())
+    }
+
+    /** A link in `files/` pointing outside is removed by eviction and by clear; its target is never touched. */
+    @Test fun symlinksAreRemovedNeverFollowed() = cacheTest {
+        val target = File(folder.root, "precious.m4a").also { it.writeBytes(ByteArray(100) { 5 }) }
+        fun link(id: Int) {
+            val f = cache.localFile(id.toLong())!!
+            f.delete()
+            java.nio.file.Files.createSymbolicLink(f.toPath(), target.toPath())
+        }
+        put(1, 100, false, t0); link(1)
+        cache.capBytes = 100
+        put(2, 100, false, at(1))                                          // over the cap: 1 (the link) is evicted
+        assertFalse(java.nio.file.Files.exists(File(root, "files/1.m4a").toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS))
+        assertEquals(100, target.length())
+        put(3, 100, false, at(2)); link(3)
+        cache.clear()
+        assertFalse(java.nio.file.Files.exists(File(root, "files/3.m4a").toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS))
+        assertEquals(100, target.length())
+        // A `files` directory that is itself a link to somewhere else is unlinked, not emptied.
+        val elsewhere = folder.newFolder("elsewhere").also { File(it, "keep").writeBytes(byteArrayOf(1)) }
+        cache.close()
+        File(root, "files").deleteRecursively()
+        java.nio.file.Files.createSymbolicLink(File(root, "files").toPath(), elsewhere.toPath())
+        cache = makeCache()
+        cache.clear()
+        assertTrue(File(elsewhere, "keep").exists())
+    }
+
+    @Test fun capDefaultsAndChoices() {
+        assertEquals(2L * 1024 * 1024 * 1024, CacheStore.DEFAULT_CAP)
+        assertEquals(listOf(1, 2, 5, 10), CacheStore.CAP_CHOICES_GB)
+        assertEquals(500L * 1024 * 1024, CacheStore.RESERVE_BYTES)
+        assertEquals(2, CacheStore.MAX_CONCURRENT_DOWNLOADS)
+    }
+
+    /** A failing rename never damages the index that is there: the write goes through a temporary file. */
+    @Test fun aFailedIndexWriteLeavesTheOldIndexAndNoTemporaryFile() = cacheTest {
         put(1, 100, true, t0)
         cache.flush()
-        val base = folder.root.toPath()
-        assertTrue(cache.localFile(1)!!.toPath().startsWith(root.toPath()))
-        // Besides the test's own scratch files and the user's folder, nothing else appeared.
-        assertEquals(setOf("base", "scratch"), folder.root.list()!!.toSet())
-        assertTrue(File(root, "index.json").toPath().startsWith(base))
+        val old = File(root, "index.json").readText()
+        cache = makeCache(move = { _, _ -> throw IOException("rename failed") })
+        cache.touch(1)
+        clock.current = at(50)
+        cache.touch(1)
+        cache.flush()
+        assertEquals(old, File(root, "index.json").readText())
+        assertEquals(emptyList<String>(), root.list()!!.filter { it.endsWith(".tmp") })
+    }
+
+    @Test fun aFailedMoveIntoFilesDeletesTheStagedFileExceptWhenOutOfSpace() = cacheTest {
+        cache = makeCache(move = { _, _ -> throw IOException("rename failed") })
+        val staged = File(root, "staging/1.m4a").also { it.parentFile!!.mkdirs(); it.writeBytes(byteArrayOf(1)) }
+        val t = lark.testing.trackModel(1)
+        try { cache.store(1, staged, t.track, t.json, true); org.junit.Assert.fail() } catch (_: IOException) {}
+        assertFalse(staged.exists())
+        assertNull(cache.localFile(1))
+        cache = makeCache(move = { _, _ -> throw IOException("write failed: ENOSPC (No space left on device)") })
+        val staged2 = File(root, "staging/2.m4a").also { it.parentFile!!.mkdirs(); it.writeBytes(byteArrayOf(1)) }
+        try { cache.store(2, staged2, t.track, t.json, true); org.junit.Assert.fail() } catch (_: IOException) {}
+        assertTrue(staged2.exists())
     }
 
     @Test fun storingAgainReplacesTheFile() = cacheTest {
@@ -437,11 +510,6 @@ class IndexWriteTest : CacheTestCase() {
         assertEquals(writes + 1, cache.indexWrites)
     }
 
-    @Test fun theIndexIsWrittenAtomically() = cacheTest {
-        put(1, 100, true, t0)
-        cache.flush()
-        assertEquals(listOf("index.json"), root.list()!!.filter { it.startsWith("index") })   // no temporary file left behind
-    }
 }
 
 /** Disk space and headroom (`CacheSpaceTests`). */

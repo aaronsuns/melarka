@@ -61,6 +61,17 @@ class FavoritesSyncTest : CacheTestCase() {
         assertNull(cache.localFile(1)); assertNotNull(cache.localFile(2))
     }
 
+    @Test fun aReAddedFavoriteIsNotDownloadedAgain() = syncTest {
+        api.favoritesAnswer = models(1..2)
+        sync.run()
+        api.favoritesAnswer = models(2..2)                                  // 1 unfavorited: the file stays
+        sync.run()
+        api.favoritesAnswer = models(1..2)                                  // and favorited again
+        sync.run()
+        assertEquals(listOf(1L, 2L), api.downloadCalls.sorted())
+        assertEquals(listOf(1L, 2L), favoriteIds())
+    }
+
     @Test fun syncSkippedOffOrOnExpensiveNetwork() = syncTest {
         api.favoritesAnswer = models(1..1)
         network.isExpensive = true

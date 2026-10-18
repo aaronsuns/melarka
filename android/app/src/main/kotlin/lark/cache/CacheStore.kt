@@ -56,6 +56,8 @@ class CacheStore(
     private val freeSpace: FreeSpace = FreeSpace { null },
     capBytes: Long = DEFAULT_CAP,
     private val indexDelaySeconds: Double = INDEX_WRITE_DELAY_S,
+    /** The rename that publishes a file (tests make it fail). */
+    private val move: (File, File) -> Unit = ::moveAtomic,
 ) : CacheProviding {
     class Download internal constructor(val job: Job, /** False: another caller's download of the same track, which only its owner may cancel. */ val created: Boolean)
 
@@ -154,7 +156,13 @@ class CacheStore(
         val name = "files/$trackId.$ext"
         val dest = File(root, name)
         entries[trackId]?.takeIf { it.file != name }?.let { delete(File(root, it.file)) }
-        moveAtomic(file, dest)
+        try {
+            move(file, dest)
+        } catch (ex: IOException) {
+            // Out of space may pass (the sync stops and a later one retries it); anything else is not coming back.
+            if (!isOutOfSpace(ex)) delete(file)
+            throw ex
+        }
         val (t, m) = flagged(track, meta, favorite)
         entries[trackId] = Entry(name, dest.length(), seconds(), favorite, t, m)
         evict(keeping = trackId, save = false)
@@ -365,7 +373,7 @@ class CacheStore(
     /** `data` empty: the "none" marker, dated now. */
     private fun writeMarked(f: File, data: ByteArray) {
         try {
-            writeAtomic(f, data)
+            writeAtomic(f, data, move)
             if (data.isEmpty()) f.setLastModified(clock.now().toEpochMilli())
         } catch (ex: IOException) {
             if (isOutOfSpace(ex)) outOfSpace = true
@@ -459,7 +467,7 @@ class CacheStore(
     private fun writeIndex() {
         indexWrites += 1
         try {
-            writeAtomic(indexFile, CacheIndex.encode(entries).toByteArray())
+            writeAtomic(indexFile, CacheIndex.encode(entries).toByteArray(), move)
         } catch (ex: IOException) {
             if (isOutOfSpace(ex)) outOfSpace = true
         }

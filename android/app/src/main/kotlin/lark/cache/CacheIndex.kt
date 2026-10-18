@@ -146,12 +146,12 @@ class StorageManagerFreeSpace(context: Context, private val dir: File) : FreeSpa
 }
 
 /** Writes `bytes` to `dest` through a temporary file beside it and a rename, so `dest` is never half written. */
-internal fun writeAtomic(dest: File, bytes: ByteArray) {
+internal fun writeAtomic(dest: File, bytes: ByteArray, move: (File, File) -> Unit = ::moveAtomic) {
     dest.parentFile?.mkdirs()
     val tmp = File(dest.parentFile, dest.name + ".tmp")
     try {
         tmp.writeBytes(bytes)
-        moveAtomic(tmp, dest)
+        move(tmp, dest)
     } finally { tmp.delete() }
 }
 

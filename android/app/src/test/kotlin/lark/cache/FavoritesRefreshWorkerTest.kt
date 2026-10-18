@@ -10,7 +10,15 @@ import androidx.work.WorkManager
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
+import android.os.Looper
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import org.robolectric.Shadows.shadowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -27,6 +35,7 @@ import java.util.concurrent.TimeUnit
 /** Port of BackgroundRefreshTests: the background run does the sync, stops with it, and is asked again 6 h later. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
+@OptIn(DelicateCoroutinesApi::class)
 class FavoritesRefreshWorkerTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
@@ -39,6 +48,24 @@ class FavoritesRefreshWorkerTest {
     @After fun tearDown() { FavoritesRefresh.provider = null }
 
     private fun worker() = TestListenableWorkerBuilder<FavoritesRefreshWorker>(context).build()
+
+    /** Lets the main looper run while the test thread waits (the work hops to the main thread). */
+    private fun <T> awaitIdling(d: Deferred<T>): T = runBlocking {
+        withTimeout(10_000) {
+            while (!d.isCompleted) { shadowOf(Looper.getMainLooper()).idle(); delay(5) }
+            d.await()
+        }
+    }
+
+    /** CacheStore and FavoritesSync are main-confined: both the provider and the sync run on the main thread. */
+    @Test fun providerAndSyncRunOnTheMainThread() {
+        val main = Looper.getMainLooper().thread
+        val seen = mutableListOf<Thread>()
+        FavoritesRefresh.provider = { seen.add(Thread.currentThread()); SyncRun { seen.add(Thread.currentThread()) } }
+        val result = GlobalScope.async(Dispatchers.Default) { worker().doWork() }   // WorkManager starts it off the main thread
+        assertEquals(ListenableWorker.Result.success(), awaitIdling(result))
+        assertEquals(listOf(main, main), seen)
+    }
 
     @Test fun runsTheSyncOfTheSignedInUser() = runBlocking {
         var runs = 0
@@ -69,12 +96,12 @@ class FavoritesRefreshWorkerTest {
             }
         }
         val w = worker()
-        val result = w.startWork()
-        withTimeout(10_000) { started.await() }
+        val result = GlobalScope.async(Dispatchers.Default) { w.startWork() }.let { awaitIdling(it) }
+        awaitIdling(started)
         // What WorkManager does when the system stops the work (the network left, the time is up): it cancels the
         // future `startWork` returned, which cancels the coroutine, and with it the sync.
         result.cancel(true)
-        assertTrue(withTimeout(10_000) { cancelled.await() })
+        assertTrue(awaitIdling(cancelled))
     }
 
     @Test fun isScheduledEverySixHoursOnAnUnmeteredNetworkAndOnlyOnce() {

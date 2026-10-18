@@ -61,9 +61,9 @@ abstract class CacheTestCase {
     open fun beforeCache() {}
 
     /** A cache on [root], as after a process launch (the previous one flushed its index, as on backgrounding). */
-    fun makeCache(indexDelay: Double = CacheStore.INDEX_WRITE_DELAY_S): CacheStore {
+    fun makeCache(indexDelay: Double = CacheStore.INDEX_WRITE_DELAY_S, move: (File, File) -> Unit = ::moveAtomic): CacheStore {
         if (this::cache.isInitialized) cache.flush()
-        return CacheStore(root, api, network, clock, cacheScope, scheduler, { free }, indexDelaySeconds = indexDelay)
+        return CacheStore(root, api, network, clock, cacheScope, scheduler, { free }, indexDelaySeconds = indexDelay, move = move)
     }
 
     fun put(id: Int, bytes: Int, fav: Boolean, at: Instant) {

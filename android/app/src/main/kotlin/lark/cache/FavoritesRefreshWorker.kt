@@ -8,6 +8,8 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 /** One favorites sync, as the background work needs it (the app services' [FavoritesSync], on the main thread). */
@@ -46,8 +48,9 @@ object FavoritesRefresh {
 
 class FavoritesRefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        val sync = FavoritesRefresh.provider?.invoke() ?: return Result.success()
-        sync.run()
+        // The cache and the sync are main-confined (like the engine): the provider and the sync both run on the main thread.
+        // Stopping the work cancels this coroutine, and with it the sync.
+        withContext(Dispatchers.Main.immediate) { FavoritesRefresh.provider?.invoke()?.run() }
         return Result.success()
     }
 }

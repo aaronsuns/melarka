@@ -22,16 +22,16 @@ import java.io.File
 class CacheLayoutTest {
     @get:Rule val folder = TemporaryFolder()
 
-    @Test fun serverKeyNormalisesTheBaseUrl() {
+    @Test fun serverKeyIsTheSha256PrefixOfTheNormalisedBaseUrl() {
         val k = CacheLayout::serverKey
-        assertEquals(k("https://Cache.Lark.test/"), k("https://cache.lark.test"))
+        // First 16 hex digits of SHA-256, e.g. `printf '%s' 'https://cache.lark.test' | shasum -a 256 | cut -c1-16`.
+        assertEquals("34169e7c5b033967", k("https://cache.lark.test"))
+        assertEquals("34169e7c5b033967", k("https://cache.lark.test/"))     // the trailing slash is not part of it
+        assertEquals("34169e7c5b033967", k("https://Cache.Lark.test/"))     // nor the case of the host
+        assertEquals("bc36b01f83fd55cf", k("https://Cache.Lark.test:8443/lark/"))   // hashed: https://cache.lark.test:8443/lark
         assertNotEquals(k("https://cache.lark.test"), k("https://cache.lark.test:8443"))
         assertNotEquals(k("https://cache.lark.test"), k("https://cache.lark.test/lark"))
         assertNotEquals(k("https://cache.lark.test"), k("http://cache.lark.test"))
-        assertEquals(16, k("https://cache.lark.test").length)
-        // The first 8 bytes of SHA-256("https://cache.lark.test"), as iOS computes it.
-        assertEquals("e2c0d4ee7dcc6a2a".length, k("https://cache.lark.test").length)
-        assertTrue(k("https://cache.lark.test").matches(Regex("[0-9a-f]{16}")))
     }
 
     @Test fun userRootIsServerThenUser() {
