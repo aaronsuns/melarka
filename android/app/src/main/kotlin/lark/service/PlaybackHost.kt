@@ -109,16 +109,25 @@ class PlaybackHost(
 
 /**
  * The process's playback host, built on first use (the media service's `onCreate`, or the app services). The stream
- * client comes from [httpClient]: the app services (Task 10) set the one that trusts user-installed CAs before the first
- * use; until then it is a plain client.
+ * client comes from [httpClient]: the application sets the app's one client (`LarkHttp`, trusting the user's CAs as the
+ * network security config says) before anything is built.
  */
 @UnstableApi
 object Playback {
     @Volatile var httpClient: () -> OkHttpClient = { OkHttpClient() }
+
+    /**
+     * Runs once the host is first built (set by the application): the app services are brought up then, so a media
+     * service started with no Activity (a Bluetooth play) finds the engine.
+     */
+    @Volatile var onCreated: ((Context) -> Unit)? = null
     private var host: PlaybackHost? = null
 
     fun host(context: Context): PlaybackHost =
-        host ?: PlaybackHost.create(context.applicationContext, httpClient()).also { host = it }
+        host ?: PlaybackHost.create(context.applicationContext, httpClient()).also {
+            host = it
+            onCreated?.invoke(context.applicationContext)
+        }
 
     /** Tests: the host the service is to use. */
     fun install(host: PlaybackHost) { this.host = host }

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Who the app trusts, for OkHttp (the API, streams, downloads) and the WebView alike.
+     https everywhere, trusting the system's CAs and the ones the user installed (a self-hosted server behind a
+     private CA or a LAN proxy, as the iPhone app trusts a root the user installed). Plain http only for development
+     hosts: localhost and *.local (the debug build's copy adds the emulator's host, 10.0.2.2). -->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <!-- On purpose (the owner's call, android-client-design.md): self-hosted servers behind a private CA. -->
+            <certificates src="user" tools:ignore="AcceptsUserCertificates" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="true">local</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <!-- On purpose (the owner's call, android-client-design.md): self-hosted servers behind a private CA. -->
+            <certificates src="user" tools:ignore="AcceptsUserCertificates" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

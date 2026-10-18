@@ -183,7 +183,17 @@ behaviour; the builder works through it as a checklist.
   and states (as iOS on scene activation).
 - Navigation policy as iOS (`BridgeController`/`WebShell`): same-origin in the web view, other web
   origins open in the browser, `data:`/`javascript:` blocked in the main frame, the YouTube embed
-  allowed in subframes, a main-frame 5xx counts as a load failure, a renderer crash reloads.
+  allowed in subframes, a main-frame 5xx counts as a load failure (`net::ERR_ABORTED`, a load
+  replaced by another, does not), a renderer crash gets a new web view on the server's page.
+  `target=_blank`/`window.open` reach `onCreateWindow`; the new window's first URL is caught in a
+  throwaway web view and decided as a new window. `alert`/`confirm` show native dialogs only for the
+  server's own frames; `prompt` is refused. The user agent gains `LarkAndroid/<version>` (unused, as
+  iOS's `LarkiOS/<version>`).
+- The web view belongs to the Activity (made in `onCreate`, destroyed in `onDestroy`; the Activity is
+  not recreated on rotation or resizing), unlike iOS, where the app services keep the `WKWebView`:
+  an app-scoped web view would hold an Activity context. The bridge and everything behind it are the
+  app's; the page reloads only when the Activity is recreated. Edge to edge (Android 15), the page is
+  padded inside the system bars, the cutout and the keyboard.
 
 ### Auth
 
@@ -253,7 +263,7 @@ behaviour; the builder works through it as a checklist.
 | BGAppRefreshTask | decided: WorkManager periodic work (`FavoritesRefresh`, unique name `io.github.aaronsuns.melarka.refresh`, 6 h, `NetworkType.UNMETERED`, kept across launches) for the favorites sync. The worker takes the signed-in user's sync from a small app-level seam (`FavoritesRefresh.provider`, set by the app services; null while signed out or before they are up, then the work ends at once); stopping the work cancels the sync. The sync itself still requires Wi-Fi (`!isExpensive`: metered or Data Saver) |
 | NWPathMonitor (+ expensive / Low Data) | `ConnectivityManager.NetworkCallback` (NOT_METERED; `isRestrictBackgroundStatus`), keeping the "answered" semantics; online = INTERNET capability only (not VALIDATED), so a LAN-only self-hosted server stays reachable, as with `NWPath.satisfied` |
 | Library/Caches (purgeable) | decided: `filesDir/lark/<serverKey>/<userId>/{files,staging,covers,lyrics,index.json}` (`serverKey` = first 8 bytes, hex, of the SHA-256 of the normalised base URL), internal storage, not purgeable by the system and not backed up (`allowBackup=false`); queues and events in `filesDir`. Free space via `StorageManager.getAllocatableBytes` behind `FreeSpace` (500 MB must stay free). `index.json` and every file write go through a temporary file and a rename; an unreadable index is an empty cache, `staging/` is emptied at every start, and nothing outside the user's folder is ever deleted. `CacheStore.wipe()` deletes a user's whole folder (sign-out for good, another server); `CacheLayout.pruneOtherServers` keeps only the current server's folder. The index write delay runs on the `Scheduler` |
-| ATS http exception (localhost, *.local) | `networkSecurityConfig` cleartext for those domains only |
+| ATS http exception (localhost, *.local) | decided: `networkSecurityConfig`: https everywhere with the system's and the user's CAs; cleartext for `localhost` and `*.local` only, plus `10.0.2.2` in the debug build's copy (`src/debug/res/xml`), the same hosts `ServerUrl` takes. One `OkHttpClient` (`LarkHttp.client`) for the API, the `/me` check, downloads, covers and the player's streams (`Playback.httpClient`); its trust is the platform's, which follows the config, as the WebView's does. Certificate validation is never replaced |
 | xcstrings | `values/`, `values-zh-rCN`, `values-zh-rTW`, `values-sv` |
 
 Everything else (queues, kinds, shuffle/repeat with the web's fixtures, sleep timer with fade,

@@ -189,6 +189,22 @@ class AppServicesTest : ServicesTestCase() {
         assertFalse(sent.contains(NativeEvent.AuthRequired))
     }
 
+    /** A page load may have set the session cookie (a sign-in form that reloads): it is harvested, and the sync scheduled. */
+    @Test fun aPageLoadHarvestsTheCookie() = servicesTest {
+        val refresh = RecordingRefresh()
+        val s = makeServices(user = null, refresh = refresh)
+        handler = me(7)
+        web.token = "T7"
+        s.pageCookiesChanged()
+        s.idle()
+        assertEquals("T7", s.auth.token)
+        assertEquals(7L, s.auth.userId)
+        assertEquals(listOf("schedule"), refresh.calls)
+        s.pageCookiesChanged()                               // the same cookie: nothing new, nothing asked
+        s.idle()
+        assertEquals(1, requestsTo("/api/v1/me").size)
+    }
+
     /** Sign-in schedules the background favorites sync; sign-out cancels it. */
     @Test fun signInSchedulesTheBackgroundSyncAndSignOutCancelsIt() = servicesTest {
         val refresh = RecordingRefresh()

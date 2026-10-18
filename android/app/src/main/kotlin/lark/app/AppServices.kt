@@ -266,10 +266,21 @@ class AppServices(
         engineStorage?.emitAll()
     }
 
-    /** Reads `lark_token` for the server from the web view's cookie jar (verified by the server before it is kept). */
-    suspend fun harvestCookies(userId: Long? = null) {
-        val server = serverUrl ?: return
-        auth.harvest(server, userId)
+    /**
+     * A page finished loading: the session cookie may have changed (Android has no cookie observer; an in-page sign-in
+     * that sets the cookie without a load is covered by the page's `auth{signedIn}`). A new token starts the background sync.
+     */
+    fun pageCookiesChanged() {
+        tasks.run { if (harvestCookies()) refresh.schedule() }
+    }
+
+    /**
+     * Reads `lark_token` for the server from the web view's cookie jar (verified by the server before it is kept).
+     * True when a new token was stored.
+     */
+    suspend fun harvestCookies(userId: Long? = null): Boolean {
+        val server = serverUrl ?: return false
+        return auth.harvest(server, userId)
     }
 
     /**

@@ -19,26 +19,40 @@ interface WebData : CookieSource {
  * values only, so a cookie is deleted by writing it again expired, for the host itself and for its domain (the server
  * may have set it either way). The HTTP cache goes with the web view (`WebShell.destroy`).
  */
-class WebViewData : WebData {
-    private val cookies: CookieManager get() = CookieManager.getInstance()
+class WebViewData(
+    private val jar: Jar = SystemJar,
+    private val deleteOrigin: (String) -> Unit = { WebStorage.getInstance().deleteOrigin(it) },
+) : WebData {
+    /** The part of `CookieManager` used here. */
+    interface Jar {
+        fun getCookie(url: String): String?
+        fun setCookie(url: String, value: String)
+        fun flush()
+    }
 
-    override fun larkToken(url: String): String? = parseCookie(cookies.getCookie(url), COOKIE_NAME)
+    private object SystemJar : Jar {
+        override fun getCookie(url: String): String? = CookieManager.getInstance().getCookie(url)
+        override fun setCookie(url: String, value: String) = CookieManager.getInstance().setCookie(url, value)
+        override fun flush() = CookieManager.getInstance().flush()
+    }
+
+    override fun larkToken(url: String): String? = parseCookie(jar.getCookie(url), COOKIE_NAME)
 
     override fun deleteSessionCookie(serverUrl: String) {
         expire(serverUrl, COOKIE_NAME)
-        cookies.flush()
+        jar.flush()
     }
 
     override fun removeWebsiteData(serverUrl: String) {
-        cookieNames(cookies.getCookie(serverUrl)).forEach { expire(serverUrl, it) }
-        cookies.flush()
-        WebStorage.getInstance().deleteOrigin(BridgeController.allowedOrigin(serverUrl))
+        cookieNames(jar.getCookie(serverUrl)).forEach { expire(serverUrl, it) }
+        jar.flush()
+        deleteOrigin(BridgeController.allowedOrigin(serverUrl))
     }
 
     private fun expire(serverUrl: String, name: String) {
         val host = URI(serverUrl).host ?: return
         for (domain in listOf("", "; Domain=$host")) {
-            cookies.setCookie(serverUrl, "$name=; Path=/$domain; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT")
+            jar.setCookie(serverUrl, "$name=; Path=/$domain; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT")
         }
     }
 
