@@ -15,6 +15,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
   GitHub APK byte for byte, so both install as the same app and update each other), the store texts
   sit where F-Droid reads them, and the signed APK no longer carries Google's dependency-metadata block.
 
+### Fixed
+
+- **Next could play the same favorite again** (iPhone and Android): after playing one favorite from
+  the page, the favorites that follow could start with that same song. They now never do.
+
 ## [0.2.16] - 2026-10-18
 
 ### Added
