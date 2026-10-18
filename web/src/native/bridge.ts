@@ -1,9 +1,10 @@
 // The bridge to the Lark native apps (iPhone: lark-ios; Android: lark-android). Inside the app the page runs
-// in a WKWebView that injects `window.larkNative = { version, post }`; the
-// web posts the messages below, and native answers with `lark-native`
-// CustomEvents on window. The field names are the wire protocol of
-// lark-ios Sources/Bridge/WebMessage.swift and NativeEvent.swift: change
-// them only together.
+// in a WKWebView (iPhone) or an Android WebView that injects
+// `window.larkNative = { version, platform, post }` (platform is "ios" or
+// "android"; older iPhone builds leave it out); the web posts the messages
+// below, and native answers with `lark-native` CustomEvents on window. The
+// field names are the wire protocol of ios/Sources/Bridge/WebMessage.swift and
+// NativeEvent.swift and of android lark/bridge: change them only together.
 //
 // Shuffle and repeat (music only): the web posts `setModes {shuffle, repeat}`
 // and native's `state` carries `shuffle` and `repeat` (an episode's state:
