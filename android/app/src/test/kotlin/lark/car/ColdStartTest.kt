@@ -279,6 +279,37 @@ class ColdStartServicesTest : ServicesTestCase() {
     }
 
     /**
+     * The resumption hook builds the engine when there is none yet (a cold start, or right after a server change), as
+     * the commands do: the saved queue plays from disk, and after a change the new server's engine is the one resumed.
+     */
+    @Test fun playbackResumptionBuildsTheEngineFirst() = servicesTest {
+        val data = File(dir, "data")
+        val saved = QueueStore(data); saved.user = 3
+        saved.save(QueueSnapshot(music = PlaybackQueue(listOf(track(7), track(8)), 1, 42_000, QueueSource.favorites),
+            episodes = PlaybackQueue.empty, active = Item.Kind.track, savedAt = 0))
+        val fakeCache = FakeCache(); fakeCache.local[8] = File(dir, "8.m4a")
+        val exo = androidx.media3.test.utils.TestExoPlayerBuilder(context).build()
+        val host = PlaybackHost(exo, lark.service.NowPlayingHub(), this, null, artwork = { null })
+        val second = MockWebServer().apply { start(InetAddress.getByName("localhost"), 0) }
+        try {
+            val s = makeServices(user = 3, cache = fakeCache, dataDirectory = data, onEngine = { host.engine = it })
+            host.engineProvider = { s.engine }
+            assertTrue(host.engine == null)                            // nothing built it yet
+            host.resumption()
+            val first = host.engine!!
+            assertTrue(first === s.engine)
+            assertEquals(MediaSource.File(File(dir, "8.m4a")), backend.loads.last().src)
+            assertEquals(42_000L, backend.loads.last().startMs)
+            s.setServerUrl("http://localhost:${second.port}/")
+            assertTrue(host.engine == null)                            // the old server's engine is gone
+            host.resumption()
+            assertTrue(host.engine != null && host.engine !== first && host.engine === s.engine)
+        } finally {
+            host.engine = null; exo.release(); second.shutdown()
+        }
+    }
+
+    /**
      * The whole app graph, as after Android started Melarka in the background for the car: the services from the
      * preferences and the secret store, the engine built, the queue from disk, the file from the cache, and no request.
      */
@@ -373,6 +404,40 @@ class ColdStartServiceTest {
         rig.settle()
         assertFalse(shadow.isStoppedBySelf)
         assertFalse(shadow.isForegroundStopped)
+    }
+
+    /** A shuffle from the server still running keeps the cold-start notification; its failure lets it go. */
+    @Test fun aShuffleStillRunningKeepsTheForeground() {
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        rig.api.randomFavoritesGate = gate
+        rig.api.refillError = java.net.SocketTimeoutException()
+        val controller = start(mediaButtonPlay())
+        val shadow = shadowOf(controller.get())
+        idleMain()
+        assertTrue(rig.remote.starting)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(20))
+        assertFalse(shadow.isForegroundStopped)
+        assertFalse(shadow.isStoppedBySelf)
+        gate.complete(Unit)                                             // the server could not be reached
+        assertFalse(rig.remote.starting)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2))
+        assertTrue(shadow.isForegroundStopped)
+        assertTrue(shadow.isStoppedBySelf)
+    }
+
+    /** Waiting for the network's first answer keeps it too, but only up to the 30 s cap. */
+    @Test fun waitingForTheNetworkKeepsTheForegroundUpToTheCap() {
+        rig.network.answered = false
+        val controller = start(mediaButtonPlay())
+        val shadow = shadowOf(controller.get())
+        idleMain()
+        assertTrue(rig.engine.awaitingNetworkAnswer)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(PlaybackService.HOLD_MAX_MS - 2_000))
+        assertFalse(shadow.isForegroundStopped)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(3))
+        assertTrue(rig.engine.awaitingNetworkAnswer)                   // still no answer: the cap let it go
+        assertTrue(shadow.isForegroundStopped)
+        assertTrue(shadow.isStoppedBySelf)
     }
 
     /** Car autoplay's start ([PlaybackService.startInForeground]) holds the foreground the same way. */

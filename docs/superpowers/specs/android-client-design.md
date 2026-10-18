@@ -265,7 +265,7 @@ behaviour; the builder works through it as a checklist.
 | MPNowPlayingInfo + remote commands | decided: a Media3 `MediaSessionService` (`PlaybackService`) whose session player is `SessionPlayer`, a `ForwardingSimpleBasePlayer` over the app-wide ExoPlayer that shows the engine's view: one item (the current one, from `NowPlayingController`), the engine's position and `playing`, no player errors (the engine handles them). Its commands go to `RemoteCommands` (port of iOS `RemoteCommands`): play/pause, seek, next, previous always; seek back 15 s / forward 30 s for episodes; shuffle and repeat for music; never set items, volume (the sleep fade's) or speed. The notification's own buttons are custom commands: `SKIP_BACK_15`/`SKIP_FORWARD_30` in place of previous/next for episodes, `SHUFFLE`/`REPEAT` (showing their state) for music. Releasing the session player only detaches it: the ExoPlayer and the engine live in the process-wide `PlaybackHost`, so the service ending (swiped away while paused) stops nothing |
 | MPMediaItemArtwork | decided: `MediaMetadata.artworkData` (bytes from `LarkApiProtocol.artwork`, the token only in its header), never an artwork URI; kept for the last 20 items, the same array on every write, "no cover" (404) remembered, a failed fetch asked again after 30 s doubling up to 10 min |
 | car lyrics as title | the same: the current line as the MediaSession title, "song · artist" as the artist, updated only when the line changes (the session item's own metadata keeps the song, so only the shown metadata changes) |
-| cold start from the car (remote play) | decided: a session play with nothing current reaches `RemoteCommands.handlePlay` (the iOS steps: play, else `resumeFromDisk`, else prepare and shuffle favorites); the session player takes no media items, so Media3 never asks for resumption on a play. `MediaSession.Callback.onPlaybackResumption` answers at once from disk: for a play the host's hook (`resumeFromDisk`, no network), then the engine's active queue as media items with its index and position. `MediaButtonReceiver` in the manifest; the start's foreground rule: see "Cold start, shortcuts and car autoplay" |
+| cold start from the car (remote play) | decided: a session play with nothing current reaches `RemoteCommands.handlePlay` (the iOS steps: play, else `resumeFromDisk`, else prepare and shuffle favorites); the session player takes no media items, so Media3 never asks for resumption on a play. `MediaSession.Callback.onPlaybackResumption` answers at once from disk: for a play the host's hook (`resumeFromDisk`, no network; with no engine yet, the services build it first, as for a command), then the engine's active queue as media items with its index and position. `MediaButtonReceiver` in the manifest; the start's foreground rule: see "Cold start, shortcuts and car autoplay" |
 | Shortcuts "car connects → shuffle favorites" | decided: car autoplay through a CompanionDeviceManager association (below); launcher shortcuts "Shuffle Favorites" and "Resume" (`res/xml/shortcuts.xml` → `ShortcutActivity`); both run `IntentRun`, the port of iOS `Intents/*` |
 | BGAppRefreshTask | decided: WorkManager periodic work (`FavoritesRefresh`, unique name `io.github.aaronsuns.melarka.refresh`, 6 h, `NetworkType.UNMETERED`, kept across launches) for the favorites sync. The worker takes the signed-in user's sync from a small app-level seam (`FavoritesRefresh.provider`, set by the app services; null while signed out or before they are up, then the work ends at once); stopping the work cancels the sync. The sync itself still requires Wi-Fi (`!isExpensive`: metered or Data Saver) |
 | NWPathMonitor (+ expensive / Low Data) | `ConnectivityManager.NetworkCallback` (NOT_METERED; `isRestrictBackgroundStatus`), keeping the "answered" semantics; online = INTERNET capability only (not VALIDATED), so a LAN-only self-hosted server stays reachable, as with `NWPath.satisfied` |
@@ -290,8 +290,10 @@ ports as is.
   (the engine clears `pausedBySystem`), so it never counts as playing: the shuffle starts afresh.
 - **Launcher shortcuts**: static (`android.app.shortcuts` on the launcher activity), targeting `ShortcutActivity`
   (`Theme.NoDisplay`, not exported: the system starts shortcuts as the app). It runs the intent on the services'
-  main-thread scope, synchronously up to the first suspension, so the media service is started while the activity is
-  still visible (the background-start rule), then finishes. The result shows as a toast (iOS's Shortcuts dialog; a
+  main-thread scope, synchronously up to the first suspension, and starts the media service into the foreground
+  (`PlaybackService.startInForeground`, as car autoplay does) while the activity is still visible, then finishes: the
+  cold-start notification holds the foreground until playback starts, so a shuffle from the server that answers after
+  the activity is gone still gets its media notification. The result shows as a toast (iOS's Shortcuts dialog; a
   Resume that played says nothing); with no server or signed out, Melarka opens instead of only saying so.
 - **The cold start's foreground**: a media button with the app not running reaches `MediaButtonReceiver`, which starts
   the service with `startForegroundService`; car autoplay does the same (`PlaybackService.startInForeground`). Android
@@ -312,14 +314,18 @@ ports as is.
   is already playing (the car's own play resumed the queue first). The media service is started into the foreground
   first; Android 12+ allows that from the background only through the documented exemption for companion apps holding
   `REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND` (install-time; presence observation by itself grants
-  no exemption). A refusal is logged and nothing plays, never a crash. Turning it off stops the observation, removes
-  the association and forgets the car.
+  no exemption). A refusal is logged and nothing plays, never a crash ("Android didn't allow Melarka to start playing
+  in the background", four locales, for Settings). Picking another car lets the previous one go first (observation
+  stopped, association removed: one car at a time). Turning it off stops the observation, removes the association and
+  forgets the car and its presence. The system calls go through `CompanionOps` (`SystemCompanion`; a fake in tests).
 - **Below Android 12** (no presence observation): the manifest receiver `CarConnectionReceiver` hears the associated
   car's `ACL_CONNECTED`/`ACL_DISCONNECTED` (exempt from the implicit-broadcast limits; `BLUETOOTH`, maxSdk 30) and runs
   the same path; Android 8–11 allow the foreground start from a receiver. What is lost: the system does not bind or
   wake Melarka for the car, so nothing happens after a force stop or where the phone maker blocks broadcasts to a
   stopped app (the vendor's "autostart"); any ACL link counts as the car connecting (not only audio); Settings says
-  so (`car_autoplay_old_android`). The service is enabled from API 31 and the receiver below it (`@bool/` resources).
+  so (`car_autoplay_old_android`). The service is enabled from API 31 (`@bool/car_companion_service`); the receiver is
+  disabled in the manifest and enabled below API 31 only while car autoplay is on, so no Bluetooth link wakes Melarka
+  otherwise.
 - **Phone makers** (outside China first, one standard approach): no vendor code paths. Settings shows Android's
   battery exemption (Task 12) and, for the makers whose power management goes further, one line of guidance from
   `CarAutoplay.vendorHint(Build.MANUFACTURER)` (four locales): Xiaomi/Redmi/POCO (Autostart, battery saver "No

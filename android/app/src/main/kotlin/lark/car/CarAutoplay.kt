@@ -7,6 +7,7 @@ import android.companion.AssociationInfo
 import android.companion.AssociationRequest
 import android.companion.BluetoothDeviceFilter
 import android.companion.CompanionDeviceManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
@@ -37,6 +38,10 @@ class CarAutoplay(
     private val startService: () -> Boolean,
     /** Runs the intent on the main thread, synchronously up to its first suspension (`AppServices.runIntent`). */
     private val run: (suspend () -> Unit) -> Unit,
+    /** What CompanionDeviceManager and the package manager do for car autoplay ([SystemCompanion] in the app). */
+    private val companion: CompanionOps = CompanionOps.none,
+    /** The result text when Android refused the foreground start (`R.string.intent_background_start_refused`). */
+    private val refusedText: String = BACKGROUND_START_REFUSED,
     private val log: (String) -> Unit = { Log.i(TAG, it) },
 ) {
     /** The cars present now (normalised addresses): an appearance runs the intent once. */
@@ -52,7 +57,7 @@ class CarAutoplay(
         if (!present.add(CarAutoplaySettings.key(address))) return
         val p = player()
         run {
-            val r = IntentRun.shuffleFavorites(p?.let { BackgroundStart(it, startService) })
+            val r = IntentRun.shuffleFavorites(p?.let { BackgroundStart(it, startService, refusedText) })
             lastResult = r
             if (r.failed) log("car autoplay: nothing played ($r)") else log("car autoplay: $r")
         }
@@ -64,19 +69,27 @@ class CarAutoplay(
     }
 
     /**
-     * The intent's player with the media service started into the foreground before playback is prepared: from the
-     * background a plain start is refused, a foreground start is allowed (see [CarAutoplay]). Refused: nothing plays.
+     * The car is associated (the system's confirmation came back): remembered, and Android told to report it. A car
+     * picked before is let go first (its presence no longer observed, its association removed), so only one car
+     * starts autoplay.
      */
-    private class BackgroundStart(private val inner: IntentPlayer, private val start: () -> Boolean) : IntentPlayer by inner {
-        private var refused = false
-
-        override fun prepareForPlayback() {
-            if (start()) inner.prepareForPlayback() else refused = true
+    fun onAssociated(address: String, name: String?, associationId: Int) {
+        val old = settings.address
+        if (old != null && (!settings.matches(address) || settings.associationId != associationId)) {
+            companion.forget(old, settings.associationId)
+            present.remove(CarAutoplaySettings.key(old))
         }
+        settings.save(address, name, associationId)
+        companion.observe(address)
+        companion.setReceiverEnabled(true)
+    }
 
-        override suspend fun shuffleFavorites() { if (!refused) inner.shuffleFavorites() }
-        override suspend fun resumeOrShuffleFavorites() { if (!refused) inner.resumeOrShuffleFavorites() }
-        override val failureText: String? get() = if (refused) BACKGROUND_START_REFUSED else inner.failureText
+    /** Car autoplay off: presence no longer observed, the association removed, the car forgotten. */
+    fun turnOff() {
+        settings.address?.let { companion.forget(it, settings.associationId) }
+        companion.setReceiverEnabled(false)
+        settings.clear()
+        present.clear()
     }
 
     /** A paired Bluetooth device the user can pick as the car. */
@@ -86,10 +99,10 @@ class CarAutoplay(
         private const val TAG = "CarAutoplay"
         const val REQUEST_ASSOCIATE = 0x4C41     // "LA"
         const val REQUEST_PERMISSIONS = 0x4C42
-        /** The log's reason when Android refused the foreground start (not shown to the user). */
         /** `Manifest.permission.BLUETOOTH_CONNECT` (API 31; asked only there). */
         const val BLUETOOTH_CONNECT = "android.permission.BLUETOOTH_CONNECT"
-        const val BACKGROUND_START_REFUSED = "the media service was not allowed to start from the background"
+        /** Android refused the foreground start: the English text (the app passes the localised one). */
+        const val BACKGROUND_START_REFUSED = "Android didn't allow Melarka to start playing in the background"
 
         /** The process's car autoplay (the application's). */
         fun of(context: Context): CarAutoplay = (context.applicationContext as LarkApplication).carAutoplay
@@ -168,36 +181,12 @@ class CarAutoplay(
             return true
         }
 
-        /** The car is associated: remembered, and (Android 12+) its presence observed, so the system tells us when it connects. */
-        fun associated(context: Context, address: String, name: String?, associationId: Int) {
-            of(context).settings.save(address, name, associationId)
-            if (Build.VERSION.SDK_INT >= 31) {
-                try {
-                    @Suppress("DEPRECATION")
-                    context.getSystemService(CompanionDeviceManager::class.java)?.startObservingDevicePresence(address)
-                } catch (e: RuntimeException) {
-                    Log.w(TAG, "car presence not observed (${e.javaClass.simpleName})")
-                }
-            }
-        }
+        /** The car is associated: see [onAssociated]. */
+        fun associated(context: Context, address: String, name: String?, associationId: Int) =
+            of(context).onAssociated(address, name, associationId)
 
-        /** Car autoplay off: presence no longer observed, the association removed, the car forgotten. */
-        fun turnOff(context: Context) {
-            val settings = of(context).settings
-            val address = settings.address
-            val cdm = context.getSystemService(CompanionDeviceManager::class.java)
-            if (cdm != null && address != null) {
-                try {
-                    @Suppress("DEPRECATION")
-                    if (Build.VERSION.SDK_INT >= 31) cdm.stopObservingDevicePresence(address)
-                    if (Build.VERSION.SDK_INT >= 33 && settings.associationId >= 0) cdm.disassociate(settings.associationId)
-                    else @Suppress("DEPRECATION") cdm.disassociate(address)
-                } catch (e: RuntimeException) {
-                    Log.w(TAG, "car association not removed (${e.javaClass.simpleName})")
-                }
-            }
-            settings.clear()
-        }
+        /** Car autoplay off: see [turnOff]. */
+        fun turnOff(context: Context) = of(context).turnOff()
 
         /**
          * What a phone maker's own power management may need besides Android's battery setting, for car autoplay and
@@ -212,5 +201,83 @@ class CarAutoplay(
             "samsung" -> R.string.car_autoplay_hint_samsung
             else -> null
         }
+    }
+}
+
+/**
+ * The intent's player with the media service started into the foreground before playback is prepared: from the
+ * background (car autoplay) a plain start is refused and a foreground start is allowed (see [CarAutoplay]); from a
+ * shortcut, the foreground start's notification covers a shuffle from the server that ends after the shortcut's
+ * activity is gone. Refused: nothing plays, and [refusedText] says why.
+ */
+internal class BackgroundStart(
+    private val inner: IntentPlayer,
+    private val start: () -> Boolean,
+    private val refusedText: String,
+) : IntentPlayer by inner {
+    private var refused = false
+
+    override fun prepareForPlayback() {
+        if (start()) inner.prepareForPlayback() else refused = true
+    }
+
+    override suspend fun shuffleFavorites() { if (!refused) inner.shuffleFavorites() }
+    override suspend fun resumeOrShuffleFavorites() { if (!refused) inner.resumeOrShuffleFavorites() }
+    override val failureText: String? get() = if (refused) refusedText else inner.failureText
+}
+
+/** What car autoplay asks of the system; a fake in tests. */
+interface CompanionOps {
+    /** Android 12+: report the car's presence (bind [CarCompanionService]). */
+    fun observe(address: String)
+    /** Stop reporting the car and remove its association (Android 13+ by [associationId] when known). */
+    fun forget(address: String, associationId: Int)
+    /** Below Android 12: [CarConnectionReceiver] gets the Bluetooth broadcasts only while car autoplay is on. */
+    fun setReceiverEnabled(on: Boolean)
+
+    companion object {
+        val none = object : CompanionOps {
+            override fun observe(address: String) {}
+            override fun forget(address: String, associationId: Int) {}
+            override fun setReceiverEnabled(on: Boolean) {}
+        }
+    }
+}
+
+/** [CompanionOps] on CompanionDeviceManager and the package manager. Failures are logged, never thrown. */
+class SystemCompanion(private val context: Context) : CompanionOps {
+    private val cdm: CompanionDeviceManager? get() = context.getSystemService(CompanionDeviceManager::class.java)
+
+    override fun observe(address: String) {
+        if (Build.VERSION.SDK_INT < 31) return
+        try {
+            @Suppress("DEPRECATION")
+            cdm?.startObservingDevicePresence(address)
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "car presence not observed (${e.javaClass.simpleName})")
+        }
+    }
+
+    override fun forget(address: String, associationId: Int) {
+        val cdm = cdm ?: return
+        try {
+            @Suppress("DEPRECATION")
+            if (Build.VERSION.SDK_INT >= 31) cdm.stopObservingDevicePresence(address)
+            if (Build.VERSION.SDK_INT >= 33 && associationId >= 0) cdm.disassociate(associationId)
+            else @Suppress("DEPRECATION") cdm.disassociate(address)
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "car association not removed (${e.javaClass.simpleName})")
+        }
+    }
+
+    override fun setReceiverEnabled(on: Boolean) {
+        if (Build.VERSION.SDK_INT >= 31) return
+        context.packageManager.setComponentEnabledSetting(ComponentName(context, CarConnectionReceiver::class.java),
+            if (on) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP)
+    }
+
+    private companion object {
+        const val TAG = "CarAutoplay"
     }
 }

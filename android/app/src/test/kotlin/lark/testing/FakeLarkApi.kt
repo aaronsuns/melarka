@@ -46,6 +46,8 @@ class FakeLarkApi : LarkApiProtocol {
 
     /** When set, postEvents waits for it (after recording). */
     var gate: CompletableDeferred<Unit>? = null
+    /** Holds `randomFavorites` (a shuffle from the server still running) until completed. */
+    var randomFavoritesGate: CompletableDeferred<Unit>? = null
     /**
      * While true, saveQueue waits (after recording) until [releaseSaves], and a cancel does not interrupt the wait:
      * the answer still arrives, as from a server that answered while the app was signing out.
@@ -82,6 +84,7 @@ class FakeLarkApi : LarkApiProtocol {
 
     override suspend fun randomFavorites(n: Int, exclude: List<Long>): RandomFavorites {
         randomFavoritesCalls.add(ExcludeCall(n, exclude))
+        randomFavoritesGate?.await()
         refillError?.let { throw it }
         return randomFavoritesAnswer
     }

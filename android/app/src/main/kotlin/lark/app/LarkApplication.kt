@@ -16,6 +16,7 @@ import lark.cache.FavoritesRefresh
 import lark.cache.StorageManagerFreeSpace
 import lark.car.CarAutoplay
 import lark.car.CarAutoplaySettings
+import lark.car.SystemCompanion
 import lark.core.AndroidNetworkStatus
 import lark.core.Clock
 import lark.core.MainScheduler
@@ -48,6 +49,8 @@ class LarkApplication : Application() {
             player = { services.intentPlayer },
             startService = { PlaybackService.startInForeground(this) },
             run = { body -> services.runIntent(body) },
+            companion = SystemCompanion(this),
+            refusedText = getString(R.string.intent_background_start_refused),
         )
     }
 

@@ -21,6 +21,7 @@
     <string name="intent_not_set_up">Öppna Melarka och ange servern först</string>
     <string name="intent_not_signed_in">Inte inloggad</string>
     <string name="intent_offline_nothing_cached">Offline, och inga låtar är cachade</string>
+    <string name="intent_background_start_refused">Android tillät inte Melarka att börja spela i bakgrunden</string>
     <string name="cold_start_notification">Startar uppspelningen…</string>
     <string name="car_autoplay_title">Autostart i bilen</string>
     <string name="car_autoplay_explain">När bilens Bluetooth ansluter blandar Melarka dina favoriter, även i bakgrunden. Om musik redan spelas händer ingenting. Android ber dig bekräfta bilen en gång.</string>

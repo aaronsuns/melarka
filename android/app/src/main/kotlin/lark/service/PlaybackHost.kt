@@ -68,10 +68,10 @@ class PlaybackHost(
     val nowPlayingSink = NowPlayingController(sink, artwork, scope, clock)
 
     /**
-     * `MediaSession.Callback.onPlaybackResumption` for a play: the engine's synchronous resume from disk. The cold
-     * start's full behaviour (and its tests) belongs to Task 11.
+     * `MediaSession.Callback.onPlaybackResumption` for a play: the engine's synchronous resume from disk, no network.
+     * With no engine yet (a cold start, or after a server change) it is built first ([engineProvider]), as for a command.
      */
-    var resumption: () -> Unit = { engine?.resumeFromDisk() }
+    var resumption: () -> Unit = { (engine ?: engineProvider?.invoke())?.resumeFromDisk() }
 
     private var kind: Item.Kind? = null
 

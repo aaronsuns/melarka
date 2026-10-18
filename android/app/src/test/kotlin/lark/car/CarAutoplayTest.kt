@@ -37,8 +37,16 @@ class CarAutoplayTest {
     private var starts = 0
     private var allowStart = true
     private val logged = mutableListOf<String>()
+    /** Records what car autoplay asks of the system. */
+    private class FakeCompanion : CompanionOps {
+        val calls = mutableListOf<String>()
+        override fun observe(address: String) { calls.add("observe $address") }
+        override fun forget(address: String, associationId: Int) { calls.add("forget $address $associationId") }
+        override fun setReceiverEnabled(on: Boolean) { calls.add("receiver $on") }
+    }
+    private val companion = FakeCompanion()
     private val car = CarAutoplay(settings, player = { fake }, startService = { starts++; fake?.log?.add("startService"); allowStart },
-        run = { body -> scope.launch { body() } }, log = { logged.add(it) })
+        run = { body -> scope.launch { body() } }, companion = companion, log = { logged.add(it) })
 
     private val address = "00:11:22:AA:BB:CC"
 
@@ -132,15 +140,72 @@ class CarAutoplayTest {
         val info = pm.getServiceInfo(ComponentName(context, CarCompanionService::class.java), PackageManager.MATCH_DISABLED_COMPONENTS)
         assertEquals("android.permission.BIND_COMPANION_DEVICE_SERVICE", info.permission)
         assertTrue(context.resources.getBoolean(R.bool.car_companion_service))     // SDK 34 here
-        assertFalse(context.resources.getBoolean(R.bool.car_connection_receiver))
         val requested = pm.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS).requestedPermissions!!.toList()
         assertTrue(requested.contains("android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE"))
         assertTrue(requested.contains("android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND"))
     }
 
-    @Test @Config(sdk = [30]) fun belowAndroid12TheBluetoothBroadcastIsUsed() {
+    /** Below Android 12 the Bluetooth broadcast is used, and only while car autoplay is on (off in the manifest). */
+    @Test @Config(sdk = [30]) fun belowAndroid12TheBluetoothReceiverIsOnOnlyWhileAutoplayIs() {
         assertFalse(context.resources.getBoolean(R.bool.car_companion_service))
-        assertTrue(context.resources.getBoolean(R.bool.car_connection_receiver))
+        val pm = context.packageManager
+        val receiver = ComponentName(context, CarConnectionReceiver::class.java)
+        assertFalse(pm.getReceiverInfo(receiver, PackageManager.MATCH_DISABLED_COMPONENTS).enabled)
+        val system = SystemCompanion(context)
+        system.setReceiverEnabled(true)
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_ENABLED, pm.getComponentEnabledSetting(receiver))
+        system.setReceiverEnabled(false)
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, pm.getComponentEnabledSetting(receiver))
+        // The car autoplay switch drives it.
+        val live = CarAutoplay(settings, { fake }, { true }, { }, companion = system)
+        live.onAssociated(address, null, -1)
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_ENABLED, pm.getComponentEnabledSetting(receiver))
+        live.turnOff()
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, pm.getComponentEnabledSetting(receiver))
+    }
+
+    /** Android 12+: the receiver is never enabled (the companion service is used). */
+    @Test fun fromAndroid12TheReceiverStaysOff() {
+        val pm = context.packageManager
+        val receiver = ComponentName(context, CarConnectionReceiver::class.java)
+        SystemCompanion(context).setReceiverEnabled(true)
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, pm.getComponentEnabledSetting(receiver))
+    }
+
+    @Test fun associatingObservesTheCar() {
+        car.onAssociated(address, "Volvo", 4)
+        assertEquals(listOf("observe $address", "receiver true"), companion.calls)
+        assertTrue(settings.enabled)
+    }
+
+    /** Picking another car lets the old one go first: only one car starts autoplay. */
+    @Test fun pickingANewCarForgetsThePreviousOne() {
+        car.onAssociated(address, "Old car", 4)
+        car.deviceAppeared(address)
+        companion.calls.clear()
+        car.onAssociated("11:22:33:44:55:66", "New car", 5)
+        assertEquals(listOf("forget $address 4", "observe 11:22:33:44:55:66", "receiver true"), companion.calls)
+        assertEquals("New car", settings.name)
+        car.deviceAppeared(address)                               // the old car does nothing now
+        assertEquals(1, fake!!.calls.size)
+        // The same car again (Android re-confirmed it with the same association): nothing to forget.
+        companion.calls.clear()
+        car.onAssociated("11:22:33:44:55:66", "New car", 5)
+        assertEquals(listOf("observe 11:22:33:44:55:66", "receiver true"), companion.calls)
+    }
+
+    /** Off: the car forgotten and its presence too, so turning it on again with the car still connected starts afresh. */
+    @Test fun turningOffForgetsTheCarAndItsPresence() {
+        car.onAssociated(address, null, 4)
+        car.deviceAppeared(address)
+        companion.calls.clear()
+        car.turnOff()
+        assertEquals(listOf("forget $address 4", "receiver false"), companion.calls)
+        assertFalse(settings.enabled)
+        car.onAssociated(address, null, 6)
+        fake!!.playing = false
+        car.deviceAppeared(address)
+        assertEquals(2, fake!!.calls.size)
     }
 
     /** The guidance for phone makers whose power management goes beyond Android's (dontkillmyapp.com). */

@@ -25,6 +25,7 @@
     <string name="intent_not_set_up">Open Melarka and set the server first</string>
     <string name="intent_not_signed_in">Not signed in</string>
     <string name="intent_offline_nothing_cached">Offline, and no songs are cached</string>
+    <string name="intent_background_start_refused">Android didn\'t allow Melarka to start playing in the background</string>
     <!-- The media service's notification while a play from the car or a headset is starting. -->
     <string name="cold_start_notification">Starting playback…</string>
     <!-- Car autoplay: shown by the Settings screen (Task 12); the hints by phone maker come from CarAutoplay.vendorHint. -->

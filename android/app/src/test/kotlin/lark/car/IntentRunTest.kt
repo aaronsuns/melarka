@@ -34,7 +34,7 @@ class IntentRunTest {
 
     @Test fun shuffleIntentCallsEngineWithoutUI() = runTest {
         val fake = FakeIntentPlayer()
-        assertEquals(IntentResult.played, ShortcutActivity.run(ShortcutActivity.ACTION_SHUFFLE_FAVORITES, fake))
+        assertEquals(IntentResult.played, ShortcutActivity.run(ShortcutActivity.ACTION_SHUFFLE_FAVORITES, fake, { true }, "refused"))
         assertEquals(listOf("shuffleFavorites"), fake.calls)
         // Playback is prepared synchronously, before the intent's first suspension.
         assertEquals(listOf("intentBlocker", "prepareForPlayback", "shuffleFavorites"), fake.log)
@@ -43,7 +43,7 @@ class IntentRunTest {
 
     @Test fun resumeIntentResumesOrShufflesWithoutUI() = runTest {
         val fake = FakeIntentPlayer()
-        assertEquals(IntentResult.played, ShortcutActivity.run(ShortcutActivity.ACTION_RESUME, fake))
+        assertEquals(IntentResult.played, ShortcutActivity.run(ShortcutActivity.ACTION_RESUME, fake, { true }, "refused"))
         assertEquals(listOf("resumeOrShuffleFavorites"), fake.calls)
         assertEquals(listOf("intentBlocker", "prepareForPlayback", "resumeOrShuffleFavorites"), fake.log)
         assertNoUI()
@@ -56,9 +56,32 @@ class IntentRunTest {
         assertTrue(!info.exported)
     }
 
+    /** The shortcut starts the media service in the foreground first, while its activity is visible (the cold-start hold). */
+    @Test fun shortcutsStartTheServiceInTheForegroundBeforePreparing() = runTest {
+        for (action in listOf(ShortcutActivity.ACTION_SHUFFLE_FAVORITES, ShortcutActivity.ACTION_RESUME)) {
+            val fake = FakeIntentPlayer()
+            ShortcutActivity.run(action, fake, { fake.log.add("startInForeground"); true }, "refused")
+            assertEquals(listOf("intentBlocker", "startInForeground", "prepareForPlayback"), fake.log.take(3))
+        }
+        // Refused (not expected while the activity is visible): nothing plays, and the text says why.
+        val fake = FakeIntentPlayer()
+        assertEquals(IntentResult.nothingToPlay("refused"),
+            ShortcutActivity.run(ShortcutActivity.ACTION_SHUFFLE_FAVORITES, fake, { false }, "refused"))
+        assertEquals(emptyList<String>(), fake.calls)
+        // Blocked or already playing: the service is not started at all.
+        var starts = 0
+        val playing = FakeIntentPlayer().also { it.playing = true }
+        ShortcutActivity.run(ShortcutActivity.ACTION_SHUFFLE_FAVORITES, playing, { starts++; true }, "refused")
+        val blocked = FakeIntentPlayer().also { it.blocker = IntentResult.notSignedIn }
+        ShortcutActivity.run(ShortcutActivity.ACTION_RESUME, blocked, { starts++; true }, "refused")
+        assertEquals(0, starts)
+        assertEquals("Android didn't allow Melarka to start playing in the background",
+            context.getString(R.string.intent_background_start_refused))
+    }
+
     @Test fun anUnknownShortcutDoesNothing() = runTest {
         val fake = FakeIntentPlayer()
-        assertNull(ShortcutActivity.run("lark.action.OTHER", fake))
+        assertNull(ShortcutActivity.run("lark.action.OTHER", fake, { true }, "refused"))
         assertEquals(emptyList<String>(), fake.log)
     }
 

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Car autoplay: the companion device service from Android 12, the Bluetooth broadcast before it. -->
+    <!-- Car autoplay: the companion device service from Android 12 (the Bluetooth receiver before it is enabled in code). -->
     <bool name="car_companion_service">false</bool>
-    <bool name="car_connection_receiver">true</bool>
 </resources>

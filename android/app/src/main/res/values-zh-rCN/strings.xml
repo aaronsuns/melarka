@@ -21,6 +21,7 @@
     <string name="intent_not_set_up">请先打开 Melarka 并设置服务器</string>
     <string name="intent_not_signed_in">未登录</string>
     <string name="intent_offline_nothing_cached">离线且没有缓存的歌曲</string>
+    <string name="intent_background_start_refused">Android 不允许 Melarka 在后台开始播放</string>
     <string name="cold_start_notification">正在开始播放…</string>
     <string name="car_autoplay_title">车载自动播放</string>
     <string name="car_autoplay_explain">汽车蓝牙连接后，Melarka 会随机播放收藏，即使在后台也可以。如果已经在播放，则不做任何改变。Android 会请你确认一次这辆车。</string>

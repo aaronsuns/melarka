@@ -64,10 +64,11 @@
             </intent-filter>
         </service>
 
-        <!-- Car autoplay below Android 12: the car's Bluetooth connection (system broadcasts only). -->
+        <!-- Car autoplay below Android 12: the car's Bluetooth connection (system broadcasts only). Off until car
+             autoplay is turned on (CarAutoplay enables it), so no Bluetooth link wakes Melarka for nothing. -->
         <receiver
             android:name="lark.car.CarConnectionReceiver"
-            android:enabled="@bool/car_connection_receiver"
+            android:enabled="false"
             android:exported="true"
             android:permission="android.permission.BLUETOOTH">
             <intent-filter>
