@@ -134,4 +134,38 @@ class WebMessageTest {
         assertEquals(WebMessage.SetPrefs(NativePrefs("high", true, true)), decode("""{"type":"setPrefs","quality":"high","carLyrics":true}"""))
         assertNull(decode("""{"type":"setPrefs","quality":"high","carLyrics":true,"loudness":"off"}"""))
     }
+
+    // MARK: Limits, checked before any decoding (a page could post a huge or deeply nested body)
+
+    /** A real queue: the web sends every track with its full JSON as `meta` (about 450 characters each). */
+    private fun bigQueue(n: Int): String {
+        val meta = """"id":1,"title":"晴天","artist":"周杰伦","artist_id":3,"album":"叶惠美","album_id":4,"year":2003,""" +
+            """"duration_ms":269000,"codec":"aac","lossless":false,"bitrate":256000,"status":"kept","broken":false,""" +
+            """"broken_reason":"","favorite":true,"disliked":false,"library_id":1,"path":"/music/jay/yehuimei/01 晴天.m4a",""" +
+            """"added_at":1700000000,"track_no":1,"disc_no":1,"gain_db":-6.5"""
+        val item = """{"kind":"track","id":"1","title":"晴天","artist":"周杰伦","album":"叶惠美","durationMs":269000,"meta":{$meta}}"""
+        return """{"type":"setQueue","kind":"track","index":0,"play":true,"source":"list","items":[${List(n) { item }.joinToString(",")}]}"""
+    }
+
+    @Test fun aLongQueueIsWithinTheLimit() {
+        val json = bigQueue(5000)
+        org.junit.Assert.assertTrue("a realistic big queue", json.length > 2_000_000)
+        assertEquals(5000, (decode(json) as WebMessage.SetQueue).items.size)
+    }
+
+    @Test fun anOversizedMessageIsDropped() {
+        val pad = "x".repeat(WebMessage.MAX_MESSAGE_CHARS)
+        assertNull(decode("""{"type":"openSettings","pad":"$pad"}"""))
+        assertNotNull(decode("""{"type":"openSettings","pad":"${pad.take(1000)}"}"""))
+    }
+
+    @Test fun deepNestingIsDroppedBeforeDecoding() {
+        fun nested(depth: Int) = """{"type":"openSettings","x":${"[".repeat(depth - 1)}${"]".repeat(depth - 1)}}"""
+        assertNotNull(decode(nested(WebMessage.MAX_DEPTH)))       // the message object itself is level 1
+        assertNull(decode(nested(WebMessage.MAX_DEPTH + 1)))
+        assertNull(decode("{".repeat(100_000)))                    // never reaches the parser's recursion
+        // Brackets inside strings are text, not nesting.
+        assertNotNull(decode("""{"type":"openSettings","x":"${"[{".repeat(1000)}"}"""))
+        assertNotNull(decode("""{"type":"openSettings","x":"\\\"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["}"""))
+    }
 }

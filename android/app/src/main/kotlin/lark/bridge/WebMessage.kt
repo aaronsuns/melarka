@@ -44,8 +44,18 @@ sealed interface WebMessage {
         /** The longest sleep timer taken (a day): anything longer is a malformed message. */
         const val MAX_SLEEP_MINUTES = 24 * 60
 
+        /**
+         * The longest message body taken (characters). The web sends a whole queue in one `setQueue`, every item with
+         * its track's JSON (450 characters or more each; 64 K would stop at about 140 tracks), so a 5,000-track queue is
+         * over 2 M: 8 M leaves room for that and still refuses a runaway body.
+         */
+        const val MAX_MESSAGE_CHARS = 8 shl 20
+
+        /** The deepest nesting of objects and arrays taken (the message object is level 1; a real one is 4 at most). */
+        const val MAX_DEPTH = 32
+
         /** Decodes a message body from the page; null (drop it) for anything malformed, unknown or of a missing field. */
-        fun decode(json: String): WebMessage? = try {
+        fun decode(json: String): WebMessage? = if (!withinLimits(json)) null else try {
             val root = lenientJson.parseToJsonElement(json)
             if (root !is JsonObject) null else decode(root.asFields(), root)
         } catch (_: Malformed) {
@@ -54,6 +64,33 @@ sealed interface WebMessage {
             null
         } catch (_: IllegalArgumentException) {
             null
+        }
+
+        /**
+         * Checked before any parsing, so an oversized or deeply nested body never reaches the parser (whose recursion
+         * a deep one could exhaust): [MAX_MESSAGE_CHARS], and [MAX_DEPTH] counted over `{`/`[` outside strings.
+         */
+        private fun withinLimits(json: String): Boolean {
+            if (json.length > MAX_MESSAGE_CHARS) return false
+            var depth = 0
+            var inString = false
+            var escaped = false
+            for (c in json) {
+                if (inString) {
+                    when {
+                        escaped -> escaped = false
+                        c == '\\' -> escaped = true
+                        c == '"' -> inString = false
+                    }
+                    continue
+                }
+                when (c) {
+                    '"' -> inString = true
+                    '{', '[' -> if (++depth > MAX_DEPTH) return false
+                    '}', ']' -> depth--
+                }
+            }
+            return true
         }
 
         private fun decode(c: Fields, root: JsonObject): WebMessage {

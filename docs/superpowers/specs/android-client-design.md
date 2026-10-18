@@ -168,7 +168,12 @@ behaviour; the builder works through it as a checklist.
 - A document-start script defines `window.larkNative = {version:1, platform:"android",
   post(msg)}` exactly as iOS does, with `post` sending `JSON.stringify(msg)` over
   `WebViewCompat.addWebMessageListener("lark", allowedOrigins=[server origin])`. Messages are
-  accepted only from the main frame and the server's origin.
+  accepted only from the main frame and the server's exact origin (scheme, host, port), checked again
+  in `BridgeController.onMessage`; anything else is dropped silently. The script defines
+  `larkNative` once, in the top frame only, non-writable and frozen.
+- Before decoding, a message body over 8 M characters or nested deeper than 32 objects/arrays is
+  dropped (a 5,000-track `setQueue`, every item with its track JSON, is over 2 M characters, so a
+  64 K cap would break real queues).
 - Native → web: `evaluateJavascript` of `window.dispatchEvent(new CustomEvent("lark-native",
   {detail:…}))`, with the iOS escaping (U+2028/U+2029, `</`, non-finite numbers as strings) and the
   same event shapes: `state`, `queue`, `flushed`, `authRequired`, `notice`.
