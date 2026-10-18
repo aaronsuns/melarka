@@ -1,0 +1,40 @@
+AntiFeatures:
+  NonFreeNet:
+    en-US: YouTube search and downloads (done by your own Melarka server) get their
+      content from YouTube.
+Categories:
+  - Multimedia
+  - Online Media Player
+License: AGPL-3.0-or-later
+AuthorName: Aaron Sun
+SourceCode: https://github.com/aaronsuns/melarka
+IssueTracker: https://github.com/aaronsuns/melarka/issues
+Changelog: https://github.com/aaronsuns/melarka/releases
+
+AutoName: Melarka
+
+RepoType: git
+Repo: https://github.com/aaronsuns/melarka.git
+Binaries: https://github.com/aaronsuns/melarka/releases/download/v%v/Melarka-%v.apk
+
+Builds:
+  - versionName: 0.2.16
+    versionCode: 216
+    commit: e9ae8e0f80129a05bc861d33e5ae5449a421a632
+    subdir: android/app
+    sudo:
+      - echo "deb https://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/bookworm.list
+      - apt-get update
+      - apt-get install -y -t bookworm openjdk-17-jdk-headless
+      - update-java-alternatives -s java-1.17.0-openjdk-amd64
+    gradle:
+      - yes
+
+AllowedAPKSigningKeys: 42c929f4f00f837e74df5be81a43d59829704b1e136654445ea1836992daa02b
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9.]+$
+UpdateCheckData: 
+  android/version.properties|versionCode=(\d+)|ios/project.yml|MARKETING_VERSION:\s*"([0-9.]+)"
+CurrentVersion: 0.2.16
+CurrentVersionCode: 216

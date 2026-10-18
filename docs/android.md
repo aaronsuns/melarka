@@ -49,6 +49,8 @@ Install the newer APK over the old one; your server, sign-in and cache stay (And
 because the signing key is the same). Melarka doesn't check for updates itself. The
 [Obtainium](https://obtainium.imranr.dev) app does it for you: in Obtainium choose **Add App**
 and enter `https://github.com/aaronsuns/melarka`. It then installs new releases as they come out.
+<!-- F-Droid: merge request TBD (not opened yet; steps in docs/fdroid/README.md). When it is merged,
+     say here that F-Droid ships the same signed APK, so F-Droid and GitHub installs update each other. -->
 
 ## 2. Connect to your server
 
