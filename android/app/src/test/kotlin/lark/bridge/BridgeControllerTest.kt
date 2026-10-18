@@ -51,7 +51,7 @@ class BridgeControllerTest {
         assertTrue(got.isEmpty())
     }
 
-    /** A closed bridge (a server change) routes nothing and sends nothing, even with its old view attached again. */
+    /** A closed bridge (a server change) routes nothing and sends nothing, even with a view attached; reopened, it works. */
     @Test fun aClosedBridgeIsInert() {
         bridge.close()
         bridge.attach(view)
@@ -59,6 +59,9 @@ class BridgeControllerTest {
         bridge.send(NativeEvent.AuthRequired)
         assertTrue(got.isEmpty())
         assertTrue(view.scripts.isEmpty())
+        bridge.reopen()
+        bridge.send(NativeEvent.AuthRequired)
+        assertEquals(listOf(dispatchScript(NativeEvent.AuthRequired)), view.scripts)
     }
 
     @Test fun sendIsANoOpWhileInactive() {

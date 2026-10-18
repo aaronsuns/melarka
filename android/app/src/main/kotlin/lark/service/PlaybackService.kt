@@ -75,7 +75,7 @@ class PlaybackService : MediaSessionService() {
     /** The cold-start notification is up and Media3's own has not taken over yet. */
     private var holding = false
     private var holdSince = 0L
-    /** No start has reached [onStartCommand] since [onCreate]: only that one can be a cold start. */
+    /** No start has reached [onStartCommand] since [onCreate]: only that one can be a media button's cold start. */
     private var firstStart = false
 
     /**
@@ -85,16 +85,17 @@ class PlaybackService : MediaSessionService() {
      * on Media3's channel and id, which Media3's media notification replaces when playback starts; when nothing plays,
      * it is removed and the service stops.
      *
-     * Only the first start after [onCreate] is such a cold start. Later `MEDIA_BUTTON` starts come to a service that is
-     * already running, most of them from Media3's own notification buttons (Android 8-12 sends them as service starts):
-     * they go to Media3 alone, so a paused notification's Previous or Play neither swaps the notification nor stops
-     * the service.
+     * A `MEDIA_BUTTON` start is a cold start only as the first start after [onCreate]: later ones come to a service that
+     * is already running, most of them from Media3's own notification buttons (Android 8-12 sends them as service
+     * starts), and go to Media3 alone, so a paused notification's Previous or Play neither swaps the notification nor
+     * stops the service. A [startInForeground] start always holds: a plain [start] may have reached the new service
+     * first, and Android still wants `startForeground` within 5 s of the foreground start.
      */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val first = firstStart
         firstStart = false
-        val coldStart = first && intent != null && !isPlaybackOngoing &&
-            (intent.action == Intent.ACTION_MEDIA_BUTTON || intent.getBooleanExtra(EXTRA_FOREGROUND_START, false))
+        val coldStart = intent != null && !isPlaybackOngoing &&
+            ((first && intent.action == Intent.ACTION_MEDIA_BUTTON) || intent.getBooleanExtra(EXTRA_FOREGROUND_START, false))
         if (coldStart) hold()
         val r = super.onStartCommand(intent, flags, startId)
         if (coldStart && holding) handler.post(checkHold)       // after the media button's play, which Media3 posted

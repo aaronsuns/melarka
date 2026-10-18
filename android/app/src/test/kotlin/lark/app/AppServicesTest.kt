@@ -362,6 +362,24 @@ class AppServicesTest : ServicesTestCase() {
         assertNull(s.bridge)
     }
 
+    /** A server change whose sign-out fails leaves the server as it was: its page's bridge works again. */
+    @Test fun aFailedServerChangeReopensTheBridge() = servicesTest {
+        val s = makeServices()
+        val view = FakeView()
+        val b = s.bridge(serverUrl).also { it.attach(view) }
+        s.scenePhaseChanged(ScenePhase.active)
+        web.onDelete = { throw IllegalStateException("cookie store") }
+        assertTrue(runCatching { s.changeServer() }.isFailure)
+        assertEquals(serverUrl, s.serverUrl)
+        assertFalse(s.changingServer)
+        assertTrue(s.bridge(serverUrl) === b)
+        b.onMessage("""{"type":"openSettings"}""", serverUrl.trimEnd('/'), isMainFrame = true)
+        assertTrue("the page reaches the services again", s.showSettings)
+        view.scripts.clear()
+        s.handle(q(listOf(8), 0, 0, false))
+        assertTrue("and gets events again", view.scripts.isNotEmpty())
+    }
+
     /** A dropped engine is inert: the network coming back does not make it play. */
     @Test fun aDroppedEngineIgnoresTheNetwork() = servicesTest {
         val s = makeServices()

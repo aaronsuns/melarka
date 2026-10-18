@@ -533,6 +533,24 @@ class ColdStartServiceTest {
         assertNotNull(controller.get().session)
     }
 
+    /**
+     * A plain start (the engine's `PlaybackService.start`) can reach a new service first while car autoplay's
+     * `startForegroundService` is on its way: the foreground start still gets the hold, as Android needs
+     * `startForeground` within 5 s of it.
+     */
+    @Test fun aForegroundStartAfterAPlainFirstStartStillHolds() {
+        rig.host.engine = null
+        val controller = start(Intent(context, PlaybackService::class.java))
+        val shadow = shadowOf(controller.get())
+        idleMain()
+        assertEquals(null, shadow.lastForegroundNotification)
+        controller.get().onStartCommand(Intent(context, PlaybackService::class.java).putExtra(PlaybackService.EXTRA_FOREGROUND_START, true), 0, 2)
+        assertEquals(HOLD_ID, shadow.lastForegroundNotificationId)
+        idleMain()
+        assertTrue(shadow.isForegroundStopped)
+        assertTrue(shadow.isStoppedBySelf)
+    }
+
     /** Car autoplay's start ([PlaybackService.startInForeground]) holds the foreground the same way. */
     @Test fun aForegroundStartWithNothingToPlayStops() {
         rig.host.engine = null

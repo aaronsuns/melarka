@@ -418,6 +418,7 @@ class AppServices(
             webData.removeWebsiteData(old)
         } finally {
             changingServer = false
+            if (serverUrl == old) bridgeStorage?.reopen()     // the change failed: the server and its page stay
         }
     }
 
@@ -430,6 +431,7 @@ class AppServices(
         dropEngine()
         apiClient = null
         bridgeStorage?.close()
+        bridgeStorage?.attach(null)
         bridgeStorage = null
     }
 

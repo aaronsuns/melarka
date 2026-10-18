@@ -30,19 +30,20 @@ class BridgeController(val serverUrl: String, private val router: (WebMessage) -
     var isActive = true
 
     /** The web view of this server's page, or null when the Activity let it go. */
-    fun attach(view: BridgeView?) { if (!closed) this.view = view }
+    fun attach(view: BridgeView?) { this.view = view }
 
     /** [view] is going: let it go, unless another view (a newer shell) has been attached since. */
     fun detach(view: BridgeView) { if (this.view === view) this.view = null }
 
     /**
-     * Dropped for good (a server change): the view goes, and from now on the page's messages reach nothing and no event
-     * is sent, though the old shell may still be on screen until the Activity replaces it.
+     * Cut off (a server change): the page's messages reach nothing and no event is sent, though the old shell may
+     * still be on screen until the Activity replaces it. [reopen] undoes it (the change failed and the server stays).
      */
     var closed = false
         private set
 
-    fun close() { closed = true; view = null }
+    fun close() { closed = true }
+    fun reopen() { closed = false }
 
     /**
      * Dispatches [event] to the page. A no-op with no view, while inactive, or while the web view shows anything but

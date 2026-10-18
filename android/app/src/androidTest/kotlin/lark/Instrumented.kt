@@ -93,6 +93,15 @@ object Instrumented {
         }
     }
 
+    /** [text] as a file in the test outputs (kept and copied out as [recordFailure]'s are). */
+    fun recordText(fileName: String, text: String) {
+        try {
+            TestStorage().openOutputFile(fileName).use { it.write(text.toByteArray()) }
+        } catch (e: Throwable) {
+            Log.w("Instrumented", "could not record $fileName: ${e.javaClass.simpleName}")
+        }
+    }
+
     /** A controller of the media service, as a car or the lock screen sees it. Use it on the main thread ([onMain]). */
     @UnstableApi
     fun mediaController(): MediaController {

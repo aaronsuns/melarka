@@ -104,7 +104,8 @@ allowed to run in the background (see below), and not after you force-stop it.
 
 ## Automation apps: Tasker, Samsung Modes & Routines, …
 
-Automation apps can run the two shortcuts, for example when you get in the car or at a set time.
+Automation apps that can send an Android intent to start an activity (Tasker, Automate,
+MacroDroid, …) can run the two shortcuts, for example when you get in the car or at a set time.
 Have the app send an intent that starts an **activity**, with package
 `io.github.aaronsuns.melarka` and one of these actions (nothing else is needed; extras and data
 are ignored):
@@ -113,9 +114,9 @@ are ignored):
 - `io.github.aaronsuns.melarka.action.RESUME`: Resume (your last queue, or your favorites
   shuffled when there is none).
 
-In Tasker that is **System → Send Intent** with **Target: Activity**. Samsung's Modes and
-Routines can't send an action typed by hand: pick Melarka's Shuffle Favorites or Resume in its
-step for app actions (the name varies with the One UI version), or run a Tasker task from it.
+In Tasker, for example, that is its **Send Intent** action with the target set to **Activity**.
+Samsung's Modes and Routines can use them only if it offers a step on your phone that opens an
+app with an action or sends an intent; otherwise, have it run a task in one of the apps above.
 Melarka shows the same short message as the shortcuts; Android may not let an automation app
 start it while that app itself runs in the background.
 

@@ -64,6 +64,19 @@ class SmokeFlowTest {
         throw e
     }
 
+    /** What the next-song wait saw (a failure's message): the engine, the player, the controller, the cache. */
+    private fun nextSongState(c: MediaController, first: String?): String {
+        val e = services().engine
+        val p = lark.service.Playback.host(Instrumented.context).player
+        val q = e?.music
+        val ids = q?.items?.map { it.id }.orEmpty()
+        val cached = ids.associateWith { id -> id.toLongOrNull()?.let { services().cache.localFile(it) } != null }
+        return "engine playing=${e?.playing} current=${e?.current?.id}/${e?.current?.title} index=${q?.index} of ${ids.size} " +
+            "failure=${e?.failureText}; player pwr=${p.playWhenReady} state=${p.playbackState} " +
+            "suppression=${p.playbackSuppressionReason} isPlaying=${p.isPlaying} error=${p.playerError?.errorCodeName}; " +
+            "controller mediaId=${c.currentMediaItem?.mediaId} (was $first) isPlaying=${c.isPlaying}; cached=$cached"
+    }
+
     private fun flow() {
         val favorites = server.seedFavorites()
 
@@ -118,7 +131,13 @@ class SmokeFlowTest {
         waitOnMain("playing again through the session") { c.isPlaying && services().engine?.playing == true }
         val first = onMain { c.currentMediaItem?.mediaId }
         onMain { c.seekToNext() }
-        waitOnMain("the next song through the session", 30_000) { c.currentMediaItem?.mediaId != first && c.isPlaying }
+        try {
+            waitOnMain("the next song through the session", 30_000) { c.currentMediaItem?.mediaId != first && c.isPlaying }
+        } catch (e: AssertionError) {
+            val state = onMain { nextSongState(c, first) }
+            Instrumented.recordText("SmokeFlowTest-next-song.txt", state)
+            throw AssertionError(state, e)
+        }
         assertTrue("the next song is a favorite too", onMain { c.mediaMetadata.title?.toString() } in favorites.values)
 
         // Offline: the favorites the sync cached play on.
