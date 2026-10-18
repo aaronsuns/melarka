@@ -127,8 +127,9 @@ frames. (`Bridge/WebShell.swift`, `Bridge/PageLoad.swift`)
   "Network too slow…") and requeues the stalled track.
 - **Never stop**: failed items skipped; local-only mode offline or after 3 failures (on-device
   items, else a random cached favorite not among the last 30 played); refill favorites (20),
-  shuffle (20) and radio (10) queues when 2 or fewer playable items are left, excluding up to 300
-  recent ids, never under repeat all; offline resume modes replay / advance / shuffle.
+  shuffle (20) and radio (10) queues when 2 or fewer playable items are left (shuffle and radio
+  exclude up to 300 recent ids; favorites exclude the current and upcoming items, so a one-song
+  queue never gets the same song next), never under repeat all; offline resume modes replay / advance / shuffle.
 - **Modes**: shuffle reorders the upcoming items only and remembers the original order (fixtures
   shared with the web's `modes.ts`); repeat all starts a new pass (reshuffled, never starting with
   the track that just ended); repeat one replays a track that ended by itself.

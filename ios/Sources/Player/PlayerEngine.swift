@@ -1312,8 +1312,11 @@ import os
         refillWanted = false
         refilling = true
         let src = music.source, gen = musicGeneration
-        // Favorites loop, so only what is still upcoming is excluded; radio and shuffle exclude the recent queue.
-        let exclude = src == .favorites ? upcoming.compactMap(\.trackID) : music.items.suffix(Self.refillExcludeMax).compactMap(\.trackID)
+        // Favorites loop, so only the current item and what is still upcoming are excluded (the current one too: else
+        // a one-song queue, the page's played favorite, could get that song again right after itself, and Next would
+        // play it again); radio and shuffle exclude the recent queue.
+        let exclude = src == .favorites ? ([music.current].compactMap { $0 } + upcoming).compactMap(\.trackID)
+            : music.items.suffix(Self.refillExcludeMax).compactMap(\.trackID)
         tasks.run { [weak self, api] in
             var answer: (tracks: [(Track, JSONValue)], source: QueueSource)?
             do {

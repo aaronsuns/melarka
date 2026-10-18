@@ -112,7 +112,7 @@ final class NeverStopTests: EngineTestCase {
         XCTAssertTrue(api.randomFavoritesCalls.isEmpty)       // 3 upcoming: not yet
         backend.start(); backend.finish()                     // 2 upcoming
         await engine.idle()
-        XCTAssertEqual(api.randomFavoritesCalls, [.init(n: 20, exclude: [7, 8])])
+        XCTAssertEqual(api.randomFavoritesCalls, [.init(n: 20, exclude: [6, 7, 8])])
         XCTAssertEqual(engine.music.items.map(\.id), ["5", "6", "7", "8", "30", "31"])   // 8 is still upcoming: not twice
         XCTAssertEqual(queues(.track).last?.items.count, 6)
         XCTAssertEqual(engine.music.items.last?.meta["title"], .string("T31"))
@@ -190,6 +190,17 @@ final class NeverStopTests: EngineTestCase {
         XCTAssertTrue(engine.playing)
     }
 
+    /// The page plays one favorite (a one-song favorites queue): the refill excludes that song, so the server never
+    /// puts it right after itself and Next (the car's, the lock screen's) never plays the same song again.
+    func testAOneSongFavoritesQueueExcludesTheCurrentSongFromTheRefill() async {
+        api.randomFavoritesAnswer = ("favorites", [trackModel(6), trackModel(7)])
+        engine.handle(.setQueue(q([5], index: 0, pos: 0, play: true, source: .favorites)))
+        await engine.idle()
+        XCTAssertEqual(api.randomFavoritesCalls, [.init(n: 20, exclude: [5])])
+        engine.next()
+        XCTAssertEqual(engine.music.current?.id, "6")
+    }
+
     /// Shuffle and repeat at their defaults (or turned back off): the refill and the favorite fallback are
     /// exactly what they were before the modes existed.
     func testDefaultModesLeaveNeverStopAsItWas() async {
@@ -200,7 +211,7 @@ final class NeverStopTests: EngineTestCase {
         api.randomFavoritesAnswer = ("favorites", [trackModel(30), trackModel(31)])
         engine.handle(.setQueue(q([5, 6, 7], index: 0, pos: 0, play: true, source: .favorites)))
         await engine.idle()
-        XCTAssertEqual(api.randomFavoritesCalls, [.init(n: 20, exclude: [6, 7])])
+        XCTAssertEqual(api.randomFavoritesCalls, [.init(n: 20, exclude: [5, 6, 7])])
         XCTAssertEqual(engine.music.items.map(\.id), ["5", "6", "7", "30", "31"])
 
         // The end of a list offline: a cached favorite is put after it (never a wrap, never a stop).

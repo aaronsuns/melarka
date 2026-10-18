@@ -321,9 +321,9 @@ Everything else (queues, kinds, shuffle/repeat with the web's fixtures, sleep ti
 retries 2/5/10 s, stall switch after 6 s, failed items skipped 30 min, never-stop local-only mode,
 refill, offline resume modes, play events, queue sync incl. the `yt:` rule, episode progress,
 queue persistence, lookahead, offline cache with cap and eviction, favorites sync, offline lyrics)
-ports as is, with one difference: a favorites refill excludes the current item as well as
-the upcoming ones (iOS: the upcoming ones only), so a one-song favorites queue (a favorite played from the page) never
-gets that song again right after itself, where Next would play it again.
+ports as is. A favorites refill excludes the current item as well as the upcoming ones (iOS has the
+same rule since 0.2.17), so a one-song favorites queue (a favorite played from the page) never gets
+that song again right after itself, where Next would play it again.
 
 ### Cold start, shortcuts and car autoplay
 
