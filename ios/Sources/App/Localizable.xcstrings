@@ -1284,7 +1284,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "全部重複"
+            "value" : "列表循環"
           }
         }
       }
@@ -1307,7 +1307,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "單曲重複"
+            "value" : "單曲循環"
           }
         }
       }

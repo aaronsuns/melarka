@@ -318,20 +318,20 @@ final class OfflinePlayerModelTests: EngineTestCase {
     }
 
     func testTheOfflineStringsAreTranslated() {
-        let cases: [(String, String)] = [
-            ("Offline Mode", "离线模式"),
-            ("Retry Connection", "重试连接"),
-            ("Up Next", "播放队列"),
-            ("Offline Favorites", "离线收藏"),
-            ("Shuffle", "随机播放"),
-            ("Repeat One", "单曲循环"),
-            ("Previous", "上一首"),
-            ("Next", "下一首"),
+        let cases: [(String, String, String)] = [
+            ("Offline Mode", "离线模式", "離線模式"),
+            ("Retry Connection", "重试连接", "重試連線"),
+            ("Up Next", "播放队列", "播放佇列"),
+            ("Offline Favorites", "离线收藏", "離線收藏"),
+            ("Shuffle", "随机播放", "隨機播放"),
+            ("Repeat One", "单曲循环", "單曲循環"),
+            ("Previous", "上一首", "上一首"),
+            ("Next", "下一首", "下一首"),
         ]
-        for (en, zh) in cases {
+        for (en, hans, hant) in cases {
             XCTAssertEqual(localized(en, "en"), en, en)
-            XCTAssertEqual(localized(en, "zh-Hans"), zh, en)
-            XCTAssertEqual(localized(en, "zh-Hant"), zh, en)
+            XCTAssertEqual(localized(en, "zh-Hans"), hans, en)
+            XCTAssertEqual(localized(en, "zh-Hant"), hant, en)
         }
     }
 }
