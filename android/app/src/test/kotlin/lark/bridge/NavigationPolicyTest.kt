@@ -29,7 +29,7 @@ class NavigationPolicyTest {
         assertTrue(BridgeController.originMatches("http://mac.local:8080", "http://mac.local:8080/"))
         assertFalse(BridgeController.originMatches("https://evil.test", "https://lark.test/"))
         assertFalse(BridgeController.originMatches("https://lark.test.evil.test", "https://lark.test/"))
-        assertFalse(BridgeController.originMatches("https://lark.test@evil.test", "https://lark.test/"))
+        assertFalse(BridgeController.originMatches("https://lark.test@example.com", "https://lark.test/"))
         assertFalse(BridgeController.originMatches("http://lark.test", "https://lark.test/"))
         assertFalse(BridgeController.originMatches("null", "https://lark.test/"))           // an opaque origin (sandbox, data:)
         assertFalse(BridgeController.originMatches("", "https://lark.test/"))
@@ -92,7 +92,7 @@ class NavigationPolicyTest {
     @Test fun trickyUrlsAreNotTheServer() {
         val server = "https://lark.test/"
         fun d(s: String) = NavigationPolicy.decide(s, server, Target.mainFrame, userActivated = false)
-        assertEquals(NavigationPolicy.openExternally, d("https://lark.test@evil.test/"))
+        assertEquals(NavigationPolicy.openExternally, d("https://lark.test@example.com/"))
         assertEquals(NavigationPolicy.openExternally, d("https://evil.test\\@lark.test/"))
         assertEquals(NavigationPolicy.openExternally, d("https://lark.test.evil.test/"))
         assertEquals(NavigationPolicy.openExternally, d("https://lark.test:8443/"))
