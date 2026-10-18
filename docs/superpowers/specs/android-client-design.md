@@ -335,7 +335,8 @@ ports as is.
   nothing cached), and Media3 only does it once something plays. So `PlaybackService.onStartCommand` goes into the
   foreground at once with a plain "Starting playback…" notification on Media3's channel and id (Media3's media
   notification replaces it), keeps it while the engine plays, a shuffle from the server runs (a play command's, or a
-  shortcut's or car autoplay's `AppServices.runIntent` run: `intentRunning`, through `PlaybackHost.intentStarting`),
+  shortcut's or car autoplay's `AppServices.runIntent` run: `intentRunning`, through `PlaybackHost.intentStarting`;
+  Settings' server change runs as `runAppTask` and does not count),
   or a cold start waits for the network's first answer (at most 30 s), and otherwise removes it and stops the service.
   A cold start offline with nothing cached therefore ends with the service stopped; when the network comes back later in the background, the
   background-start rule (App services) applies (the engine waits for the user). Only the first start after the

@@ -54,6 +54,19 @@ class AppServicesTest : ServicesTestCase() {
         assertFalse(s.intentRunning)
     }
 
+
+    /** Other work that must outlive its screen (Settings' server change) runs on the same scope but is no intent run. */
+    @Test fun anAppTaskIsNoIntentRun() = servicesTest {
+        val s = makeServices()
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        var done = false
+        s.runAppTask { gate.await(); done = true }
+        assertFalse(s.intentRunning)
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertTrue(done)
+    }
+
     /** A message for the user from work with no screen (a shortcut's late failure): observed, shown, then dismissed. */
     @Test fun aNoticeIsKeptUntilDismissed() = servicesTest {
         val s = makeServices()

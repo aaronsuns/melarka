@@ -177,7 +177,7 @@ fun SettingsScreen(
     if (confirmServer) {
         Confirm(stringResource(R.string.change_server_confirm), stringResource(R.string.change_server_explain),
             stringResource(R.string.change_server),
-            onConfirm = { confirmServer = false; services.runIntent { model.changeServer() } }, onDismiss = { confirmServer = false })
+            onConfirm = { confirmServer = false; services.runAppTask { model.changeServer() } }, onDismiss = { confirmServer = false })
     }
     if (host.picking) CarPicker(host)
 }

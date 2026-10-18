@@ -195,9 +195,9 @@ class AppServices(
         set(value) { intentOverride = value }
 
     /**
-     * Runs a shortcut's or car autoplay's [IntentRun] on the main thread, or other work that must outlive the screen that
-     * started it (Settings' server change and test button). The scope's dispatcher is immediate: [body] runs now up to
-     * its first suspension, so playback is prepared before this returns (while a shortcut is still visible).
+     * Runs an [lark.car.IntentRun] (a shortcut's, car autoplay's, or Settings' Test: Shuffle Favorites) on the main
+     * thread, counted in [intentRunning] until it ends. The scope's dispatcher is immediate: [body] runs now up to its
+     * first suspension, so playback is prepared before this returns (while a shortcut is still visible).
      */
     fun runIntent(body: suspend () -> Unit): Job {
         // Lazily started: a run that ends at once must find itself in `intentRuns` to leave it.
@@ -211,9 +211,15 @@ class AppServices(
     private val intentRuns = mutableSetOf<Job>()
 
     /**
-     * A [runIntent] run has not finished yet: a shortcut's or car autoplay's shuffle may still be asking the server. The
-     * media service's cold-start hold waits for it (`PlaybackHost.intentStarting`), so the service is still there,
-     * in the foreground, when the playback starts after the shortcut's activity has gone.
+     * Other work that must outlive the screen that started it (Settings' server change), on the same main-thread scope
+     * (failures logged), but no intent run: the media service's cold-start hold does not wait for it.
+     */
+    fun runAppTask(body: suspend () -> Unit): Job = scope.launch { body() }
+
+    /**
+     * A [runIntent] run has not finished yet: an intent's shuffle may still be asking the server. The media service's
+     * cold-start hold waits for it (`PlaybackHost.intentStarting`), so the service is still there, in the foreground,
+     * when the playback starts after the shortcut's activity has gone. [runAppTask] work does not count.
      */
     val intentRunning: Boolean get() = intentRuns.any { it.isActive }
 
