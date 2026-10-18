@@ -4,9 +4,18 @@ All notable changes to Melarka are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The server, the web app and
-the iPhone app share one version number.
+the iPhone app and the Android app share one version number.
 
 ## [Unreleased]
+
+### Added
+
+- **The Android app**: the web app full screen with a native player (Media3). Background playback
+  with lock-screen, notification, headphone and car controls, gapless transitions, an offline cache of
+  your favorites, launcher shortcuts (Shuffle Favorites, Resume), car autoplay when the Bluetooth
+  connects, and the current lyric line on the lock screen. Every release now has a signed
+  `Melarka-X.Y.Z.apk` (Android 8.0 or later); see docs/android.md for installing, the signing
+  fingerprint and the battery settings.
 
 ## [0.2.15] - 2026-10-17
 

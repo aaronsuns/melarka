@@ -24,9 +24,30 @@ Each release on GitHub has an APK: open
    apps: tap **Settings**, turn on **Allow from this source**, and go back.
 2. Tap **Install**.
 
-To update, install the newer APK over the old one; your server, sign-in and cache stay. The
-[Obtainium](https://obtainium.imranr.dev) app can do this for you: add the app with the URL
-`https://github.com/aaronsuns/melarka` and it installs new releases as they come out.
+### Check who signed it
+
+Every release APK is signed with the same Melarka release key. Its certificate fingerprint
+(SHA-256) is
+
+```
+42c929f4f00f837e74df5be81a43d59829704b1e136654445ea1836992daa02b
+```
+
+(also in the repository as `android/signing-cert.sha256`). To check a downloaded file on a computer
+with the Android SDK build tools:
+
+```sh
+apksigner verify --print-certs Melarka-X.Y.Z.apk
+```
+
+`Signer #1 certificate SHA-256 digest` must equal the fingerprint above. If it differs, don't install the file.
+
+### Updates
+
+Install the newer APK over the old one; your server, sign-in and cache stay (Android accepts it
+because the signing key is the same). Melarka doesn't check for updates itself. The
+[Obtainium](https://obtainium.imranr.dev) app does it for you: in Obtainium choose **Add App**
+and enter `https://github.com/aaronsuns/melarka`. It then installs new releases as they come out.
 
 ## 2. Connect to your server
 
@@ -102,7 +123,10 @@ phone; the steps are:
   limits**.
 
 Menu names change between versions; <https://dontkillmyapp.com> keeps current steps for each
-phone maker.
+phone maker, with a page per brand: [Xiaomi](https://dontkillmyapp.com/xiaomi),
+[Huawei](https://dontkillmyapp.com/huawei), [OnePlus](https://dontkillmyapp.com/oneplus),
+[OPPO](https://dontkillmyapp.com/oppo), [vivo](https://dontkillmyapp.com/vivo),
+[Samsung](https://dontkillmyapp.com/samsung).
 
 ## Language
 
@@ -121,6 +145,13 @@ default, or the one chosen in **Me → Settings**).
 - **Car autoplay doesn't start**: check that the car is the one shown in the settings, that the
   battery setting above is done, and run **Test: Shuffle Favorites** to see whether favorites play
   at all (offline, only cached ones can).
+- **Android blocks the install ("Install blocked", or Play Protect asks)**: allow your browser or
+  file manager to install apps (step 1 above). If Play Protect says the app is unknown, choose
+  **Install anyway**: Melarka is not on Google Play, and Play Protect doesn't know its key yet.
+- **The fingerprint doesn't match**: the file isn't the one the release published. Download it again
+  from the releases page, over a trusted network.
+- **The server screen says the address isn't valid**: use `https://`, with no path. Plain `http://` is
+  accepted only for `localhost` and `*.local`.
 - **"App not installed" when updating**: the new APK must be signed by the same key as the
   installed one. An install from another source (such as F-Droid's own build) has to be
   uninstalled first; this deletes the offline cache.

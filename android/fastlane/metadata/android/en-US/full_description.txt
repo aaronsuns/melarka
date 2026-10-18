@@ -1,0 +1,13 @@
+Melarka is the Android app for your own Melarka music server. It needs a Melarka server that you run yourself (see github.com/aaronsuns/melarka); the app does not include any music.
+
+The app shows your server's web app full screen and plays the audio with a native player, which gives it what a browser tab on a phone cannot do reliably:
+
+- Playback that keeps going with the screen off, with lock-screen, notification, headphone and car (Bluetooth) controls
+- Gapless transitions, with the next songs downloaded ahead
+- An offline cache of your favorites, synced on Wi-Fi, with a size limit you choose
+- Launcher shortcuts: Shuffle Favorites and Resume
+- Car autoplay: your favorites start by themselves when the phone connects to your car
+- The current lyric line on the lock screen and the car's display
+- Works with servers behind your own certificate authority, once you have installed its certificate on the phone
+
+Your server needs HTTPS (plain http works only for localhost and .local addresses). Songs found through YouTube search are downloaded by your server; the app only plays what your server has.

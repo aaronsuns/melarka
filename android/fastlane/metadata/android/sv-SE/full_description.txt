@@ -1,0 +1,13 @@
+Melarka är Android-appen till din egen Melarka-musikserver. Du behöver en Melarka-server som du driver själv (se github.com/aaronsuns/melarka); appen innehåller ingen musik.
+
+Appen visar serverns webbapp i helskärm och spelar ljudet med en inbyggd spelare, vilket ger den det som en webbläsarflik i mobilen inte klarar pålitligt:
+
+- Uppspelning som fortsätter med skärmen av, med kontroller på låsskärmen, i aviseringen, i hörlurarna och i bilen (Bluetooth)
+- Sömlösa övergångar, med de närmaste låtarna nedladdade i förväg
+- En offlinekopia av dina favoriter, som synkas över Wi-Fi, med en storleksgräns du väljer
+- Genvägar på startskärmen: Blanda favoriter och Fortsätt
+- Bilstart: dina favoriter börjar spelas av sig själva när telefonen ansluter till bilen
+- Den aktuella textraden på låsskärmen och i bilens display
+- Fungerar med servrar bakom din egen certifikatutfärdare, när du har installerat dess certifikat i telefonen
+
+Servern måste använda HTTPS (vanlig http fungerar bara för localhost och .local-adresser). Låtar som hittas via YouTube-sökning laddas ned av din server; appen spelar bara det som finns på servern.

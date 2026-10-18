@@ -112,9 +112,24 @@ pages (they come from the server), the same reliable playback.
 - **Project location**: `android/` at the repo root, Gradle (Kotlin DSL) with a version catalog.
 - **Version**: `versionName` = the release tag (X.Y.Z); `versionCode` = X×10000 + Y×100 + Z
   (monotonic, readable). The source of truth is the same hand-bumped version as `ios/project.yml`.
-- **Signing**: one release keystore, generated once, stored as a GitHub Actions secret (base64
-  plus passwords); CI signs the release APK. A backup copy of the keystore is kept outside the repo
-  (location: the owner's call, see Open questions).
+- **Signing** (as built): one release keystore (PKCS12, alias `melarka`, RSA 4096), generated once on the
+  owner's private Mac. Its certificate SHA-256 is public in `android/signing-cert.sha256` and in `docs/android.md`.
+  The keystore and its passwords exist only in the owner's keeping (a backup outside the repo) and as four GitHub
+  Actions secrets: `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+  `app/build.gradle.kts` reads signing only from the environment (`ANDROID_KEYSTORE_FILE` plus those three); without
+  `ANDROID_KEYSTORE_FILE` the release build is unsigned and never uses the debug key.
+- **Release job** (as built): the `apk` job in `release.yml` decodes the keystore to a file under `$RUNNER_TEMP`
+  (deleted when the step ends), builds `assembleRelease -PlarkVersion=<tag>`, then fails unless
+  `apksigner verify --print-certs` shows exactly the SHA-256 in `android/signing-cert.sha256` and
+  `aapt2 dump badging` shows package `io.github.aaronsuns.melarka`, the tag as versionName, X*10000+Y*100+Z as
+  versionCode and the label Melarka. The `release` job attaches `Melarka-X.Y.Z.apk` next to the IPA, and only after
+  the gate, the image, the IPA and the APK all succeeded. Run by hand (`workflow_dispatch`, input `dry_run`) the
+  workflow runs only the `apk` job on the version in `ios/project.yml` and keeps the APK as a workflow artifact;
+  nothing is published. The release APK was also installed on the emulator (debug build uninstalled first) and
+  reached the server screen and a demo server (plain http to `localhost` through `adb reverse`; the emulator host
+  `10.0.2.2` is debug-only).
+- **Store metadata** (as built): `android/fastlane/metadata/android/{en-US,zh-CN,zh-TW,sv-SE}` with title, short and
+  full description, `changelogs/<versionCode>.txt` (the next release's code) and five phone screenshots.
 - **F-Droid**: prepare fastlane metadata (`android/fastlane/metadata/android/…`: title,
   descriptions in four languages, screenshots, changelogs) and submit the merge request to
   fdroiddata after the first GitHub release works. Aim for a **reproducible build signed with our

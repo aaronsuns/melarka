@@ -3,6 +3,12 @@ name: release
 on:
   push:
     tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and sign the Android APK from the current version and keep it as a workflow artifact; publish nothing
+        type: boolean
+        default: true
 
 permissions: {}
 
@@ -25,6 +31,7 @@ defaults:
 jobs:
   # Nothing is published unless the tag is a plain X.Y.Z with release notes and the gate is clean.
   gate:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -48,6 +55,7 @@ jobs:
 
   image:
     needs: gate
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -93,6 +101,7 @@ jobs:
 
   ipa:
     needs: gate
+    if: github.event_name == 'push'
     runs-on: macos-latest
     permissions:
       contents: read
@@ -139,8 +148,81 @@ jobs:
           path: ios/build/Melarka-${{ needs.gate.outputs.version }}.ipa
           if-no-files-found: error
 
+  # The signed Android APK. The key is a repository secret, decoded to a temporary file for this job only. Run by
+  # hand with dry_run (Actions -> release -> Run workflow) it builds the APK of the version in ios/project.yml and
+  # keeps it as a workflow artifact; nothing is published.
+  apk:
+    needs: gate
+    # A tag push waits for a clean gate; a manual run has no gate.
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.gate.result == 'success') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GATE_VERSION: ${{ needs.gate.outputs.version }}
+      APK_CERT_FILE: android/signing-cert.sha256
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+      - id: v
+        name: The version (the tag's, or ios/project.yml's for a manual run) and its versionCode
+        run: |
+          v="$GATE_VERSION"
+          [ -n "$v" ] || v=$(sed -n 's/^ *MARKETING_VERSION: *"\([0-9.]*\)".*/\1/p' ios/project.yml)
+          [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || { echo "version '$v' is not X.Y.Z" >&2; exit 1; }
+          code=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+      - name: Signed release APK
+        working-directory: android
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          [ -n "$KEYSTORE_B64" ] || { echo "the ANDROID_KEYSTORE_B64 secret is not set" >&2; exit 1; }
+          export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/melarka-release.jks"
+          trap 'rm -f "$ANDROID_KEYSTORE_FILE"' EXIT
+          (umask 077; printf '%s' "$KEYSTORE_B64" | base64 -d > "$ANDROID_KEYSTORE_FILE")
+          ./gradlew --console=plain assembleRelease -PlarkVersion="$VERSION"
+      - name: The APK is signed with the release key and says what it should
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          CODE: ${{ steps.v.outputs.code }}
+        run: |
+          tools=$(printf '%s\n' "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          src=android/app/build/outputs/apk/release/app-release.apk
+          mkdir -p dist && cp "$src" "dist/Melarka-$VERSION.apk"
+          apk="dist/Melarka-$VERSION.apk"
+          "$tools/apksigner" verify --print-certs "$apk" | tee "$RUNNER_TEMP/certs.txt"
+          got=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt")
+          want=$(tr -d '[:space:]' < "$APK_CERT_FILE")
+          [ "$(printf '%s' "$got" | wc -l)" = 0 ] && [ -n "$got" ] || { echo "no single signer certificate found" >&2; exit 1; }
+          [ "$got" = "$want" ] || { echo "signed with $got, want $want ($APK_CERT_FILE)" >&2; exit 1; }
+          "$tools/aapt2" dump badging "$apk" | tee "$RUNNER_TEMP/badging.txt" | head -1
+          line=$(head -1 "$RUNNER_TEMP/badging.txt")
+          for part in "name='$APP_BUNDLE_ID'" "versionCode='$CODE'" "versionName='$VERSION'"; do
+            [[ "$line" == *"$part"* ]] || { echo "badging lacks $part" >&2; exit 1; }
+          done
+          grep -q "^application-label:'$APP_DISPLAY_NAME'" "$RUNNER_TEMP/badging.txt"
+          ls -l "$apk"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: apk
+          path: dist/Melarka-${{ steps.v.outputs.version }}.apk
+          if-no-files-found: error
+
   release:
-    needs: [gate, image, ipa]
+    needs: [gate, image, ipa, apk]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -152,21 +234,25 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: ipa
+          pattern: '{ipa,apk}'
           path: dist
+          merge-multiple: true
       - run: scripts/changelog-section.sh "$VERSION" > "$RUNNER_TEMP/notes.md"
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ github.ref_name }}
           name: Melarka ${{ needs.gate.outputs.version }}
           body_path: ${{ runner.temp }}/notes.md
-          files: dist/Melarka-${{ needs.gate.outputs.version }}.ipa
+          files: |
+            dist/Melarka-${{ needs.gate.outputs.version }}.ipa
+            dist/Melarka-${{ needs.gate.outputs.version }}.apk
           fail_on_unmatched_files: true
 
   # A release made with GITHUB_TOKEN does not trigger other workflows, so Pages is called from here.
   # pages.yml skips itself while the repository is private.
   pages:
     needs: release
+    if: github.event_name == 'push'
     permissions:
       contents: read
       pages: write

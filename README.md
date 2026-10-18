@@ -1,4 +1,4 @@
-**Melarka** (internal code name `lark`) — a self-hosted music server with a web app and an iPhone app.
+**Melarka** (internal code name `lark`) — a self-hosted music server with a web app, an iPhone app and an Android app.
 
 # Melarka
 
@@ -67,6 +67,12 @@ followed by a command that checks it worked.
 <p align="center"><sub>On a phone: Home · Now Playing (lyrics, cover) · Favorites · Search · Channels · Tags · Settings.
 In a desktop browser: Home and Albums. Demo data: invented songs and channels, generated test tones and covers.</sub></p>
 <!-- /SCREENSHOTS -->
+<p align="center">
+  <img src="docs/screenshots/android-home.png" width="24%" alt="The Android app: Home">
+  <img src="docs/screenshots/android-library.png" width="24%" alt="The Android app: Library, with the mini player">
+  <img src="docs/screenshots/android-settings.png" width="24%" alt="The Android app's own settings: server and offline cache">
+</p>
+<p align="center"><sub>The Android app (Home, Library with the mini player, its own settings), on an emulator with the demo data.</sub></p>
 
 ## Features
 
@@ -74,6 +80,9 @@ In a desktop browser: Home and Albums. Demo data: invented songs and channels, g
   `high` (AAC up to 256 kbps) and `saver` (AAC up to 128 kbps), transcoded on the fly and cached.
 - **A web app that installs to the home screen** of a phone and runs full screen, with
   lock-screen controls.
+- **An Android app** with the same native playback engine: background play, gapless transitions, an
+  offline cache of your favorites, car autoplay over Bluetooth, and launcher shortcuts; a signed APK
+  on every release (docs/android.md).
 - **An iPhone app** with a native playback engine: background play, gapless transitions, an
   offline cache of your favorites, and Shortcuts to start playing when the car connects.
 - **Now Playing** with shuffle and repeat (all or one), a sleep timer that fades out, volume
@@ -301,6 +310,21 @@ Step-by-step instructions, the 7-day refresh and troubleshooting are in
 [docs/iphone.md](docs/iphone.md). Without the app, you can also open your Melarka address in
 Safari and tap Share → **Add to Home Screen**.
 
+## The Android app
+
+The Android app is the same idea as the iPhone app: the web app full screen plus a native player
+with background play, lock-screen and car controls, an offline cache of your favorites and car
+autoplay. It needs Android 8.0 or later and an HTTPS server. Each release has a signed
+`Melarka-X.Y.Z.apk`:
+
+1. On the phone, open <https://github.com/aaronsuns/melarka/releases/latest> and download the APK.
+2. Open it and allow your browser to install apps when Android asks, then tap **Install**.
+3. Open Melarka, enter your server URL (for example `https://music.example.com`), and sign in.
+
+[Obtainium](https://obtainium.imranr.dev) installs new releases for you. The signing fingerprint,
+the battery settings that keep music playing, and troubleshooting are in
+[docs/android.md](docs/android.md).
+
 ## Agent skills
 
 Three optional skills let an AI coding agent (such as Claude Code) do tedious library work
@@ -326,6 +350,7 @@ Melarka is a tool for listening to your own music collection at home.
 - [docs/install.md](docs/install.md): installing, building from source, file ownership.
 - [docs/configuration.md](docs/configuration.md): every environment variable and `config.yaml` key, and how each feature uses them.
 - [docs/iphone.md](docs/iphone.md): the iPhone app.
+- [docs/android.md](docs/android.md): the Android app.
 - [docs/agent-skills.md](docs/agent-skills.md): the AI agent skills.
 - [docs/architecture.md](docs/architecture.md): how the code is organised, and the HTTP API.
 - [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [CHANGELOG.md](CHANGELOG.md).

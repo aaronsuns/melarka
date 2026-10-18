@@ -25,6 +25,25 @@ android {
         testInstrumentationRunnerArguments["clearPackageData"] = "true"
     }
 
+    // Release signing reads ONLY these environment variables (CI decodes the keystore secret to a temporary file;
+    // nothing is stored in the repository). Without them the release build stays unsigned: it never falls back to
+    // the debug key.
+    val releaseKeystore = System.getenv("ANDROID_KEYSTORE_FILE")
+    val releaseSigning = if (!releaseKeystore.isNullOrEmpty()) {
+        signingConfigs.create("release") {
+            storeFile = file(releaseKeystore)
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: error("ANDROID_KEYSTORE_PASSWORD is not set")
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: error("ANDROID_KEY_ALIAS is not set")
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: error("ANDROID_KEY_PASSWORD is not set")
+        }
+    } else null
+
+    buildTypes {
+        release {
+            signingConfig = releaseSigning
+        }
+    }
+
     buildFeatures {
         buildConfig = true   // ServerUrl: the emulator host is allowed in debug builds only; Settings: the version
         compose = true       // the native screens (lark.ui)
