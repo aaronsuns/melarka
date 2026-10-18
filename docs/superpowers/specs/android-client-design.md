@@ -137,9 +137,10 @@ pages (they come from the server), the same reliable playback.
   release APK was installed on the emulator (no debug build was installed, so no uninstall was needed), launched to
   the server screen and connected to a demo server by `http://localhost:4700` through `adb reverse`, because release
   builds refuse cleartext to the emulator host `10.0.2.2` (debug only).
-- **Store metadata** (as built): `android/fastlane/metadata/android/{en-US,zh-CN,zh-TW,sv-SE}` with title, short and
+- **Store metadata** (as built): `fastlane/metadata/android/{en-US,zh-CN,zh-TW,sv-SE}` at the repository root (F-Droid
+  reads it only there or in the build subdir `android/app`; it was under `android/` until 0.2.16) with title, short and
   full description, `changelogs/<versionCode>.txt` (the next release's code) and five phone screenshots (under en-US only; F-Droid falls back to it for the other locales).
-- **F-Droid**: prepare fastlane metadata (`android/fastlane/metadata/android/…`: title,
+- **F-Droid**: prepare fastlane metadata (`fastlane/metadata/android/…`: title,
   descriptions in four languages, screenshots, changelogs) and submit the merge request to
   fdroiddata after the first GitHub release works. Aim for a **reproducible build signed with our
   key** (F-Droid then ships our APK, so GitHub and F-Droid installs update each other): pinned JDK
