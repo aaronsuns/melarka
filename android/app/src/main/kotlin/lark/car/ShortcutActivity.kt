@@ -17,11 +17,14 @@ import lark.service.PlaybackService
  * toast says what happened (iOS's Shortcuts dialog); with no server or signed out, Melarka opens, where that is fixed.
  */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-class ShortcutActivity : Activity() {
+open class ShortcutActivity : Activity() {
+    /** The shortcut action [intent] asks for, null for anything else (which does nothing at all). */
+    protected open fun shortcutAction(intent: Intent?): String? = intent?.action?.takeIf { it in ACTIONS }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val action = shortcutAction(intent) ?: return finish()
         val services = (application as LarkApplication).services
-        val action = intent?.action
         val app = applicationContext
         var creating = true
         val start = { PlaybackService.startInForeground(app) }
@@ -31,7 +34,7 @@ class ShortcutActivity : Activity() {
             val r = reply(result, showing = creating, text = result.text(app, shuffle = action == ACTION_SHUFFLE_FAVORITES))
             r.toast?.let { Toast.makeText(app, it, Toast.LENGTH_SHORT).show() }
             r.notice?.let { services.showNotice(it) }
-            if (r.open) startActivity(app)
+            if (r.open) openMelarka(app)
         }
         creating = false
         finish()
@@ -46,6 +49,10 @@ class ShortcutActivity : Activity() {
     companion object {
         const val ACTION_SHUFFLE_FAVORITES = "lark.action.SHUFFLE_FAVORITES"
         const val ACTION_RESUME = "lark.action.RESUME"
+        private val ACTIONS = setOf(ACTION_SHUFFLE_FAVORITES, ACTION_RESUME)
+
+        /** The activities whose own task goes as they finish (the media service ignores that task's removal). */
+        val TASK_CLASSES = setOf(ShortcutActivity::class.java.name, AutomationActivity::class.java.name)
 
         /**
          * The shortcut's intent ([action]) on [player]; null for an unknown action. The media service is started into
@@ -79,7 +86,7 @@ class ShortcutActivity : Activity() {
          * Melarka in front. From the background Android may refuse it (it allows it for a few seconds after the
          * shortcut's activity): the notice then waits in the services until Melarka is opened.
          */
-        private fun startActivity(context: Context) {
+        private fun openMelarka(context: Context) {
             try {
                 context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             } catch (_: RuntimeException) {

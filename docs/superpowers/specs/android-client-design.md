@@ -150,6 +150,12 @@ pages (they come from the server), the same reliable playback.
 - **Shortcuts instead of Siri**: launcher shortcuts "Shuffle favorites" and "Resume" (the iOS
   ResumeIntent: resume, or shuffle favorites when the queue is empty), both running without
   showing the page. Voice phrases are dropped (Google Assistant App Actions need Google Play).
+  For user-built automations (iOS: an App Shortcut in a Shortcuts automation), `AutomationActivity`
+  (final review ruling) is exported with no permission and takes exactly two public actions,
+  `io.github.aaronsuns.melarka.action.SHUFFLE_FAVORITES` and `io.github.aaronsuns.melarka.action.RESUME`,
+  ignoring extras and data; it is `ShortcutActivity` with that action mapping (the same no-UI
+  activity, toast and foreground start), and any other action does nothing. Another app can do no
+  more with it than a headset's play button: start Melarka's own music.
 - **Updates**: users update by installing the newer APK over the old one, through Obtainium
   (pointed at the GitHub repo) or F-Droid. No SideStore-style source is needed.
 - **User-installed CA certificates are trusted** (`<certificates src="user"/>` in the network
@@ -291,7 +297,7 @@ behaviour; the builder works through it as a checklist.
 | MPMediaItemArtwork | decided: `MediaMetadata.artworkData` (bytes from `LarkApiProtocol.artwork`, the token only in its header), never an artwork URI; kept for the last 20 items, the same array on every write, "no cover" (404) remembered, a failed fetch asked again after 30 s doubling up to 10 min |
 | car lyrics as title | the same: the current line as the MediaSession title, "song · artist" as the artist, updated only when the line changes (the session item's own metadata keeps the song, so only the shown metadata changes) |
 | cold start from the car (remote play) | decided: a session play with nothing current reaches `RemoteCommands.handlePlay` (the iOS steps: play, else `resumeFromDisk`, else prepare and shuffle favorites); the session player takes no media items, so Media3 never asks for resumption on a play. `MediaSession.Callback.onPlaybackResumption` answers at once from disk: for a play the host's hook (`resumeFromDisk`, no network; with no engine yet, the services build it first, as for a command), then the engine's active queue as media items with its index and position. `MediaButtonReceiver` in the manifest; the start's foreground rule: see "Cold start, shortcuts and car autoplay" |
-| Shortcuts "car connects → shuffle favorites" | decided: car autoplay through a CompanionDeviceManager association (below); launcher shortcuts "Shuffle Favorites" and "Resume" (`res/xml/shortcuts.xml` → `ShortcutActivity`); both run `IntentRun`, the port of iOS `Intents/*` |
+| Shortcuts "car connects → shuffle favorites" | decided: car autoplay through a CompanionDeviceManager association (below); launcher shortcuts "Shuffle Favorites" and "Resume" (`res/xml/shortcuts.xml` → `ShortcutActivity`), and the same two for automation apps (`AutomationActivity`, public actions); all run `IntentRun`, the port of iOS `Intents/*` |
 | BGAppRefreshTask | decided: WorkManager periodic work (`FavoritesRefresh`, unique name `io.github.aaronsuns.melarka.refresh`, 6 h, `NetworkType.UNMETERED`, kept across launches) for the favorites sync. The worker takes the signed-in user's sync from a small app-level seam (`FavoritesRefresh.provider`, set by the app services; null while signed out or before they are up, then the work ends at once); stopping the work cancels the sync. The sync itself still requires Wi-Fi (`!isExpensive`: metered or Data Saver) |
 | NWPathMonitor (+ expensive / Low Data) | `ConnectivityManager.NetworkCallback` (NOT_METERED; `isRestrictBackgroundStatus`), keeping the "answered" semantics; online = INTERNET capability only (not VALIDATED), so a LAN-only self-hosted server stays reachable, as with `NWPath.satisfied` |
 | Library/Caches (purgeable) | decided: `filesDir/lark/<serverKey>/<userId>/{files,staging,covers,lyrics,index.json}` (`serverKey` = first 8 bytes, hex, of the SHA-256 of the normalised base URL), internal storage, not purgeable by the system and not backed up or carried to a new phone (`allowBackup=false`, and `dataExtractionRules`/`fullBackupContent` excluding every domain: Android 12+'s device-to-device transfer ignores `allowBackup`, and would carry the WebView's session cookie and the secrets file); queues and events in `filesDir`. Free space via `StorageManager.getAllocatableBytes` behind `FreeSpace` (500 MB must stay free). `index.json` and every file write go through a temporary file and a rename; an unreadable index is an empty cache, `staging/` is emptied at every start, and nothing outside the user's folder is ever deleted. `CacheStore.wipe()` deletes a user's whole folder (sign-out for good, another server); `CacheLayout.pruneOtherServers` keeps only the current server's folder. The index write delay runs on the `Scheduler` |
@@ -320,6 +326,7 @@ ports as is.
   cold-start notification holds the foreground until playback starts, so a shuffle from the server that answers after
   the activity is gone still gets its media notification. The activity's own task (`taskAffinity=""`) goes as it
   finishes, and Android tells the app's started services (`onTaskRemoved`): `PlaybackService` ignores it for that task
+  (and for `AutomationActivity`'s, which works the same way)
   (Media3's default would pause the shuffle that is just starting and stop the service; any other task, Melarka's own
   swiped away, keeps Media3's default). The result (iOS's Shortcuts dialog) shows as a toast while the activity is
   still showing (a Resume that played says nothing); with no server or signed out, Melarka opens too. A result that

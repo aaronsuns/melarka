@@ -60,6 +60,22 @@
             android:taskAffinity=""
             android:exported="false" />
 
+        <!-- Automation apps (Tasker, Samsung Modes & Routines, …): the same two intents under public action names, with no
+             permission, as a headset's play button can already start the music. Extras and data are ignored. -->
+        <activity
+            android:name="lark.car.AutomationActivity"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:exported="true">
+            <intent-filter>
+                <action android:name="io.github.aaronsuns.melarka.action.SHUFFLE_FAVORITES" />
+                <action android:name="io.github.aaronsuns.melarka.action.RESUME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- Car autoplay, Android 12+: bound by the system when the associated car connects or goes. -->
         <service
             android:name="lark.car.CarCompanionService"

@@ -136,13 +136,13 @@ class PlaybackService : MediaSessionService() {
     }
 
     /**
-     * The shortcuts' activity (`ShortcutActivity`) runs in a task of its own that goes as soon as it finishes, and Android
+     * The shortcuts' activity (`ShortcutActivity`, and `AutomationActivity` for automation apps) runs in a task of its own that goes as soon as it finishes, and Android
      * tells every started service of the app: that is not the user swiping Melarka away. Media3's default would pause
      * the playback the shortcut is starting (the session does not show it as playing yet) and stop the service. Any
      * other task (Melarka's own, swiped away) gets Media3's default: the service stops unless something is playing.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        if (rootIntent?.component?.className == ShortcutActivity::class.java.name) return
+        if (rootIntent?.component?.className?.let { it in ShortcutActivity.TASK_CLASSES } == true) return
         super.onTaskRemoved(rootIntent)
     }
 

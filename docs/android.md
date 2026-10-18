@@ -7,7 +7,8 @@ native player. That gives it what a browser tab on a phone can't do reliably:
   (Bluetooth) controls;
 - gapless transitions and a few songs downloaded ahead;
 - an offline cache of your favorites, synced on Wi-Fi, with a size limit you choose;
-- launcher shortcuts, **Shuffle Favorites** and **Resume** (long-press the Melarka icon);
+- launcher shortcuts, **Shuffle Favorites** and **Resume** (long-press the Melarka icon), which
+  automation apps can run too;
 - **car autoplay**: your favorites start by themselves when the phone connects to the car;
 - the current lyric line on the lock screen and the car's display.
 
@@ -100,6 +101,23 @@ happened the last time the car connected. Turning car autoplay off lets the car 
 
 On Android 8 to 11, Android doesn't wake Melarka for the car: autoplay works only while Melarka is
 allowed to run in the background (see below), and not after you force-stop it.
+
+## Automation apps: Tasker, Samsung Modes & Routines, …
+
+Automation apps can run the two shortcuts, for example when you get in the car or at a set time.
+Have the app send an intent that starts an **activity**, with package
+`io.github.aaronsuns.melarka` and one of these actions (nothing else is needed; extras and data
+are ignored):
+
+- `io.github.aaronsuns.melarka.action.SHUFFLE_FAVORITES`: Shuffle Favorites;
+- `io.github.aaronsuns.melarka.action.RESUME`: Resume (your last queue, or your favorites
+  shuffled when there is none).
+
+In Tasker that is **System → Send Intent** with **Target: Activity**. In Samsung's Modes and
+Routines, apps can't be given an action by hand: use a launcher-shortcut step (**Open an app or
+do an app action**) with Melarka's Shuffle Favorites or Resume, or Tasker through its plugin.
+Melarka shows the same short message as the shortcuts; Android may not let an automation app
+start it while that app itself runs in the background.
 
 ## Background playback and your phone's battery settings
 

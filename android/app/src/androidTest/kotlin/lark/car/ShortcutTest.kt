@@ -27,12 +27,22 @@ import java.io.File
 /**
  * The launcher's Shuffle Favorites with the app not running (Android 12+): the shortcut's activity finishes at once,
  * the shuffle asks the server after that, and the media service still goes into the foreground with Media3's own
- * notification and plays; no Melarka screen opens.
+ * notification and plays; no Melarka screen opens. The same for an automation app's intent (`AutomationActivity`).
  */
 @UnstableApi
 @RunWith(AndroidJUnit4::class)
 class ShortcutTest {
-    @Test fun shuffleFavoritesFromTheShortcutPlaysInTheForegroundWithNoScreen() {
+    @Test fun shuffleFavoritesFromTheShortcutPlaysInTheForegroundWithNoScreen() =
+        // As the launcher starts a shortcut: its intent, in a new task.
+        shufflePlaysInTheForegroundWithNoScreen(Intent(ShortcutActivity.ACTION_SHUFFLE_FAVORITES)
+            .setClassName(Instrumented.context, ShortcutActivity::class.java.name))
+
+    /** An automation app's intent (implicit, by its public action; extras ignored) takes the same path. */
+    @Test fun shuffleFavoritesFromAnAutomationAppPlaysInTheForegroundWithNoScreen() =
+        shufflePlaysInTheForegroundWithNoScreen(Intent(AutomationActivity.ACTION_SHUFFLE_FAVORITES)
+            .setPackage(Instrumented.context.packageName).putExtra("server", "http://10.0.2.2:4799/"))
+
+    private fun shufflePlaysInTheForegroundWithNoScreen(intent: Intent) {
         val server = DemoServer()
         val session = server.login("smoke-shortcut")
         val favorites = server.seedFavorites(session)
@@ -42,9 +52,7 @@ class ShortcutTest {
         ctx.getSharedPreferences("lark", Context.MODE_PRIVATE).edit().putString(AppServices.SERVER_URL_KEY, server.url + "/").commit()
         KeystoreSecretStore(File(ctx.filesDir, "secrets.bin")).apply { set("token", session.token); set("userId", session.userId.toString()) }
 
-        // As the launcher starts a shortcut: its intent, in a new task.
-        ctx.startActivity(Intent(ShortcutActivity.ACTION_SHUFFLE_FAVORITES).setClassName(ctx, ShortcutActivity::class.java.name)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
         try {
             waitFor("the engine plays", 30_000) { onMain { Instrumented.app.servicesBuilt && Instrumented.app.services.engine?.playing == true } }
