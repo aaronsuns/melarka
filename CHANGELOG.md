@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.16] - 2026-10-18
+
 ### Added
 
 - **The Android app**: the web app full screen with a native player (Media3). Background playback
@@ -14,7 +16,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
   your favorites, launcher shortcuts (Shuffle Favorites, Resume), car autoplay when the Bluetooth
   connects, and the current lyric line on the lock screen. Every release now has a signed
   `Melarka-X.Y.Z.apk` (Android 8.0 or later); see docs/android.md for installing, the signing
-  fingerprint and the battery settings.
+  fingerprint and the battery settings. Automation apps (Tasker and others) can start Shuffle
+  Favorites or Resume.
+
+### Changed
+
+- **Traditional Chinese in the iPhone app** is now written in Traditional characters with Taiwan
+  wording (it used Simplified characters before).
+- The web's settings entry names the app it runs in (iPhone app settings or Android app settings).
 
 ## [0.2.15] - 2026-10-17
 
@@ -323,7 +332,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.15...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.16...HEAD
+[0.2.16]: https://github.com/aaronsuns/melarka/compare/v0.2.15...v0.2.16
 [0.2.15]: https://github.com/aaronsuns/melarka/compare/v0.2.14...v0.2.15
 [0.2.14]: https://github.com/aaronsuns/melarka/compare/v0.2.13...v0.2.14
 [0.2.13]: https://github.com/aaronsuns/melarka/compare/v0.2.12...v0.2.13
