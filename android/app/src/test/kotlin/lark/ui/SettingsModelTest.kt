@@ -106,6 +106,20 @@ class SettingsModelTest : ServicesTestCase() {
         assertEquals("1,5 GB", SettingsModel.bytes(3L shl 29, java.util.Locale.forLanguageTag("sv")))
     }
 
+    /** The screens follow the cache while they are up: Settings' figures, the can't-connect screen's offline favorites. */
+    @Test fun theServicesSayWhenTheCacheChanges() = servicesTest {
+        val s = services()
+        var heard = 0
+        s.observe { heard++ }
+        val before = s.cacheChanges
+        storeOne(s)
+        assertTrue(s.cacheChanges > before)
+        assertTrue(heard > 0)
+        val stored = s.cacheChanges
+        s.cacheStore!!.clear()
+        assertTrue(s.cacheChanges > stored)
+    }
+
     @Test fun clearCacheGoesThroughTheStore() = servicesTest {
         val s = services()
         val m = model(s)

@@ -206,6 +206,7 @@ class CacheStore(
         entries.clear()
         pendingWrite?.cancel(); pendingWrite = null; dirty = false
         for (f in listOf(filesDir, stagingDir, coversDir, lyricsDir, indexFile)) delete(f)
+        if (!closed) onChange?.invoke()
     }
 
     /** Sign-out or another user: this cache stays on disk for its user's next sign-in, and does nothing more. */
@@ -456,9 +457,13 @@ class CacheStore(
         }
     }
 
+    /** Runs after anything in the cache changed (a store, an eviction, a clear, a favorite): the screens follow it. */
+    var onChange: (() -> Unit)? = null
+
     /** Something changed: the index is written once the delay has passed (or at the next [flush]). */
     private fun markDirty() {
         if (closed) return
+        onChange?.invoke()
         dirty = true
         if (pendingWrite != null) return
         pendingWrite = scheduler.after(indexDelaySeconds) { pendingWrite = null; flush() }

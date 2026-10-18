@@ -51,7 +51,7 @@
     <string name="close">关闭</string>
     <string name="up_next">播放队列</string>
     <string name="offline_favorites">离线收藏</string>
-    <string name="offline_no_favorites">这台手机上还没有已缓存的收藏。</string>
+    <string name="offline_no_favorites">这部手机上还没有已缓存的收藏。</string>
     <string name="nothing_playing">未在播放</string>
     <string name="tap_a_song">轻点一首歌即可播放。</string>
     <string name="lyrics">歌词</string>
@@ -99,7 +99,7 @@
     <string name="battery_explain">如果锁屏后音乐停止，请允许 Melarka 在后台运行，否则 Android 的电池优化可能会停止它。</string>
     <string name="battery_allow">允许后台播放</string>
     <string name="battery_allowed">Melarka 可以在后台运行。</string>
-    <string name="battery_docs">查看你的手机的设置步骤</string>
+    <string name="battery_docs">查看你手机的设置步骤</string>
     <string name="about">关于</string>
     <string name="version">版本</string>
 </resources>

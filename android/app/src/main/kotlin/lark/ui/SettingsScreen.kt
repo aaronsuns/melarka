@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -31,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,12 +40,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import lark.app.AppServices
 import lark.app.R
 import lark.car.CarAutoplay
@@ -89,15 +89,16 @@ fun SettingsScreen(
     /** The services' state, passed in so the screen recomposes when it changes (`AppServices.observe`). */
     stayOffline: Boolean,
     changingServer: Boolean,
+    /** `AppServices.cacheChanges`: the usage is read again when the cache changes (a sync storing songs, a clear). */
+    cacheChanges: Int,
     onDone: () -> Unit,
 ) {
     val context = LocalContext.current
     val model = remember(services, car) { SettingsModel(services, context, car) }
-    val scope = rememberCoroutineScope()
     var confirmClear by remember { mutableStateOf(false) }
     var confirmServer by remember { mutableStateOf(false) }
     var exempt by remember { mutableStateOf(host.batteryExempt()) }
-    LaunchedEffect(host.refresh) {
+    LaunchedEffect(host.refresh, cacheChanges) {
         model.refresh()
         exempt = host.batteryExempt()
     }
@@ -141,7 +142,7 @@ fun SettingsScreen(
                     StayOfflineToggle(stayOffline, { services.setStayOffline(it) }, Modifier.padding(vertical = 8.dp))
                 }
                 Section(stringResource(R.string.car_autoplay_title)) {
-                    CarAutoplaySection(model, car, host, exempt, busy) { scope.launch { model.testShuffle() } }
+                    CarAutoplaySection(model, car, host, exempt, busy) { services.runIntent { model.testShuffle() } }
                 }
                 Section(stringResource(R.string.battery_title)) {
                     Box(Modifier.padding(vertical = 8.dp)) {
@@ -174,7 +175,7 @@ fun SettingsScreen(
     if (confirmServer) {
         Confirm(stringResource(R.string.change_server_confirm), stringResource(R.string.change_server_explain),
             stringResource(R.string.change_server),
-            onConfirm = { confirmServer = false; scope.launch { model.changeServer() } }, onDismiss = { confirmServer = false })
+            onConfirm = { confirmServer = false; services.runIntent { model.changeServer() } }, onDismiss = { confirmServer = false })
     }
     if (host.picking) CarPicker(host)
 }
@@ -186,16 +187,18 @@ fun SettingsScreen(
 @Composable
 private fun CarAutoplaySection(model: SettingsModel, car: CarAutoplay?, host: SettingsHost, exempt: Boolean, busy: Boolean,
                                onTest: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    val enabled = car != null && !busy
+    // The whole row is one switch (its label read with it, a tap anywhere toggles).
+    Row(Modifier.fillMaxWidth().toggleable(value = model.carEnabled, enabled = enabled, role = Role.Switch, onValueChange = { on ->
+        if (on) {
+            host.permissionDenied = false
+            if (!host.requestCarPermissions()) host.picking = true
+        } else {
+            model.turnOffCar()
+        }
+    }).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.car_autoplay_title), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-        Switch(checked = model.carEnabled, enabled = car != null && !busy, onCheckedChange = { on ->
-            if (on) {
-                host.permissionDenied = false
-                if (!host.requestCarPermissions()) host.picking = true
-            } else {
-                model.turnOffCar()
-            }
-        })
+        Switch(checked = model.carEnabled, enabled = enabled, onCheckedChange = null)
     }
     Text(stringResource(R.string.car_autoplay_explain), style = MaterialTheme.typography.bodySmall, color = LarkColors.muted)
     if (host.permissionDenied) {

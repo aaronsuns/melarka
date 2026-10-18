@@ -79,20 +79,23 @@ class OfflinePlayerModel(
 
     private var currentId: String? by mutableStateOf(null)
     private var source = QueueSource.list
-    /** The current song's lyrics, read once per song (state events come several times a second). */
-    private var lyricsRead: Pair<Long, OfflineLyrics?>? = null
+    /** Which song [lyrics] were read for (`Unit`: none yet). */
+    private var lyricsKey: Any? = Unit
 
     init { reload() }
 
-    /** The current song's lyrics on the phone; null when none are cached (or it is instrumental). */
-    val lyrics: OfflineLyrics?
-        get() {
-            val id = current?.trackId ?: return null
-            lyricsRead?.let { (readId, l) -> if (readId == id) return l }
-            val l = lyricsFor(id)?.let { OfflineLyrics.of(it) }
-            lyricsRead = id to l
-            return l
-        }
+    /**
+     * The current song's lyrics on the phone; null when none are cached (or it is instrumental). Read once per song, when
+     * the song changes ([receive]), never while the screen draws.
+     */
+    var lyrics: OfflineLyrics? by mutableStateOf(null); private set
+
+    private fun followSong() {
+        val id = current?.trackId
+        if (id == lyricsKey) return
+        lyricsKey = id
+        lyrics = id?.let { lyricsFor(it) }?.let { OfflineLyrics.of(it) }
+    }
 
     /** The item's cover on the phone, null when there is none (the screen draws a tile instead). */
     fun artworkFile(item: Item): File? = item.trackId?.let(artwork)
@@ -137,6 +140,7 @@ class OfflinePlayerModel(
             }
             else -> {}
         }
+        followSong()
     }
 
     // MARK: Actions

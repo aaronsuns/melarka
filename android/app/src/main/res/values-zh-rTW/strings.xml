@@ -66,7 +66,7 @@
     <string name="now_playing">正在播放</string>
     <string name="plays_this_song">播放這首歌</string>
     <string name="done">完成</string>
-    <string name="ok">好</string>
+    <string name="ok">確定</string>
     <string name="cancel">取消</string>
     <string name="settings_title">Melarka 設定</string>
     <string name="settings_server">伺服器</string>
@@ -99,7 +99,7 @@
     <string name="battery_explain">如果螢幕關閉後音樂停止，請允許 Melarka 在背景執行，否則 Android 的電池最佳化可能會停止它。</string>
     <string name="battery_allow">允許背景播放</string>
     <string name="battery_allowed">Melarka 可以在背景執行。</string>
-    <string name="battery_docs">查看你的手機的設定步驟</string>
+    <string name="battery_docs">查看你手機的設定步驟</string>
     <string name="about">關於</string>
     <string name="version">版本</string>
 </resources>

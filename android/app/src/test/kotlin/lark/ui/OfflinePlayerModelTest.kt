@@ -245,12 +245,14 @@ class OfflinePlayerModelTest : EngineTestCase() {
         engine.onEvent = { m.receive(it) }
         engine.handle(q(listOf(1, 2), 0, 0, true))
         idle()
+        assertEquals(listOf(1L), reads)                                 // read when the song changed, not when shown
         assertEquals("一", m.lyrics?.lines?.first()?.text)
         m.lyrics; m.lyrics
         assertEquals(listOf(1L), reads)                                 // read once while the song plays
         engine.handle(WebMessage.Next(Item.Kind.track))
         idle()
         assertNull(m.lyrics)                                            // 2 has none cached
+        assertEquals(listOf(1L, 2L), reads)
     }
 }
 

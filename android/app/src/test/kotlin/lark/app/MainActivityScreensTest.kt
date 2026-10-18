@@ -42,8 +42,16 @@ class MainActivityScreensTest {
         compose.runOnUiThread { services.openSettings() }
         compose.onNodeWithText("Melarka Settings").assertIsDisplayed()
         compose.onNodeWithText("Not set").assertIsDisplayed()
-        compose.runOnUiThread { compose.activity.onKeyDown(android.view.KeyEvent.KEYCODE_BACK, null) }
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
         assertEquals(false, services.showSettings)
+        assertEquals(false, compose.activity.isFinishing)          // Back closed Settings, and only that
+    }
+
+    /** With nothing of Melarka's to close, Back is the system's (the app leaves; playback, if any, goes on). */
+    @Test fun backWithNothingToCloseLeaves() {
+        compose.onNodeWithText("Server Address").assertIsDisplayed()
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        assertEquals(true, compose.activity.isFinishing)
     }
 }

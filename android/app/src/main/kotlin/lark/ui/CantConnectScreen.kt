@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -25,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -68,11 +70,13 @@ fun CantConnectScreen(
 @Composable
 fun StayOfflineToggle(on: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        // The whole row is one switch (its label read with it, a tap anywhere toggles).
+        Row(Modifier.fillMaxWidth().toggleable(value = on, role = Role.Switch, onValueChange = onChange),
+            verticalAlignment = Alignment.CenterVertically) {
             Icon(LarkIcons.airplane, contentDescription = null, tint = if (on) LarkColors.offline else LarkColors.muted)
             Spacer(Modifier.width(12.dp))
             Text(stringResource(R.string.stay_offline), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            Switch(checked = on, onCheckedChange = onChange,
+            Switch(checked = on, onCheckedChange = null,
                 colors = SwitchDefaults.colors(checkedTrackColor = LarkColors.offline, checkedThumbColor = LarkColors.text))
         }
         Text(stringResource(R.string.stay_offline_explain), style = MaterialTheme.typography.bodySmall, color = LarkColors.muted,

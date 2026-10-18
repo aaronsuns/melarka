@@ -347,7 +347,9 @@ setup and test, background playback, about). Jetpack Compose, Material 3, dark t
 - **Structure** (`lark.ui`): `MainActivity` is a `ComponentActivity` whose root holds the web view and, above it, one
   `ComposeView` with the native screens. The view is shown only while a native screen is up (no server, a failed page,
   the offline player, Settings), so the page gets every touch otherwise. `AppServices` is not Compose state: the
-  Activity copies what the screens show on each `observe` change. The models (`OfflinePlayerModel`, `SettingsModel`,
+  Activity copies what the screens show on each `observe` change, cache changes included (`CacheStore.onChange` →
+  `AppServices.cacheChanges`, so Settings' figures and Play Offline Favorites follow a sync). Back goes through the
+  `OnBackPressedDispatcher`: full screen, Settings, the offline player, the page's history, then the system's. The models (`OfflinePlayerModel`, `SettingsModel`,
   ports of iOS) hold Compose state; `AppServices.makeOfflinePlayer` builds the offline player's model on the engine
   (`EngineControl`: `WebMessage`s in, `NativeEvent`s out, no network). The theme takes `web/src/styles.css`'s tokens;
   the few icons are Material paths in code (no icon library).

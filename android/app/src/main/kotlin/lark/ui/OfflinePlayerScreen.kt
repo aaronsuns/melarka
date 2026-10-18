@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
@@ -64,6 +66,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import lark.app.R
 import lark.bridge.Item
 import lark.bridge.RepeatMode
@@ -139,9 +143,10 @@ private fun Header(model: OfflinePlayerModel, server: String, stayOffline: Boole
         }
         if (!stayOffline) {
             val retryLabel = stringResource(R.string.retry_connection)
-            IconButton(onClick = { model.retry() }, enabled = !model.connecting, colors = round) {
+            IconButton(onClick = { model.retry() }, enabled = !model.connecting, colors = round,
+                modifier = Modifier.semantics { contentDescription = retryLabel }) {
                 if (model.connecting) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                else Icon(LarkIcons.refresh, contentDescription = retryLabel)
+                else Icon(LarkIcons.refresh, contentDescription = null)
             }
         }
         IconButton(onClick = onClose, colors = round) { Icon(LarkIcons.close, contentDescription = stringResource(R.string.close)) }
@@ -323,7 +328,8 @@ private fun TimedLyrics(model: OfflinePlayerModel, lyrics: OfflineLyrics) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = if (i == now) FontWeight.Bold else FontWeight.Normal,
                 color = if (i == now) LarkColors.text else LarkColors.muted,
-                modifier = Modifier.fillMaxWidth().clickable { model.seek(lyrics.startMs(i)) }.padding(vertical = 9.dp))
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { model.seek(lyrics.startMs(i)) }
+                    .wrapContentHeight(Alignment.CenterVertically).padding(vertical = 9.dp))
         }
         item { Spacer(Modifier.size(200.dp)) }
     }
@@ -355,11 +361,16 @@ private fun SongRow(model: OfflinePlayerModel, item: Item, isCurrent: Boolean, o
 /** The cached cover, or a tile drawn from the song (a colour from its id, the title's first letter). */
 @Composable
 private fun Artwork(file: File?, seed: String, title: String, modifier: Modifier) {
-    val image = remember(file) { file?.let { Covers.load(it) } }
+    // Decoded off the main thread (the memory cache first, so a cover seen before shows at once).
+    var image by remember(file) { mutableStateOf(file?.let { Covers.cached(it) }) }
+    LaunchedEffect(file) {
+        if (image == null && file != null) image = withContext(Dispatchers.IO) { Covers.load(file) }
+    }
     BoxWithConstraints(modifier.clip(RoundedCornerShape(8.dp))) {
         val width = maxWidth
-        if (image != null) {
-            Image(image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        val shown = image
+        if (shown != null) {
+            Image(shown, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         } else {
             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(tileColor(seed, 0.55f), tileColor(seed, 0.35f)))),
                 contentAlignment = Alignment.Center) {
@@ -387,6 +398,10 @@ internal fun tileColor(seed: String, brightness: Float): Color {
 private object Covers {
     private val cache = LruCache<String, ImageBitmap>(64)
 
+    /** Already decoded: no disk. */
+    fun cached(file: File): ImageBitmap? = cache.get(file.path)
+
+    /** Reads and decodes the file (a background thread). */
     fun load(file: File): ImageBitmap? {
         cache.get(file.path)?.let { return it }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

@@ -1,6 +1,8 @@
 package lark.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -12,7 +14,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.Density
@@ -92,6 +96,18 @@ class ScreensTest : ServicesTestCase() {
         assertEquals(1, closed)
     }
 
+    /** The retry button keeps its name while it spins. */
+    @Test fun theRetryButtonIsNamedWhileItRuns() {
+        val model = OfflinePlayerModel(Recorder(), favorites = { emptyList() }, retry = {})
+        compose.setContent {
+            LarkTheme { OfflinePlayerScreen(model, "https://music.example.com/", stayOffline = false, onStayOffline = {}, onClose = {}) }
+        }
+        compose.onNodeWithContentDescription("Retry Connection").performClick()
+        assertTrue(model.connecting)
+        compose.onNodeWithContentDescription("Retry Connection").assertExists()
+        compose.onNodeWithText("Connecting…").assertIsDisplayed()
+    }
+
     @Test fun theServerScreenChecksTheAddress() {
         val connected = mutableListOf<String>()
         val checked = mutableListOf<String>()
@@ -131,8 +147,8 @@ class ScreensTest : ServicesTestCase() {
         compose.onNodeWithText("Retry").performClick()
         compose.onNodeWithText("Settings").performClick()
         compose.onNodeWithText("Play Offline Favorites").performClick()
-        compose.onNodeWithText("Stay Offline").performClick()
-        assertEquals(listOf("retry", "settings", "play"), taps)
+        compose.onNode(hasText("Stay Offline") and isToggleable()).assertIsOff().performClick()   // the whole row is the switch
+        assertEquals(listOf("retry", "settings", "play", "stay:true"), taps)
     }
 
     @Test fun withStayOfflineRetryIsOffAndWithNoFavoritesThereIsNothingToPlay() {
@@ -146,12 +162,34 @@ class ScreensTest : ServicesTestCase() {
         compose.onAllNodesWithText("Play Offline Favorites").assertCountEquals(0)
     }
 
+    /** Settings' usage follows the cache while it is open (a sync storing songs, a clear). */
+    @Test fun settingsFollowTheCache() {
+        scope = TestScope()
+        val s = makeServices(cache = null)
+        var changes by androidx.compose.runtime.mutableIntStateOf(s.cacheChanges)
+        s.observe { changes = s.cacheChanges }
+        compose.setContent {
+            LarkTheme {
+                SettingsScreen(s, car = null, host = SettingsHost(), stayOffline = false, changingServer = false,
+                    cacheChanges = changes, onDone = {})
+            }
+        }
+        compose.onNodeWithText("Used 0 B / limit 2 GB").assertIsDisplayed()
+        val file = java.io.File(dir, "in.m4a").apply { writeBytes(ByteArray(1000) { 1 }) }
+        val t = lark.testing.trackModel(9)
+        compose.runOnIdle { s.cacheStore!!.store(9, file, t.track, t.json, favorite = true) }
+        compose.onNodeWithText("Used 1000 B / limit 2 GB").assertIsDisplayed()
+    }
+
     /** Settings lays out with a signed-in user; the cap chips set the cap; Change Server asks first. */
     @Test fun settingsLaysOutAndAsksBeforeChangingServer() {
         scope = TestScope()
         val s = makeServices(cache = null)
         compose.setContent {
-            LarkTheme { SettingsScreen(s, car = null, host = SettingsHost(), stayOffline = false, changingServer = false, onDone = {}) }
+            LarkTheme {
+                SettingsScreen(s, car = null, host = SettingsHost(), stayOffline = false, changingServer = false, cacheChanges = 0,
+                    onDone = {})
+            }
         }
         compose.onNodeWithText("Melarka Settings").assertIsDisplayed()
         compose.onNodeWithText("Used 0 B / limit 2 GB").assertIsDisplayed()

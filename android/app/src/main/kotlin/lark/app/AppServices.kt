@@ -195,8 +195,9 @@ class AppServices(
         set(value) { intentOverride = value }
 
     /**
-     * Runs a shortcut's or car autoplay's [IntentRun] on the main thread. The scope's dispatcher is immediate: [body] runs
-     * now up to its first suspension, so playback is prepared before this returns (while a shortcut is still visible).
+     * Runs a shortcut's or car autoplay's [IntentRun] on the main thread, or other work that must outlive the screen that
+     * started it (Settings' server change and test button). The scope's dispatcher is immediate: [body] runs now up to
+     * its first suspension, so playback is prepared before this returns (while a shortcut is still visible).
      */
     fun runIntent(body: suspend () -> Unit): Job = scope.launch { body() }
 
@@ -497,10 +498,23 @@ class AppServices(
             val current = uc.store
             if (current != null && current.root == root && current.api === api) return
             dropSync()
-            uc.set(CacheStore(root, api, network, clock, scope, scheduler, freeSpace(root), capBytes = cacheCapGB.toLong() shl 30))
+            uc.set(CacheStore(root, api, network, clock, scope, scheduler, freeSpace(root), capBytes = cacheCapGB.toLong() shl 30)
+                .also { it.onChange = { cacheChanged() } })
         } finally {
             CacheLayout.pruneOtherServers(cacheRoot, serverDir)
         }
+    }
+
+    /**
+     * Bumped whenever the signed-in user's cache changes (a song stored or evicted, a clear, a favorite), with the
+     * observers told: Settings' figures and the can't-connect screen's Play Offline Favorites follow it.
+     */
+    var cacheChanges = 0
+        private set
+
+    private fun cacheChanged() {
+        cacheChanges += 1
+        changed()
     }
 
     /** Writes the cache index now (the Activity stopping, the end of a background run). */

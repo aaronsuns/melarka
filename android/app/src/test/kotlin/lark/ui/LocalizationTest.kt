@@ -58,9 +58,12 @@ class LocalizationTest {
 
     /** The guard's list holds no character that is also written in Traditional Chinese (it would forbid good text). */
     @Test fun theSimplifiedListIsOnlySimplified() {
-        for (c in "后种置存机歌曲听助用池号台行接牙示屏幕播放停退首目道下除清空化窗广术无挂极适复") {
+        for (c in "后置存歌曲助用池台行接牙示屏幕播放停退首目道下除清空化窗挂适") {
             assertTrue("$c is also a Traditional character", c !in SIMPLIFIED_ONLY)
         }
+        // Valid characters in old texts, but in Taiwan's writing today they are the Simplified forms of 無 機 聽 復/複 號
+        // 種 廣 術 極, and the commonest zh-CN leaks: they stay in the list.
+        for (c in "无机听复号种广术极") assertTrue("$c", c in SIMPLIFIED_ONLY)
         assertTrue(SIMPLIFIED_ONLY.length > 150)
     }
 
@@ -90,7 +93,7 @@ class LocalizationTest {
         Row(R.string.cant_connect_title, "Can't Connect to the Server", "无法连接服务器", "無法連線到伺服器", "Kan inte ansluta till servern"),
         Row(R.string.play_offline_favorites, "Play Offline Favorites", "播放离线收藏", "播放離線收藏", "Spela offlinefavoriter"),
         Row(R.string.server_address, "Server Address", "服务器地址", "伺服器位址", "Serveradress"),
-        Row(R.string.ok, "OK", "好", "好", "OK"),
+        Row(R.string.ok, "OK", "好", "確定", "OK"),
         Row(R.string.shortcut_shuffle_favorites, "Shuffle Favorites", "随机播放收藏", "隨機播放收藏", "Blanda favoriter"),
         Row(R.string.shortcut_resume, "Resume", "继续播放", "繼續播放", "Fortsätt spela"),
         Row(R.string.engine_offline_notice, "Offline: playing cached favorites", "离线：正在播放已缓存的收藏", "離線：正在播放已快取的收藏",
@@ -149,14 +152,16 @@ class LocalizationTest {
         val LOCALES = listOf("values-zh-rCN", "values-zh-rTW", "values-sv")
 
         /**
-         * Characters written only in Simplified Chinese: each has another Traditional form, and none is itself a character
-         * of Traditional text (后 皇后, 种 a surname, 机 a tree, 台 台灣 and the like are left out on purpose).
+         * Characters written in Simplified Chinese and not in Taiwan's Traditional text: each has another Traditional form
+         * there (无 無, 机 機, 听 聽, 复 復/複, 号 號, 种 種, 广 廣, 术 術, 极 極 included: old or rare characters, but Simplified in
+         * practice). Left out because Taiwan writes them too: 后 皇后, 台 台灣, 适, 挂, and the like.
          */
         val SIMPLIFIED_ONLY: String = (
             "线说该这们来时会个为与发开关门问题点务网络载设请获离缓单随环选择认证录码错误帮应电运连车蓝显锁暂继续进页资讯节频订阅" +
             "删储级还没确对钮读写间长现话语识让给经过头东动华国学实业产当气乐观欢见觉记讲访评诉译试询详谁调谢输达远递邮释钟银链" +
             "键闭闲闻队阶际陆险隐难顶项顺须预领颜风飞饭马驱验鱼鸟齐龙帐币岁归态总拥换损摄数断晓杂权条样标档桥梦检毕汇浏测济灵热" +
-            "爱状独画畅盖础积称稳笔简类纪组细终结绝绍统维编缩联职脑补装视览触计讨许论词课谈财货质购费赛软轻较辑边迟遗铁闪阳饮鸣齿"
+            "爱状独画畅盖础积称稳笔简类纪组细终结绝绍统维编缩联职脑补装视览触计讨许论词课谈财货质购费赛软轻较辑边迟遗铁闪阳饮鸣齿" +
+            "无机听复号种广术极"
             ).toSet().joinToString("")
 
         /** `res/<dir>/strings.xml`: translatable name → text (the test runs in the module's directory). */

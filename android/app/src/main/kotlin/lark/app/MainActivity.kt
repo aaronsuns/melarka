@@ -4,12 +4,12 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity(), WebShell.Host {
         native = ComposeView(this).apply { setContent { LarkTheme { NativeScreens() } } }
         root.addView(native, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         setContentView(root)
+        onBackPressedDispatcher.addCallback(this, back)
         services.observe(render)
         render()
     }
@@ -104,7 +105,7 @@ class MainActivity : ComponentActivity(), WebShell.Host {
         val app = services
         val server = app.serverUrl
         val now = NativeUi(server, app.offlinePlayer as? OfflinePlayerModel, app.pageFailed, app.showSettings, app.stayOffline,
-            app.changingServer, app.pageFailed && app.hasOfflineFavorites)
+            app.changingServer, app.pageFailed && app.hasOfflineFavorites, app.cacheChanges)
         ui = now
         native.visibility = if (now.shown) View.VISIBLE else View.GONE
         if (shell != null && shell?.server != server) dropShell(clearData = true)
@@ -193,16 +194,22 @@ class MainActivity : ComponentActivity(), WebShell.Host {
 
     /**
      * Back leaves full screen, then closes Settings, then the offline player (back to the can't-connect screen), then
-     * goes back in the page, then leaves the app (playback goes on).
+     * goes back in the page. Nothing of that: the system's Back (the app leaves; playback goes on).
      */
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (fullscreen != null) { hideFullscreen(); return true }
-            if (services.showSettings) { if (!services.changingServer) services.closeSettings(); return true }
-            if (services.offlinePlayer != null && services.serverUrl != null) { services.closeOfflinePlayer(); return true }
-            if (!ui.shown && shell?.goBack() == true) return true
+    private fun handleBack(): Boolean {
+        if (fullscreen != null) { hideFullscreen(); return true }
+        if (services.showSettings) { if (!services.changingServer) services.closeSettings(); return true }
+        if (services.offlinePlayer != null && services.serverUrl != null) { services.closeOfflinePlayer(); return true }
+        return !ui.shown && shell?.goBack() == true
+    }
+
+    private val back = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (handleBack()) return
+            isEnabled = false                     // the dispatcher's own Back: the Activity's default
+            onBackPressedDispatcher.onBackPressed()
+            isEnabled = true
         }
-        return super.onKeyDown(keyCode, event)
     }
 
     // MARK: - The native screens
@@ -216,6 +223,7 @@ class MainActivity : ComponentActivity(), WebShell.Host {
         val stayOffline: Boolean = false,
         val changingServer: Boolean = false,
         val hasOfflineFavorites: Boolean = false,
+        val cacheChanges: Int = 0,
     ) {
         /** A native screen covers the page. */
         val shown: Boolean get() = server == null || offlinePlayer != null || pageFailed || showSettings
@@ -236,7 +244,7 @@ class MainActivity : ComponentActivity(), WebShell.Host {
                 onStayOffline = { s.setStayOffline(it) })
         }
         if (u.showSettings) {
-            SettingsScreen(s, CarAutoplay.of(this), settingsHost, u.stayOffline, u.changingServer, onDone = { s.closeSettings() })
+            SettingsScreen(s, CarAutoplay.of(this), settingsHost, u.stayOffline, u.changingServer, u.cacheChanges, onDone = { s.closeSettings() })
         }
     }
 }
