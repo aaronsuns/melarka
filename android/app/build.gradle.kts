@@ -45,6 +45,13 @@ android {
         }
     }
 
+    // No "dependency metadata" block in the APK's signing block: it is encrypted for Google Play only, and F-Droid,
+    // which ships our signed APK, rejects it. It lives outside the signed content, so the unsigned APK is unchanged.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     buildFeatures {
         buildConfig = true   // ServerUrl: the emulator host is allowed in debug builds only; Settings: the version
         compose = true       // the native screens (lark.ui)
