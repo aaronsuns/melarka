@@ -18,9 +18,9 @@ Repo: https://github.com/aaronsuns/melarka.git
 Binaries: https://github.com/aaronsuns/melarka/releases/download/v%v/Melarka-%v.apk
 
 Builds:
-  - versionName: 0.2.16
-    versionCode: 216
-    commit: e9ae8e0f80129a05bc861d33e5ae5449a421a632
+  - versionName: 0.2.17
+    versionCode: 217
+    commit: af9db6a715a924803bc7f1aec8a180c44a24f03b
     subdir: android/app
     sudo:
       - echo "deb https://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/bookworm.list
@@ -34,7 +34,6 @@ AllowedAPKSigningKeys: 42c929f4f00f837e74df5be81a43d59829704b1e136654445ea183699
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
-UpdateCheckData: 
-  android/version.properties|versionCode=(\d+)|ios/project.yml|MARKETING_VERSION:\s*"([0-9.]+)"
-CurrentVersion: 0.2.16
-CurrentVersionCode: 216
+UpdateCheckData: android/version.properties|versionCode=(\d+)|ios/project.yml|MARKETING_VERSION:\s*"([0-9.]+)"
+CurrentVersion: 0.2.17
+CurrentVersionCode: 217

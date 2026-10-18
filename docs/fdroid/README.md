@@ -1,6 +1,11 @@
 # Submitting Melarka to F-Droid
 
-`io.github.aaronsuns.melarka.yml` here is the F-Droid build recipe. It goes into F-Droid's
+**Status: submitted for 0.2.17** in [merge request 53141](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53141)
+(branch `io.github.aaronsuns.melarka` of the fork `aaronsuns/fdroiddata`). The 0.2.17 APK on GitHub was checked to
+match a clean source build (`apksigcopier compare`). Answer reviewers there; after the merge, F-Droid picks up
+new tags by itself.
+
+`io.github.aaronsuns.melarka.yml` here is the F-Droid build recipe, as submitted. It goes into F-Droid's
 [fdroiddata](https://gitlab.com/fdroid/fdroiddata) repository as `metadata/io.github.aaronsuns.melarka.yml`
 through a merge request that the owner opens. The recipe builds our APK from source and, because the
 build is reproducible, F-Droid then ships **our** signed APK (`Binaries:` + `AllowedAPKSigningKeys:`): an
@@ -18,13 +23,13 @@ F-Droid needs, which are on `main` after it:
 - `android/version.properties` gives F-Droid's update check (`UpdateCheckData`) the versionCode; without it
   `fdroid checkupdates`, which the merge request pipeline runs, fails on every tag.
 
-The recipe below is written for 0.2.16, the version that was verified. Before copying it, change the
+The recipe here is the submitted 0.2.17 one. To make it for another release by hand, change the
 build entry to the new release X.Y.Z (code X*10000 + Y*100 + Z; the full commit hash of the tag):
 
 ```sh
 V=0.2.17; CODE=217; SHA=$(git rev-parse "v$V^{commit}")
-sed -e "s/0\.2\.16/$V/g" -e "s/216/$CODE/g" \
-    -e "s/e9ae8e0f80129a05bc861d33e5ae5449a421a632/$SHA/" \
+sed -e "s/0\.2\.17/$V/g" -e "s/217/$CODE/g" \
+    -e "s/af9db6a715a924803bc7f1aec8a180c44a24f03b/$SHA/" \
     docs/fdroid/io.github.aaronsuns.melarka.yml > /tmp/io.github.aaronsuns.melarka.yml
 ```
 
