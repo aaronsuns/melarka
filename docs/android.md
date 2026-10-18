@@ -113,9 +113,9 @@ are ignored):
 - `io.github.aaronsuns.melarka.action.RESUME`: Resume (your last queue, or your favorites
   shuffled when there is none).
 
-In Tasker that is **System → Send Intent** with **Target: Activity**. In Samsung's Modes and
-Routines, apps can't be given an action by hand: use a launcher-shortcut step (**Open an app or
-do an app action**) with Melarka's Shuffle Favorites or Resume, or Tasker through its plugin.
+In Tasker that is **System → Send Intent** with **Target: Activity**. Samsung's Modes and
+Routines can't send an action typed by hand: pick Melarka's Shuffle Favorites or Resume in its
+step for app actions (the name varies with the One UI version), or run a Tasker task from it.
 Melarka shows the same short message as the shortcuts; Android may not let an automation app
 start it while that app itself runs in the background.
 
