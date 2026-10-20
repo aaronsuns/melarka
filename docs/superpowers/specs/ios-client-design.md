@@ -53,7 +53,7 @@ launch with no window (the car).
 
 | type | fields | behaviour |
 |---|---|---|
-| `hello` | `onOpen` resume / shuffle_favorites / nothing | `emitAll()`; only the first hello after launch or reset acts on `onOpen` |
+| `hello` | `onOpen` resume / shuffle_favorites / nothing | `emitAll()`; only the first hello after launch or reset acts on `onOpen`; in a background launch (the cache refresh) it waits until the app comes on screen, and is dropped if something played meanwhile (the car's play) |
 | `setQueue` | `kind, items[], index, positionMs?, play, source` | no `positionMs` and same current id: an edit, playback continues; otherwise a new queue; empty items stop that kind |
 | `play` / `next` / `prev` | `kind` | on the active kind; on the other kind `play` switches, `next`/`prev` only move its index |
 | `pause` | `kind?` | absent or the active kind |

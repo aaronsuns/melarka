@@ -141,4 +141,22 @@ final class QueueSyncTests: EngineTestCase {
         XCTAssertEqual(engine.music.items.first?.id, "20")
         XCTAssertEqual(engine.music.source, .favorites)
     }
+
+    /// iOS launched Lark in the background for the cache refresh and the page loaded: the open preference
+    /// waits for the app to come on screen, instead of starting music on a phone lying on a desk.
+    func testABackgroundLaunchRunsOnOpenOnlyOnceTheAppIsOpened() async {
+        cache.local = [20: tmp("20.m4a")]; cache.favorites = [trackModel(20)]
+        engine.isForeground = false
+        engine.handle(.hello(onOpen: "shuffle_favorites"))
+        await engine.idle()
+        XCTAssertTrue(engine.music.items.isEmpty)
+        XCTAssertTrue(backend.loads.isEmpty)
+        XCTAssertFalse(engine.playing)
+
+        engine.isForeground = true
+        await engine.idle()
+        XCTAssertEqual(engine.music.items.first?.id, "20")
+        XCTAssertEqual(engine.music.source, .favorites)
+        XCTAssertTrue(engine.playing)
+    }
 }

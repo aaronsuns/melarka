@@ -186,6 +186,18 @@ import os
     private var savedAt = 0
     private var ownDevice: String?
     private var greeted = false
+    /// The first hello's `onOpen`, held while the app is in the background: iOS launching Lark for the cache
+    /// refresh loads the page too, and its open preference must not start music on a phone nobody touched.
+    private var deferredOnOpen: String?
+    /// The app is on screen, or about to be (`AppServices`, from the launch state and the scene phase). Becoming
+    /// so runs a deferred `onOpen`.
+    var isForeground = true {
+        didSet {
+            guard isForeground, !oldValue, let o = deferredOnOpen else { return }
+            deferredOnOpen = nil
+            runOnOpen(o)
+        }
+    }
 
     init(backend: MediaBackend, api: LarkAPIProtocol, cache: CacheProviding, store: QueueStore, events: PlayEventQueue,
          network: NetworkStatus, now: @escaping () -> Date = Date.init, random: @escaping () -> Double = { .random(in: 0..<1) },
@@ -243,6 +255,10 @@ import os
         emitAll()
         guard !greeted else { return }     // only the first hello after a launch; a web reload just gets the state
         greeted = true
+        if isForeground { runOnOpen(onOpen) } else { deferredOnOpen = onOpen }
+    }
+
+    private func runOnOpen(_ onOpen: String) {
         switch onOpen {
         case "resume": tasks.run { [weak self] in await self?.adoptServerQueue() }
         case "shuffle_favorites": if !playing { tasks.run { [weak self] in await self?.shuffleFavorites() } }
@@ -588,6 +604,7 @@ import os
         modes = PlayModes(); substitutes = []
         savedAt = 0; ownDevice = nil; lastProgress = nil
         greeted = false               // the next user's page gets its `hello{onOpen}` honoured
+        deferredOnOpen = nil
         events.clear()
         store.wipe()
         emitAll()
@@ -825,6 +842,7 @@ import os
         cancelRetry()            // the retry worked: the next blip gets a fresh set, from where it is then
         disarmStall()
         playing = true; buffering = false; error = nil
+        deferredOnOpen = nil     // something already plays (the car's play): opening the app later leaves it
         if loaded?.kind == .track { consecutiveFailures = 0 }
         prefetchUpcoming()
         emitState(active)

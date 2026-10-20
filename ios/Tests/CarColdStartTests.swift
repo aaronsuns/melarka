@@ -61,6 +61,51 @@ import XCTest
         XCTAssertEqual(api.randomTracksCalls.count + api.radioCalls.count, 0)
     }
 
+    /// The phone in a pocket, the app in the background, the page's open preference held: the car's play still
+    /// shuffles cached favorites offline, and opening the app later does not shuffle them again.
+    func testCarPlayInTheBackgroundStillPlaysAndOpeningTheAppLeavesIt() async throws {
+        cache.favorites = [trackModel(1), trackModel(2), trackModel(3)]
+        cache.local = [1: tmp("1.m4a"), 2: tmp("2.m4a"), 3: tmp("3.m4a")]
+        network.isOnline = false
+        makeEngine()
+        engine.isForeground = false
+        engine.handle(.hello(onOpen: "shuffle_favorites"))
+        await engine.idle()
+        XCTAssertTrue(backend.loads.isEmpty)
+
+        XCTAssertEqual(RemoteCommands.handlePlay(engine), .success)
+        XCTAssertEqual(backend.loads.count, 1)
+        XCTAssertTrue(try XCTUnwrap(backend.loads.first).2)
+        backend.start()
+        XCTAssertTrue(engine.playing)
+        let queue = engine.music.items.map(\.id)
+
+        engine.pause()
+        engine.isForeground = true
+        await engine.idle()
+        XCTAssertEqual(backend.loads.count, 1)
+        XCTAssertEqual(engine.music.items.map(\.id), queue)
+        XCTAssertFalse(engine.playing)
+    }
+
+    /// A background launch through `AppServices`: the engine starts out of the foreground, and the scene
+    /// coming on screen runs the open preference.
+    func testAppServicesHoldsOnOpenUntilTheSceneIsOnScreen() async throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "lark.tests.\(UUID().uuidString)"))
+        defaults.set("https://car.lark.test/", forKey: AppServices.serverURLKey)
+        let secrets = MemorySecretStore()
+        secrets.set("token", "T1"); secrets.set("userId", "3")
+        let s = AppServices(defaults: defaults, secrets: secrets, session: stubSession(), dataDirectory: dir.appendingPathComponent("data"),
+                            backend: FakeBackend(), cache: FakeCache(), network: FakeNetwork())
+        s.isInBackground = { true }
+        let e = try XCTUnwrap(s.engine)
+        XCTAssertFalse(e.isForeground)
+        s.scenePhaseChanged(.background)
+        XCTAssertFalse(e.isForeground)
+        s.scenePhaseChanged(.inactive)
+        XCTAssertTrue(e.isForeground)
+    }
+
     /// The saved current track was streamed (not cached), and there is no network. The car's
     /// play goes straight to a cached item of the queue, never a stream first; the streamed one stays queued.
     func testPlayCommandOfflineWithUncachedCurrentPlaysACachedItemFirst() throws {

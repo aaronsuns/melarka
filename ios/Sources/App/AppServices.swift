@@ -53,6 +53,10 @@ import CryptoKit
     static let prefsCarLyricsKey = "lark.prefs.carLyrics"
     static let prefsLoudnessKey = "lark.prefs.loudness"
     var now: () -> Date = Date.init
+    /// iOS launched the app with nothing on screen (the cache refresh, the car's play). Tests set it.
+    lazy var isInBackground: () -> Bool = { [systemIntegration] in
+        systemIntegration && UIApplication.shared.applicationState == .background
+    }
     /// How long a sync waits for the network monitor's first answer (a cold background launch).
     var networkAnswerTimeout: TimeInterval = 3
     private var terminateObserver: NSObjectProtocol?
@@ -121,6 +125,7 @@ import CryptoKit
         let e = PlayerEngine(backend: backend, api: api, cache: cache, store: queueStore,
                              events: PlayEventQueue(api: api, store: queueStore), network: network, nowPlaying: nowPlaying)
         e.onEvent = { [weak self] in self?.send($0) }
+        e.isForeground = !isInBackground()
         if let prefs = savedPrefs { e.prefs = prefs }
         engineStorage = e
         if systemIntegration {
@@ -382,6 +387,7 @@ import CryptoKit
 
     func scenePhaseChanged(_ phase: ScenePhase) {
         bridge?.isActive = phase == .active
+        engineStorage?.isForeground = phase != .background
         if phase != .active { flushCache() }
         if phase == .active {
             engineStorage?.emitAll()   // the page missed events while it was frozen
