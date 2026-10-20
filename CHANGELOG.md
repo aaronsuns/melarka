@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.18] - 2026-10-20
+
+### Fixed
+
+- **The iPhone app could start playing by itself** with the phone lying untouched: when iOS woke
+  the app in the background to refresh the offline cache, "When Melarka opens: Shuffle my
+  favorites" started the music as if you had opened it. That choice now waits until you actually
+  open the app. The car's play over Bluetooth still starts your favorites in the background and offline.
+
 ## [0.2.17] - 2026-10-18
 
 ### Changed
@@ -345,7 +354,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.17...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.18...HEAD
+[0.2.18]: https://github.com/aaronsuns/melarka/compare/v0.2.17...v0.2.18
 [0.2.17]: https://github.com/aaronsuns/melarka/compare/v0.2.16...v0.2.17
 [0.2.16]: https://github.com/aaronsuns/melarka/compare/v0.2.15...v0.2.16
 [0.2.15]: https://github.com/aaronsuns/melarka/compare/v0.2.14...v0.2.15
