@@ -2,7 +2,7 @@
 # The Dockerfile frontend (above) and the base images: Docker's own images through Google's Docker Hub mirror (mirror.gcr.io), which has no
 # anonymous pull limit (Docker Hub answers 429 when several CI builds start at once). Pinned to the
 # multi-arch index digest, which is the same on Docker Hub: the bytes are Docker's, and a build is repeatable.
-FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/node:26-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS web
+FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
