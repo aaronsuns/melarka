@@ -200,6 +200,13 @@ frames. (`Bridge/WebShell.swift`, `Bridge/PageLoad.swift`)
 - Release: an unsigned IPA (`Melarka-X.Y.Z.ipa`) on the GitHub Release; SideStore source
   (`source.json`) on GitHub Pages via `ios/scripts/make_source.py`.
 - Local test builds over the installed app: `ios/scripts/remote.sh` and the private Mac.
+- Re-signing without SideStore: `ios/scripts/resign.sh` installs a per-user launchd agent on a Mac with
+  Xcode (a GUI agent, because codesign needs the login keychain). Every 4 h it checks the recorded profile
+  expiry; with under `RENEW_DAYS` (4) left it checks out the newest `v*` tag, deletes the cached profile
+  for the bundle id so Xcode makes a fresh 7-day one, builds Release, and installs with
+  `devicectl device install app` over USB or Wi-Fi. The bundle id defaults to SideStore's
+  `io.github.aaronsuns.melarka.<team>`, with the team read from the installed app, so it upgrades in place.
+  Trouble: a macOS notification plus an optional `NOTIFY_CMD`, at most every 12 h.
 
 ## Tests
 

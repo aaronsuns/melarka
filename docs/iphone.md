@@ -97,6 +97,45 @@ and the server are released together, with the same version number.
 
 A free Apple ID can have at most three sideloaded apps active at a time, SideStore included.
 
+## Re-sign from a Mac (without SideStore)
+
+If SideStore's refresh stops working, or you'd rather not depend on it, a Mac with Xcode can keep
+Melarka signed by itself. `ios/scripts/resign.sh` installs a background job that checks every 4
+hours. When the app has fewer than 4 days left, it builds the newest Melarka release, signs it
+with a fresh 7-day profile, and installs it over the app on the phone, by USB or over Wi-Fi. Your
+server address and sign-in stay. A new release reaches the phone at the next renewal.
+
+You need:
+
+- A Mac with Xcode, signed in to the **same Apple ID** you sideloaded Melarka with
+  (**Xcode → Settings → Accounts**), and XcodeGen (`brew install xcodegen`).
+- The phone paired with that Mac: connect it by USB once and tap **Trust**. Developer Mode
+  must be on, as SideStore already needs.
+- The Mac awake and logged in at some point while the phone is on the same Wi-Fi (or plugged
+  in) during the last 4 days of each week. The phone may be locked.
+
+Set it up from a clone of this repository:
+
+```sh
+xcrun devicectl list devices                # note your phone's name or UDID
+mkdir -p ~/.config/melarka
+echo 'MELARKA_DEVICE=<name or UDID>' > ~/.config/melarka/resign.env
+ios/scripts/resign.sh install               # runs once now, then every 4 hours
+ios/scripts/resign.sh status                # when the installed app expires
+```
+
+The first run renews right away. It reads your Apple ID's team from the Melarka that SideStore
+installed, so the new build replaces it in place. Without a sideloaded Melarka on the phone, set
+`MELARKA_TEAM=<team id>` in the same file. Other settings are listed at the top of the script.
+
+When it needs you, it shows a Mac notification. That happens when a build fails (for example
+**No Accounts**: Xcode signed out of your Apple ID) or when the app expires within 36 hours and
+the phone has been out of reach. For a message on the phone as well, set `NOTIFY_CMD` to a command
+that sends one: it gets the subject as its last argument and the details on standard input.
+Logs are in `~/Library/Logs/melarka-resign/`. `ios/scripts/resign.sh uninstall` removes the job.
+
+Once the Mac keeps Melarka signed, you can delete SideStore, which frees one of the three app slots.
+
 ## Without the app
 
 You don't need the app to use Melarka on an iPhone. Open your Melarka address in Safari and tap
@@ -121,6 +160,7 @@ locked; an older app that can't shows no timer.
 
 - **"Can't connect" on first launch**: open `https://<your server>/api/v1/info` in Safari on the
   phone. It must load without a certificate warning. Self-signed certificates don't work.
-- **The app won't open after a week**: the signature expired; refresh it in SideStore (see above).
+- **The app won't open after a week**: the signature expired; refresh it in SideStore (see above),
+  or let a Mac re-sign it (`ios/scripts/resign.sh`, see "Re-sign from a Mac").
 - **Install fails in SideStore**: make sure LocalDevVPN is connected, then try again. SideStore's
   documentation covers pairing-file and signing errors.
