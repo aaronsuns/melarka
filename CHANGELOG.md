@@ -7,6 +7,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Added
+
+- **Keep the iPhone app signed from a Mac, without SideStore**: `ios/scripts/resign.sh install`
+  sets up a background job on a Mac with Xcode. Before the free Apple ID's 7 days run out, it
+  builds the newest release, signs it again and installs it over the app on the phone, by USB or
+  Wi-Fi, keeping your data and sign-in. It shows a Mac notification when it needs you. See
+  docs/iphone.md, "Re-sign from a Mac".
+
 ## [0.2.18] - 2026-10-20
 
 ### Fixed
