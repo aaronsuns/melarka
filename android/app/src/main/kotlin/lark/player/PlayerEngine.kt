@@ -487,6 +487,20 @@ class PlayerEngine(
     }
 
     /**
+     * One step of a held fast-forward or rewind ([lark.service.RemoteCommands] scanning): like [skip], but forward stops
+     * [SCAN_END_MARGIN_MS] before the end, so the item then finishes and the next starts as usual, and back stops at 0.
+     * False when it reached that edge: the scan ends there.
+     */
+    fun scanStep(ms: Long): Boolean {
+        val wanted = position(active) + ms
+        var target = maxOf(0L, wanted)
+        val d = backend.durationMs ?: queue(active).current?.durationMs
+        if (ms > 0 && d != null && d > 0) target = minOf(target, maxOf(0L, d - SCAN_END_MARGIN_MS))
+        seek(target)
+        return target == wanted
+    }
+
+    /**
      * The car's play with nothing loaded, and the Resume shortcut: the saved queue from disk (the current item
      * from the cache when it is there, before any network call); with no music queue, shuffled favorites.
      */
@@ -1649,6 +1663,8 @@ class PlayerEngine(
         const val SHUFFLE_SIZE = 50
         /** A previous press this far into an item restarts it instead. */
         const val RESTART_PREV_MS = 3000L
+        /** A held fast-forward stops this far before the end of the item. */
+        const val SCAN_END_MARGIN_MS = 1000L
         /** An episode saved this close to its end starts from the beginning (the web's `resumeAt`). */
         const val NEAR_END_S = 30L
         /** A remote track buffering this long while playing gives way to one on the phone (the web's STALL_MS). */
