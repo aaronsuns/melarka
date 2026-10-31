@@ -100,8 +100,8 @@ A free Apple ID can have at most three sideloaded apps active at a time, SideSto
 ## Re-sign from a Mac (without SideStore)
 
 If SideStore's refresh stops working, or you'd rather not depend on it, a Mac with Xcode can keep
-Melarka signed by itself. `ios/scripts/resign.sh` installs a background job that checks every 4
-hours. When the app has fewer than 4 days left, it builds the newest Melarka release, signs it
+Melarka signed by itself. `ios/scripts/resign.sh` installs a background job that checks every 15
+minutes. When the app has fewer than 4 days left and the Mac is unlocked, it builds the newest Melarka release, signs it
 with a fresh 7-day profile, and installs it over the app on the phone, by USB or over Wi-Fi. Your
 server address and sign-in stay. A new release reaches the phone at the next renewal.
 
@@ -111,8 +111,10 @@ You need:
   (**Xcode → Settings → Accounts**), and XcodeGen (`brew install xcodegen`).
 - The phone paired with that Mac: connect it by USB once and tap **Trust**. Developer Mode
   must be on, as SideStore already needs.
-- The Mac awake and logged in at some point while the phone is on the same Wi-Fi (or plugged
-  in) during the last 4 days of each week. The phone may be locked.
+- The Mac **unlocked** for a moment while the phone is on the same Wi-Fi (or plugged in) during
+  the last 4 days of each week. The phone may be locked, but the Mac may not: while its screen is
+  locked, macOS keeps the Apple ID away from Xcode, so the job waits and renews within 15 minutes
+  of the next unlock.
 
 Set it up from a clone of this repository:
 
@@ -120,7 +122,7 @@ Set it up from a clone of this repository:
 xcrun devicectl list devices                # note your phone's name or UDID
 mkdir -p ~/.config/melarka
 echo 'MELARKA_DEVICE=<name or UDID>' > ~/.config/melarka/resign.env
-ios/scripts/resign.sh install               # runs once now, then every 4 hours
+ios/scripts/resign.sh install               # runs once now, then every 15 minutes
 ios/scripts/resign.sh status                # when the installed app expires
 ```
 
@@ -130,7 +132,7 @@ installed, so the new build replaces it in place. Without a sideloaded Melarka o
 
 When it needs you, it shows a Mac notification. That happens when a build fails (for example
 **No Accounts**: Xcode signed out of your Apple ID) or when the app expires within 36 hours and
-the phone has been out of reach. For a message on the phone as well, set `NOTIFY_CMD` to a command
+the Mac has stayed locked or the phone out of reach. For a message on the phone as well, set `NOTIFY_CMD` to a command
 that sends one: it gets the subject as its last argument and the details on standard input.
 Logs are in `~/Library/Logs/melarka-resign/`. `ios/scripts/resign.sh uninstall` removes the job.
 
