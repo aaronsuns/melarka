@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Fixed
+
+- **Re-signing from a Mac** (`ios/scripts/resign.sh`) now notices a locked Mac and waits for it to
+  be unlocked instead of failing, and a phone that is slow to answer no longer counts as "no
+  Melarka on the phone". It also installs a new release within 15 minutes, instead of at the next
+  weekly renewal.
+
 ## [0.2.19] - 2026-10-31
 
 ### Added

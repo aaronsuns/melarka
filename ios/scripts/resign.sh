@@ -1,8 +1,9 @@
 #!/bin/bash
 # Keep Melarka on an iPhone signed with a free Apple ID, from a Mac with Xcode, without SideStore.
 # A free Apple ID signs apps for 7 days. A launchd job runs this every 15 minutes; when the installed build has
-# fewer than RENEW_DAYS left and the Mac is unlocked, it builds the newest release tag with a fresh profile and
-# installs it over the app on the phone (USB, or Wi-Fi on the same network), which keeps the app's data and sign-in.
+# fewer than RENEW_DAYS left, or a newer release is out, and the Mac is unlocked, it builds the newest release tag
+# with a fresh profile and installs it over the app on the phone (USB, or Wi-Fi on the same network), which keeps
+# the app's data and sign-in.
 # Usage: resign.sh install | uninstall | run | status      (see docs/iphone.md "Re-sign from a Mac")
 #
 # Config, in ~/.config/melarka/resign.env (KEY=value lines) or the environment:
@@ -21,7 +22,7 @@ export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 LABEL=io.github.aaronsuns.melarka.resign
 REPO=https://github.com/aaronsuns/melarka.git
 CONFIG=$HOME/.config/melarka/resign.env
-STATE="$HOME/Library/Application Support/melarka-resign"   # src/, dd/, expires, notified
+STATE="$HOME/Library/Application Support/melarka-resign"   # src/, dd/, expires, version, notified
 LOGDIR=$HOME/Library/Logs/melarka-resign
 PROFILES="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
 PLIST=$HOME/Library/LaunchAgents/$LABEL.plist
@@ -64,7 +65,8 @@ case "${1:-}" in
   install) install_job; exit ;;
   uninstall) launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null; rm -f "$PLIST"; echo "removed $LABEL"; exit 0 ;;
   status)
-    e=$(expires); (( e > 0 )) && echo "installed build expires $(when "$e")" || echo "no renewal recorded yet"
+    e=$(expires); v=$(cat "$STATE/version" 2>/dev/null || true)
+    (( e > 0 )) && echo "installed build ${v:+($v) }expires $(when "$e")" || echo "no renewal recorded yet"
     launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null | grep -E '^\s*(state|runs|last exit code) ' || echo "job not installed"
     exit 0 ;;
   run) ;;
@@ -113,12 +115,27 @@ fail() {
 }
 
 [ -n "${MELARKA_DEVICE:-}" ] || fail "MELARKA_DEVICE is not set (in $CONFIG)"
-if (( left > RENEW_DAYS * 86400 )); then log "not due; app expires $(when "$expires")"; exit 0; fi
-log "due (app expires $(expiry_text))"
+
+# The newest release tag. Offline, the tags fetched before do.
+src=$STATE/src
+if [ ! -d "$src/.git" ]; then git clone --quiet "$REPO" "$src" || fail "git clone failed"; fi
+git -C "$src" fetch --quiet --tags --force origin || log "git fetch failed; using the tags fetched before"
+tag=$(git -C "$src" tag -l 'v[0-9]*' --sort=-v:refname | head -1)
+[ -n "$tag" ] || fail "no release tag found"
+version=${tag#v}
+installed=$(cat "$STATE/version" 2>/dev/null || true)
+
+# Due when the signature runs low, or when a newer release than the one on the phone is out.
+if (( left > RENEW_DAYS * 86400 )) && [ "$version" = "$installed" ]; then
+  log "not due; $installed expires $(when "$expires")"; exit 0
+fi
+if [ "$version" != "$installed" ]; then log "due: $version is out (the phone has ${installed:-an unknown version})"
+else log "due (app expires $(expiry_text))"; fi
 
 # While the screen is locked, Xcode can't read the Apple ID from the keychain to make a profile ("missing
 # Xcode-Username"), so wait for an unlocked moment: a run every 15 minutes catches one soon after.
-if ioreg -n Root -d1 | grep -q '"IOConsoleLocked" = Yes'; then
+# (A string match, not `ioreg | grep -q`: grep quitting early fails ioreg with SIGPIPE, and pipefail makes that false.)
+if [[ $(ioreg -n Root -d1) == *'"IOConsoleLocked" = Yes'* ]]; then
   log "Mac is locked; renewing once it is unlocked"
   if (( left < WARN_HOURS * 3600 )); then
     notify "Mac locked" "Melarka on the iPhone expires $(expiry_text) and renewing it needs the Mac unlocked for a moment." \
@@ -138,7 +155,9 @@ fi
 
 if [ -z "${MELARKA_TEAM:-}" ] && [ -z "${MELARKA_BUNDLE:-}" ]; then
   apps=$(mktemp)
-  xcrun devicectl device info apps --device "$MELARKA_DEVICE" --json-output "$apps" >/dev/null 2>&1
+  if ! xcrun devicectl device info apps --device "$MELARKA_DEVICE" --timeout 120 --json-output "$apps" >/dev/null 2>&1; then
+    rm -f "$apps"; log "could not list the phone's apps; trying again next run"; exit 0
+  fi
   MELARKA_BUNDLE=$(grep -oE '"bundleIdentifier" *: *"io\.github\.aaronsuns\.melarka\.[A-Z0-9]{10}"' "$apps" |
     grep -oE 'io\.github[^"]*' | head -1)
   rm -f "$apps"
@@ -148,13 +167,7 @@ fi
 [ -n "${MELARKA_TEAM:-}" ] || fail "MELARKA_TEAM is not set"
 BUNDLE=${MELARKA_BUNDLE:-io.github.aaronsuns.melarka.$MELARKA_TEAM}
 
-# Newest release tag, built the way the release workflow builds it, but signed for this phone.
-src=$STATE/src
-if [ ! -d "$src/.git" ]; then git clone --quiet "$REPO" "$src" || fail "git clone failed"; fi
-git -C "$src" fetch --quiet --tags --force origin || fail "git fetch failed"
-tag=$(git -C "$src" tag -l 'v[0-9]*' --sort=-v:refname | head -1)
-[ -n "$tag" ] || fail "no release tag found"
-version=${tag#v}
+# The newest release tag, built the way the release workflow builds it, but signed for this phone.
 { git -C "$src" checkout --quiet --force --detach "$tag" && git -C "$src" clean -qfdx; } || fail "checkout $tag failed"
 (cd "$src/ios" && xcodegen generate --quiet) || fail "xcodegen failed"
 
@@ -177,5 +190,6 @@ newexp=$(date -j -u -f '%Y-%m-%dT%H:%M:%SZ' "$iso" +%s) || fail "bad profile dat
 
 xcrun devicectl device install app --device "$MELARKA_DEVICE" "$app" || fail "install on the phone failed"
 echo "$newexp" > "$STATE/expires"
+echo "$version" > "$STATE/version"
 rm -f "$STATE/notified"
 log "installed Melarka $version; expires $(when "$newexp")"
