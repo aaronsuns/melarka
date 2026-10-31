@@ -4,24 +4,37 @@ import MediaPlayer
 /// even when it is suspended: with nothing loaded it resumes the saved queue or shuffles cached favorites.
 /// Skip ±(30/15 s) replaces next/previous on the lock screen, so it is on only for 频道 episodes. Repeat and
 /// shuffle (where the lock screen or the car shows them) are music's: on only while music is the active kind.
+/// Holding next or previous on a car or headphones (AVRCP fast-forward and rewind) scans through the item: iOS sends seek forward/backward with begin and end, and the position moves while it is held.
 @MainActor final class RemoteCommands {
     static let skipForwardS: Double = 30
     static let skipBackwardS: Double = 15
+    /// Scanning: a step every `scanTickS`, `scanStepMs` at first and `scanFastStepMs` after `scanFastAfter` steps
+    /// (about 10× and 30×); it ends by itself after `scanMaxSteps` steps in case the release never comes.
+    static let scanTickS: Double = 0.5
+    static let scanStepMs = 5000
+    static let scanFastStepMs = 15000
+    static let scanFastAfter = 6
+    static let scanMaxSteps = 120
 
     private let center: MPRemoteCommandCenter
     /// The engine for this command, resolved when it arrives: the app installs the commands once at launch,
     /// and the engine is built on first use and rebuilt for another server. Nil: nothing can play yet.
     private let resolve: @MainActor () -> PlayerEngine?
+    private let scheduler: Scheduler
     private weak var attached: PlayerEngine?
     private var targets: [(MPRemoteCommand, Any)] = []
+    /// The next step of a scan in progress.
+    private var scanning: Cancellable?
 
-    convenience init(center: MPRemoteCommandCenter = .shared(), engine: PlayerEngine) {
-        self.init(center: center, resolve: { [weak engine] in engine })
+    convenience init(center: MPRemoteCommandCenter = .shared(), scheduler: Scheduler? = nil, engine: PlayerEngine) {
+        self.init(center: center, scheduler: scheduler, resolve: { [weak engine] in engine })
         attach(engine)
     }
 
-    init(center: MPRemoteCommandCenter = .shared(), resolve: @escaping @MainActor () -> PlayerEngine?) {
+    init(center: MPRemoteCommandCenter = .shared(), scheduler: Scheduler? = nil,
+         resolve: @escaping @MainActor () -> PlayerEngine?) {
         self.center = center
+        self.scheduler = scheduler ?? MainScheduler()
         self.resolve = resolve
         add(center.playCommand) { $0.playNow() }
         add(center.pauseCommand) { $0.pauseNow() }
@@ -32,6 +45,8 @@ import MediaPlayer
             guard let e = e as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
             return r.seekNow(seconds: e.positionTime)
         }
+        add(center.seekForwardCommand) { r, e in r.seekCommand(e, forward: true) }
+        add(center.seekBackwardCommand) { r, e in r.seekCommand(e, forward: false) }
         add(center.skipForwardCommand) { r, e in r.skipNow(seconds: (e as? MPSkipIntervalCommandEvent)?.interval ?? Self.skipForwardS) }
         add(center.skipBackwardCommand) { r, e in r.skipNow(seconds: -((e as? MPSkipIntervalCommandEvent)?.interval ?? Self.skipBackwardS)) }
         add(center.changeRepeatModeCommand) { r, e in
@@ -45,7 +60,8 @@ import MediaPlayer
         center.skipForwardCommand.preferredIntervals = [NSNumber(value: Self.skipForwardS)]
         center.skipBackwardCommand.preferredIntervals = [NSNumber(value: Self.skipBackwardS)]
         for c in [center.playCommand, center.pauseCommand, center.togglePlayPauseCommand, center.nextTrackCommand,
-                  center.previousTrackCommand, center.changePlaybackPositionCommand] { c.isEnabled = true }
+                  center.previousTrackCommand, center.changePlaybackPositionCommand, center.seekForwardCommand,
+                  center.seekBackwardCommand] { c.isEnabled = true }
         update(for: .track)
     }
 
@@ -80,6 +96,7 @@ import MediaPlayer
 
     /// Removes every handler (tests: the command center is shared by the process).
     func detach() {
+        endScan()
         for (c, t) in targets { c.removeTarget(t) }
         targets = []
         attached?.onActiveChange = nil
@@ -90,6 +107,7 @@ import MediaPlayer
     // MARK: Handlers (internal for tests)
 
     func playNow() -> MPRemoteCommandHandlerStatus {
+        endScan()
         guard let engine = resolve() else { return .noActionableNowPlayingItem }
         return Self.handlePlay(engine)
     }
@@ -110,6 +128,7 @@ import MediaPlayer
     }
 
     func pauseNow() -> MPRemoteCommandHandlerStatus {
+        endScan()
         guard let engine = resolve(), engine.current != nil else { return .noActionableNowPlayingItem }
         engine.pause()
         return .success
@@ -120,27 +139,63 @@ import MediaPlayer
     }
 
     func nextNow() -> MPRemoteCommandHandlerStatus {
+        endScan()
         guard let engine = resolve(), engine.current != nil else { return .noActionableNowPlayingItem }
         engine.next()
         return .success
     }
 
     func previousNow() -> MPRemoteCommandHandlerStatus {
+        endScan()
         guard let engine = resolve(), engine.current != nil else { return .noActionableNowPlayingItem }
         engine.prev()
         return .success
     }
 
     func seekNow(seconds: Double) -> MPRemoteCommandHandlerStatus {
+        endScan()
         guard let engine = resolve(), engine.current != nil, seconds.isFinite else { return .noActionableNowPlayingItem }
         engine.seek(ms: Int((seconds * 1000).rounded()))
         return .success
     }
 
     func skipNow(seconds: Double) -> MPRemoteCommandHandlerStatus {
+        endScan()
         guard let engine = resolve(), engine.current != nil, seconds.isFinite else { return .noActionableNowPlayingItem }
         engine.skip(ms: Int((seconds * 1000).rounded()))
         return .success
+    }
+
+    /// Seek forward or backward: begin starts scanning, end stops it where it is.
+    func seekCommand(_ e: MPRemoteCommandEvent, forward: Bool) -> MPRemoteCommandHandlerStatus {
+        guard let e = e as? MPSeekCommandEvent else { return .commandFailed }
+        if e.type == .endSeeking { endScan(); return .success }
+        return beginScan(forward: forward)
+    }
+
+    /// Starts moving through the current item, a step now and one every `scanTickS`, until `endScan`, another
+    /// command, the item's edge (`PlayerEngine.scanStep`) or `scanMaxSteps`. Playing or paused stays as it was.
+    func beginScan(forward: Bool) -> MPRemoteCommandHandlerStatus {
+        endScan()
+        guard let engine = resolve(), engine.current != nil else { return .noActionableNowPlayingItem }
+        scanStep(engine, forward: forward, n: 0)
+        return .success
+    }
+
+    func endScan() {
+        scanning?.cancel()
+        scanning = nil
+    }
+
+    var isScanning: Bool { scanning != nil }
+
+    private func scanStep(_ engine: PlayerEngine, forward: Bool, n: Int) {
+        let ms = n < Self.scanFastAfter ? Self.scanStepMs : Self.scanFastStepMs
+        guard engine.scanStep(ms: forward ? ms : -ms), n + 1 < Self.scanMaxSteps else { scanning = nil; return }
+        scanning = scheduler.after(Self.scanTickS) { [weak self, weak engine] in
+            guard let self, let engine else { return }
+            self.scanStep(engine, forward: forward, n: n + 1)
+        }
     }
 
     /// The lock screen's or the car's repeat button: the shuffle stays as it is. Episodes ignore it.

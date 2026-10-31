@@ -12,9 +12,11 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -168,6 +170,15 @@ class PlaybackService : MediaSessionService() {
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session).setAvailableSessionCommands(commands.build()).build()
         }
 
+        /**
+         * A car's or headphones' fast-forward and rewind keys: held, they scan through the item (key down starts, key up
+         * stops; repeats while held change nothing). Every other key is Media3's.
+         */
+        override fun onMediaButtonEvent(session: MediaSession, controllerInfo: MediaSession.ControllerInfo, intent: Intent): Boolean {
+            val key = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_KEY_EVENT, KeyEvent::class.java) ?: return false
+            return scanKey(host.remote, key)
+        }
+
         override fun onCustomCommand(session: MediaSession, controller: MediaSession.ControllerInfo, customCommand: SessionCommand,
                                      args: Bundle): ListenableFuture<SessionResult> =
             Futures.immediateFuture(when (host.remote.custom(customCommand.customAction)) {
@@ -197,6 +208,20 @@ class PlaybackService : MediaSessionService() {
         const val HOLD_CHECK_MS = 1_000L
         /** How long a cold start waiting for the server or the network keeps the notification. */
         const val HOLD_MAX_MS = 30_000L
+
+        /** [SessionCallback.onMediaButtonEvent]'s part: true when the key was fast-forward or rewind. */
+        fun scanKey(remote: RemoteCommands, key: KeyEvent): Boolean {
+            val forward = when (key.keyCode) {
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> true
+                KeyEvent.KEYCODE_MEDIA_REWIND -> false
+                else -> return false
+            }
+            when {
+                key.action == KeyEvent.ACTION_UP -> remote.endScan()
+                key.action == KeyEvent.ACTION_DOWN && (key.repeatCount == 0 || !remote.isScanning) -> remote.beginScan(forward)
+            }
+            return true
+        }
 
         /** The engine's active queue as media items (the session's resumption answer). */
         fun resumed(host: PlaybackHost): MediaSession.MediaItemsWithStartPosition {

@@ -36,6 +36,8 @@ import os
     static let shuffleSize = 50
     /// A previous press this far into an item restarts it instead.
     static let restartPrevMs = 3000
+    /// A held fast-forward stops this far before the end of the item.
+    static let scanEndMarginMs = 1000
     /// An episode saved this close to its end starts from the beginning (the web's `resumeAt`).
     static let nearEndS = 30
     /// The notices and errors the web page shows, in the phone's language (Localizable.xcstrings).
@@ -466,6 +468,19 @@ import os
         var target = position(active) + ms
         if let d = backend.durationMs ?? queue(active).current?.durationMs, d > 0 { target = min(target, d) }
         seek(ms: target)
+    }
+
+    /// One step of a held fast-forward or rewind (`RemoteCommands` scanning): like `skip`, but forward stops
+    /// `scanEndMarginMs` before the end, so the item then finishes and the next starts as usual, and back stops at 0.
+    /// False when it reached that edge: the scan ends there.
+    func scanStep(ms: Int) -> Bool {
+        let wanted = position(active) + ms
+        var target = max(0, wanted)
+        if ms > 0, let d = backend.durationMs ?? queue(active).current?.durationMs, d > 0 {
+            target = min(target, max(0, d - Self.scanEndMarginMs))
+        }
+        seek(ms: target)
+        return target == wanted
     }
 
     /// The car's play with nothing loaded, and `ResumeIntent`: the saved queue from disk (the current item

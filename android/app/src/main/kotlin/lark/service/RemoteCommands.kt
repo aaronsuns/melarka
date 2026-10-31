@@ -5,6 +5,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import lark.bridge.Item
 import lark.bridge.RepeatMode
+import lark.core.Cancellable
+import lark.core.MainScheduler
+import lark.core.Scheduler
 import lark.player.PlayModes
 import lark.player.PlayerEngine
 import java.lang.ref.WeakReference
@@ -15,13 +18,16 @@ import kotlin.math.roundToLong
  * session ([SessionPlayer], [PlaybackService]) turns its player commands and custom commands into these handlers. The
  * car's play goes to the last media app even when it is not running: with nothing loaded it resumes the saved queue or
  * shuffles cached favorites ([handlePlay]). Skip ±(30/15 s) replaces next/previous on the notification, so it is on
- * only for 频道 episodes; repeat and shuffle are music's: on only while music is the active kind.
+ * only for 频道 episodes; repeat and shuffle are music's: on only while music is the active kind. Holding a car's or
+ * headphones' fast-forward or rewind (key down … key up, [PlaybackService.SessionCallback]) scans through the item.
  *
  * What it shows (the state of the iOS `MPRemoteCommandCenter`) is [kind], [skipEnabled], [modesEnabled], [repeatMode]
  * and [shuffle]; listeners hear every change. Main thread only.
  */
 class RemoteCommands(
     private val scope: CoroutineScope,
+    /** The scan's steps. */
+    private val scheduler: Scheduler = MainScheduler(),
     /**
      * The engine for this command, resolved when it arrives: the commands are installed once, and the engine is built
      * on first use and rebuilt for another server. Null: nothing can play yet.
@@ -51,7 +57,8 @@ class RemoteCommands(
     val engine: PlayerEngine? get() = resolve()
 
     /** Commands for this engine only, held weakly (iOS `init(center:engine:)`). */
-    constructor(scope: CoroutineScope, engine: PlayerEngine) : this(scope, weakly(engine)) {
+    constructor(scope: CoroutineScope, engine: PlayerEngine, scheduler: Scheduler = MainScheduler()) :
+        this(scope, scheduler, weakly(engine)) {
         attach(engine)
     }
 
@@ -85,6 +92,7 @@ class RemoteCommands(
 
     /** Lets the engine go (the engine's callbacks are cleared). */
     fun detach() {
+        endScan()
         attached?.get()?.let { it.onActiveChange = null; it.onModesChange = null }
         attached = null
     }
@@ -98,12 +106,14 @@ class RemoteCommands(
     val starting: Boolean get() = coldStart?.isActive == true
 
     fun playNow(): Status {
+        endScan()
         val engine = resolve() ?: return Status.noActionableNowPlayingItem
         coldStart = startPlay(engine, scope)
         return Status.success
     }
 
     fun pauseNow(): Status {
+        endScan()
         val engine = resolve()?.takeIf { it.current != null } ?: return Status.noActionableNowPlayingItem
         engine.pause()
         return Status.success
@@ -112,27 +122,59 @@ class RemoteCommands(
     fun toggleNow(): Status = if (resolve()?.playing == true) pauseNow() else playNow()
 
     fun nextNow(): Status {
+        endScan()
         val engine = resolve()?.takeIf { it.current != null } ?: return Status.noActionableNowPlayingItem
         engine.next()
         return Status.success
     }
 
     fun previousNow(): Status {
+        endScan()
         val engine = resolve()?.takeIf { it.current != null } ?: return Status.noActionableNowPlayingItem
         engine.prev()
         return Status.success
     }
 
     fun seekNow(seconds: Double): Status {
+        endScan()
         val engine = resolve()?.takeIf { it.current != null && seconds.isFinite() } ?: return Status.noActionableNowPlayingItem
         engine.seek((seconds * 1000).roundToLong())
         return Status.success
     }
 
     fun skipNow(seconds: Double): Status {
+        endScan()
         val engine = resolve()?.takeIf { it.current != null && seconds.isFinite() } ?: return Status.noActionableNowPlayingItem
         engine.skip((seconds * 1000).roundToLong())
         return Status.success
+    }
+
+    /** The next step of a scan in progress. */
+    private var scanning: Cancellable? = null
+
+    val isScanning: Boolean get() = scanning != null
+
+    /**
+     * Starts moving through the current item, a step now and one every [SCAN_TICK_S], until [endScan], another command,
+     * the item's edge ([PlayerEngine.scanStep]) or [SCAN_MAX_STEPS]. Playing or paused stays as it was.
+     */
+    fun beginScan(forward: Boolean): Status {
+        endScan()
+        val engine = resolve()?.takeIf { it.current != null } ?: return Status.noActionableNowPlayingItem
+        scanStep(WeakReference(engine), forward, 0)
+        return Status.success
+    }
+
+    fun endScan() {
+        scanning?.cancel()
+        scanning = null
+    }
+
+    private fun scanStep(engine: WeakReference<PlayerEngine>, forward: Boolean, n: Int) {
+        val e = engine.get() ?: run { scanning = null; return }
+        val ms = if (n < SCAN_FAST_AFTER) SCAN_STEP_MS else SCAN_FAST_STEP_MS
+        if (!e.scanStep(if (forward) ms else -ms) || n + 1 >= SCAN_MAX_STEPS) { scanning = null; return }
+        scanning = scheduler.after(SCAN_TICK_S) { scanStep(engine, forward, n + 1) }
     }
 
     /** The repeat button (the car's, or a controller's): the shuffle stays as it is. Episodes ignore it. */
@@ -164,6 +206,16 @@ class RemoteCommands(
     companion object {
         const val SKIP_FORWARD_S = 30.0
         const val SKIP_BACKWARD_S = 15.0
+        /**
+         * Scanning (iOS `RemoteCommands`): a step every [SCAN_TICK_S], [SCAN_STEP_MS] at first and [SCAN_FAST_STEP_MS]
+         * after [SCAN_FAST_AFTER] steps (about 10× and 30×); it ends by itself after [SCAN_MAX_STEPS] steps in case the
+         * key up never comes.
+         */
+        const val SCAN_TICK_S = 0.5
+        const val SCAN_STEP_MS = 5000L
+        const val SCAN_FAST_STEP_MS = 15000L
+        const val SCAN_FAST_AFTER = 6
+        const val SCAN_MAX_STEPS = 120
 
         /** The notification's custom commands. */
         const val SKIP_FORWARD_30 = "lark.SKIP_FORWARD_30"

@@ -157,7 +157,11 @@ frames. (`Bridge/WebShell.swift`, `Bridge/PageLoad.swift`)
   passed becomes the title and "song · artist" the artist; blank lines show the song; fetched
   per track (cache first, fresh online), refetched on `lyricsChanged`.
 - **Remote commands**: play, pause, toggle, next, previous, position; ±30/15 s for episodes;
-  shuffle and repeat for music.
+  shuffle and repeat for music. Seek forward/backward (a car's or headphones' held next/previous,
+  AVRCP fast-forward/rewind) scan: `beginSeeking` steps 5 s at once and every 0.5 s, 15 s from the 7th
+  step, until `endSeeking`, any other command, the item's edge (`PlayerEngine.scanStep`: back stops at
+  0, forward 1 s before the end so the item ends normally) or 120 steps (a lost release). Playing or
+  paused is unchanged.
 - **Audio session**: playback category, activated only right before sound starts; interruptions
   pause and resume when allowed; an unplugged route pauses; a media-services reset rebuilds the
   player at its position.
