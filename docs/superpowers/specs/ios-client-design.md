@@ -208,7 +208,8 @@ frames. (`Bridge/WebShell.swift`, `Bridge/PageLoad.swift`)
   Xcode (a GUI agent, because codesign needs the login keychain). Every 15 min it fetches the tags and checks the
   recorded profile expiry and installed version; with under `RENEW_DAYS` (4) left or a newer `v*` tag, and the
   screen unlocked (Xcode's Apple ID credentials can't be read
-  from the keychain while it is locked: "missing Xcode-Username"; `IOConsoleLocked` in `ioreg`) it checks out the newest `v*` tag, deletes the cached profile
+  from the keychain while it is locked: "missing Xcode-Username"; `IOConsoleLocked` in `ioreg`), and Xcode signed in (an account in
+  `com.apple.dt.Xcode DVTDeveloperAccountManagerAppleIDLists`; otherwise it notifies "sign in to Xcode") it checks out the newest `v*` tag, deletes the cached profile
   for the bundle id so Xcode makes a fresh 7-day one, builds Release, and installs with
   `devicectl device install app` over USB or Wi-Fi. The bundle id defaults to SideStore's
   `io.github.aaronsuns.melarka.<team>`, with the team read from the installed app, so it upgrades in place.
