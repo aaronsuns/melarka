@@ -1,8 +1,8 @@
 #!/bin/bash
 # Keep Melarka on an iPhone signed with a free Apple ID, from a Mac with Xcode, without SideStore.
-# A free Apple ID signs apps for 7 days. A launchd job runs this every 4 hours; when the installed build has
-# fewer than RENEW_DAYS left, it builds the newest release tag with a fresh profile and installs it over the
-# app on the phone (USB, or Wi-Fi on the same network), which keeps the app's data and sign-in.
+# A free Apple ID signs apps for 7 days. A launchd job runs this every 15 minutes; when the installed build has
+# fewer than RENEW_DAYS left and the Mac is unlocked, it builds the newest release tag with a fresh profile and
+# installs it over the app on the phone (USB, or Wi-Fi on the same network), which keeps the app's data and sign-in.
 # Usage: resign.sh install | uninstall | run | status      (see docs/iphone.md "Re-sign from a Mac")
 #
 # Config, in ~/.config/melarka/resign.env (KEY=value lines) or the environment:
@@ -30,7 +30,7 @@ SELF=$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")
 # shellcheck source=/dev/null
 [ -f "$CONFIG" ] && . "$CONFIG"
 RENEW_DAYS=${RENEW_DAYS:-4}
-WARN_HOURS=36   # phone unreachable this close to expiry: notify
+WARN_HOURS=36   # Mac locked or phone unreachable this close to expiry: notify
 
 when() { date -r "$1" '+%a %d %b %H:%M'; }
 expires() { cat "$STATE/expires" 2>/dev/null || echo 0; }
@@ -48,7 +48,7 @@ install_job() {
 <dict>
   <key>Label</key><string>$LABEL</string>
   <key>ProgramArguments</key><array><string>/bin/bash</string><string>$SELF</string><string>run</string></array>
-  <key>StartInterval</key><integer>14400</integer>
+  <key>StartInterval</key><integer>900</integer>
   <key>RunAtLoad</key><true/>
   <key>StandardOutPath</key><string>$LOGDIR/launchd.out</string>
   <key>StandardErrorPath</key><string>$LOGDIR/launchd.out</string>
@@ -57,7 +57,7 @@ install_job() {
 EOF
   plutil -lint "$PLIST" >/dev/null || exit 1
   launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-  launchctl bootstrap "gui/$(id -u)" "$PLIST" && echo "installed $PLIST; it runs now and every 4 hours. Log: $LOGDIR"
+  launchctl bootstrap "gui/$(id -u)" "$PLIST" && echo "installed $PLIST; it runs now and every 15 minutes. Log: $LOGDIR"
 }
 
 case "${1:-}" in
@@ -116,11 +116,22 @@ fail() {
 if (( left > RENEW_DAYS * 86400 )); then log "not due; app expires $(when "$expires")"; exit 0; fi
 log "due (app expires $(expiry_text))"
 
+# While the screen is locked, Xcode can't read the Apple ID from the keychain to make a profile ("missing
+# Xcode-Username"), so wait for an unlocked moment: a run every 15 minutes catches one soon after.
+if ioreg -n Root -d1 | grep -q '"IOConsoleLocked" = Yes'; then
+  log "Mac is locked; renewing once it is unlocked"
+  if (( left < WARN_HOURS * 3600 )); then
+    notify "Mac locked" "Melarka on the iPhone expires $(expiry_text) and renewing it needs the Mac unlocked for a moment." \
+      "Unlock the Mac (with the phone on the same Wi-Fi, or plugged in); it renews within 15 minutes."
+  fi
+  exit 0
+fi
+
 if ! xcrun devicectl device info details --device "$MELARKA_DEVICE" --timeout 60 >/dev/null 2>&1; then
   log "phone not reachable"
   if (( left < WARN_HOURS * 3600 )); then
     notify "phone not reachable" "Melarka on the iPhone expires $(expiry_text) and the Mac could not reach the phone." \
-      "Put the phone on the same Wi-Fi as the Mac, or plug it in, while the Mac is awake; the next try is within 4 hours."
+      "Put the phone on the same Wi-Fi as the Mac, or plug it in, while the Mac is awake; the next try is within 15 minutes."
   fi
   exit 0
 fi
