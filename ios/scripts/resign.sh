@@ -110,7 +110,7 @@ notify() {
 fail() {
   log "FAILED: $1"
   notify "$1" "Renewing Melarka failed: $1. The app on the phone expires $(expiry_text)." \
-    "If the log says 'No Accounts', sign in again in Xcode > Settings > Accounts."
+    "If the log mentions accounts or credentials, sign in again in Xcode > Settings > Accounts."
   exit 1
 }
 
@@ -142,6 +142,15 @@ if [[ $(ioreg -n Root -d1) == *'"IOConsoleLocked" = Yes'* ]]; then
       "Unlock the Mac (with the phone on the same Wi-Fi, or plugged in); it renews within 15 minutes."
   fi
   exit 0
+fi
+
+# Xcode lists its signed-in Apple IDs in its defaults. With none (signed out, or the account was dropped),
+# the build would only fail with "No Accounts", so say what to do instead.
+if [[ $(defaults read com.apple.dt.Xcode DVTDeveloperAccountManagerAppleIDLists 2>/dev/null) != *identifier* ]]; then
+  log "FAILED: Xcode is not signed in to an Apple ID"
+  notify "sign in to Xcode" "Melarka on the iPhone expires $(expiry_text) and Xcode on this Mac is not signed in to an Apple ID." \
+    "Open Xcode > Settings > Accounts and add the Apple ID that signs Melarka; it renews within 15 minutes."
+  exit 1
 fi
 
 if ! xcrun devicectl device info details --device "$MELARKA_DEVICE" --timeout 60 >/dev/null 2>&1; then

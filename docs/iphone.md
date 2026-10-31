@@ -131,8 +131,8 @@ The first run renews right away. It reads your Apple ID's team from the Melarka 
 installed, so the new build replaces it in place. Without a sideloaded Melarka on the phone, set
 `MELARKA_TEAM=<team id>` in the same file. Other settings are listed at the top of the script.
 
-When it needs you, it shows a Mac notification. That happens when a build fails (for example
-**No Accounts**: Xcode signed out of your Apple ID) or when the app expires within 36 hours and
+When it needs you, it shows a Mac notification. That happens when Xcode is not signed in to
+an Apple ID (sign in again in **Xcode → Settings → Accounts**), when a build fails, or when the app expires within 36 hours and
 the Mac has stayed locked or the phone out of reach. For a message on the phone as well, set `NOTIFY_CMD` to a command
 that sends one: it gets the subject as its last argument and the details on standard input.
 Logs are in `~/Library/Logs/melarka-resign/`. `ios/scripts/resign.sh uninstall` removes the job.
