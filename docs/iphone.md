@@ -103,7 +103,8 @@ If SideStore's refresh stops working, or you'd rather not depend on it, a Mac wi
 Melarka signed by itself. `ios/scripts/resign.sh` installs a background job that checks every 15
 minutes. When the app has fewer than 4 days left and the Mac is unlocked, it builds the newest Melarka release, signs it
 with a fresh 7-day profile, and installs it over the app on the phone, by USB or over Wi-Fi. Your
-server address and sign-in stay. A new release reaches the phone at the next renewal.
+server address and sign-in stay. A new Melarka release is installed the same way within 15 minutes
+of being published, or of the Mac's next unlock.
 
 You need:
 
