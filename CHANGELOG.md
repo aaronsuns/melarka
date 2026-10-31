@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.19] - 2026-10-31
+
 ### Added
 
 - **Hold to fast-forward and rewind** in the iPhone and Android apps: holding the next or previous
@@ -16,9 +18,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
   stops just before its end, so the next song starts as usual.
 - **Keep the iPhone app signed from a Mac, without SideStore**: `ios/scripts/resign.sh install`
   sets up a background job on a Mac with Xcode. Before the free Apple ID's 7 days run out, and
-  while the Mac is unlocked (macOS keeps the Apple ID from Xcode while it is locked), it builds the newest release, signs it again and installs it over the app on the phone, by USB or
-  Wi-Fi, keeping your data and sign-in. It shows a Mac notification when it needs you. See
+  while the Mac is unlocked (macOS keeps the Apple ID from Xcode while it is locked), it builds the
+  newest release, signs it again and installs it over the app on the phone, by USB or Wi-Fi,
+  keeping your data and sign-in. It shows a Mac notification when it needs you. See
   docs/iphone.md, "Re-sign from a Mac".
+
+### Changed
+
+- **Updated dependencies**: newer Go, Node and Alpine base images, Go modules, web libraries
+  (React Router 8 among them) and CI actions.
 
 ## [0.2.18] - 2026-10-20
 
@@ -367,7 +375,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.18...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.19...HEAD
+[0.2.19]: https://github.com/aaronsuns/melarka/compare/v0.2.18...v0.2.19
 [0.2.18]: https://github.com/aaronsuns/melarka/compare/v0.2.17...v0.2.18
 [0.2.17]: https://github.com/aaronsuns/melarka/compare/v0.2.16...v0.2.17
 [0.2.16]: https://github.com/aaronsuns/melarka/compare/v0.2.15...v0.2.16
