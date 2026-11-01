@@ -9,6 +9,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ### Fixed
 
+- **The iPhone app no longer starts music by itself** on a phone nobody touched. When iOS woke
+  Melarka in the background, the "when the app opens" setting (shuffle favorites, or resume) could
+  start music on a locked phone. It now waits until you actually open the app. Music that stopped
+  because the network went, or because of a call, now starts again by itself only if it comes back
+  within 10 minutes; after that, only you start it. The Android app follows the same 10-minute
+  rule after a call or when the network comes back.
 - **Re-signing from a Mac** (`ios/scripts/resign.sh`) now notices a locked Mac and waits for it to
   be unlocked instead of failing, and a phone that is slow to answer no longer counts as "no
   Melarka on the phone". It also installs a new release within 15 minutes, instead of at the next

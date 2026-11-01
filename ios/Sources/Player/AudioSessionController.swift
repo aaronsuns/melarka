@@ -5,7 +5,8 @@ import os
 /// interruptions (a call, Siri, an alarm) and route changes (headphones out, the car disconnecting).
 ///
 /// - An interruption pauses playback as a system pause; when it ends with `.shouldResume`, playback resumes,
-///   unless the user paused or played something else meanwhile (that clears the engine's `pausedBySystem`).
+///   unless the user paused or played something else meanwhile (that clears the engine's `pausedBySystem`), or
+///   it lasted longer than `PlayerEngine.autoResumeWindow` (a long call or meeting: the user starts it again).
 /// - The old output device going away pauses, as a user pause: nothing brings it back by itself.
 /// - Launch only sets the category (`configure`): opening Lark to browse never stops another app's audio. The
 ///   session is activated synchronously on every path that starts sound (`engine.willStartPlayback`, and the
@@ -61,7 +62,7 @@ import os
         case .began:
             engine.systemPause()
         case .ended:
-            guard options.contains(.shouldResume), engine.pausedBySystem else { return }
+            guard options.contains(.shouldResume), engine.resumesAfterInterruption else { return }
             engine.play()             // activates the session first (`willStartPlayback`)
         default:
             break

@@ -53,13 +53,15 @@ import CryptoKit
     static let prefsCarLyricsKey = "lark.prefs.carLyrics"
     static let prefsLoudnessKey = "lark.prefs.loudness"
     var now: () -> Date = Date.init
-    /// iOS launched the app with nothing on screen (the cache refresh, the car's play). Tests set it.
-    lazy var isInBackground: () -> Bool = { [systemIntegration] in
-        systemIntegration && UIApplication.shared.applicationState == .background
+    /// The app is active on screen: the user opened it. Not in a background launch (the cache refresh, the car's
+    /// play), nor while launching or behind the lock screen. Tests set it.
+    lazy var isOnScreen: () -> Bool = { [systemIntegration] in
+        !systemIntegration || UIApplication.shared.applicationState == .active
     }
     /// How long a sync waits for the network monitor's first answer (a cold background launch).
     var networkAnswerTimeout: TimeInterval = 3
     private var terminateObserver: NSObjectProtocol?
+    private var activeObserver: NSObjectProtocol?
     /// The signed-in user's cache (Settings); nil while signed out or when a test injected `cache`.
     var cacheStore: CacheStore? { userCache?.store }
     private var engineStorage: PlayerEngine?
@@ -125,7 +127,7 @@ import CryptoKit
         let e = PlayerEngine(backend: backend, api: api, cache: cache, store: queueStore,
                              events: PlayEventQueue(api: api, store: queueStore), network: network, nowPlaying: nowPlaying)
         e.onEvent = { [weak self] in self?.send($0) }
-        e.isForeground = !isInBackground()
+        e.isOnScreen = { [weak self] in self?.isOnScreen() ?? false }
         if let prefs = savedPrefs { e.prefs = prefs }
         engineStorage = e
         if systemIntegration {
@@ -158,6 +160,11 @@ import CryptoKit
             refresh.register()
             refresh.schedule()
             backgroundRefresh = refresh
+            // Also the launch's own activation, which the scene phase may not report as a change.
+            activeObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil,
+                                                                    queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.engineStorage?.cameOnScreen() }
+            }
         }
         lastActivationSync = now()
         syncFavorites()
@@ -387,9 +394,9 @@ import CryptoKit
 
     func scenePhaseChanged(_ phase: ScenePhase) {
         bridge?.isActive = phase == .active
-        engineStorage?.isForeground = phase != .background
         if phase != .active { flushCache() }
         if phase == .active {
+            engineStorage?.cameOnScreen()
             engineStorage?.emitAll()   // the page missed events while it was frozen
             if lastActivationSync.map({ now().timeIntervalSince($0) >= Self.activationSyncInterval }) ?? true {
                 lastActivationSync = now()

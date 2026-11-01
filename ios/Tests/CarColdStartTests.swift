@@ -68,7 +68,7 @@ import XCTest
         cache.local = [1: tmp("1.m4a"), 2: tmp("2.m4a"), 3: tmp("3.m4a")]
         network.isOnline = false
         makeEngine()
-        engine.isForeground = false
+        engine.isOnScreen = { false }
         engine.handle(.hello(onOpen: "shuffle_favorites"))
         await engine.idle()
         XCTAssertTrue(backend.loads.isEmpty)
@@ -81,29 +81,40 @@ import XCTest
         let queue = engine.music.items.map(\.id)
 
         engine.pause()
-        engine.isForeground = true
+        engine.isOnScreen = { true }
+        engine.cameOnScreen()
         await engine.idle()
         XCTAssertEqual(backend.loads.count, 1)
         XCTAssertEqual(engine.music.items.map(\.id), queue)
         XCTAssertFalse(engine.playing)
     }
 
-    /// A background launch through `AppServices`: the engine starts out of the foreground, and the scene
-    /// coming on screen runs the open preference.
-    func testAppServicesHoldsOnOpenUntilTheSceneIsOnScreen() async throws {
+    /// A background launch through `AppServices`: the page's open preference is held through the background and
+    /// inactive phases (a locked phone), and runs only when the scene becomes active.
+    func testAppServicesHoldsOnOpenUntilTheSceneIsActive() async throws {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: "lark.tests.\(UUID().uuidString)"))
         defaults.set("https://car.lark.test/", forKey: AppServices.serverURLKey)
         let secrets = MemorySecretStore()
         secrets.set("token", "T1"); secrets.set("userId", "3")
+        let cache = FakeCache()
+        cache.favorites = [trackModel(1)]; cache.local = [1: tmp("1.m4a")]
+        let backend = FakeBackend()
         let s = AppServices(defaults: defaults, secrets: secrets, session: stubSession(), dataDirectory: dir.appendingPathComponent("data"),
-                            backend: FakeBackend(), cache: FakeCache(), network: FakeNetwork())
-        s.isInBackground = { true }
+                            backend: backend, cache: cache, network: FakeNetwork())
+        var onScreen = false
+        s.isOnScreen = { onScreen }
         let e = try XCTUnwrap(s.engine)
-        XCTAssertFalse(e.isForeground)
+        e.handle(.hello(onOpen: "shuffle_favorites"))
         s.scenePhaseChanged(.background)
-        XCTAssertFalse(e.isForeground)
         s.scenePhaseChanged(.inactive)
-        XCTAssertTrue(e.isForeground)
+        await e.idle()
+        XCTAssertTrue(backend.loads.isEmpty)
+        XCTAssertFalse(e.playing)
+        onScreen = true
+        s.scenePhaseChanged(.active)
+        await e.idle()
+        XCTAssertEqual(backend.loads.count, 1)
+        XCTAssertTrue(e.playing)
     }
 
     /// The saved current track was streamed (not cached), and there is no network. The car's

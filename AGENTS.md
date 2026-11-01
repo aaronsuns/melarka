@@ -71,4 +71,5 @@ The product is **Melarka** (internal code name `lark`).
 - UI text: add the key to `web/src/i18n/locales/en.json` first, then `zh-Hans`, `zh-Hant`, `sv` — the locale test fails on any missing key or placeholder. Never translate music metadata.
 - API errors: `{"error": "<English>", "code": "<stable_code>"}`; new codes get an `error.<code>` key.
 - Every admin route must be listed in `TestAdminRoutesForbiddenForMembers`.
+- The native players never start sound on a phone nobody touched: only the user (the page while the app is active, a remote command, an intent) starts it, or the engine undoes a stop the user did not make within `PlayerEngine.autoResumeWindow`. Any new path that can start playback gets a case in `ios/Tests/NoUnpromptedPlaybackTests.swift` and `android/app/src/test/kotlin/lark/player/NoUnpromptedPlaybackTest.kt`.
 - Commits: `type(scope): summary` (`feat(lyrics): …`, `fix(web): …`). Contributions require the CLA in CONTRIBUTING.md.

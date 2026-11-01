@@ -34,6 +34,10 @@ import os
     static let refillRetry: Double = 30
     static let refillExcludeMax = 300
     static let shuffleSize = 50
+    /// How long after a stop the user did not make (an interruption, the network going) the engine may start
+    /// sound again by itself. Later, only the user starts it: music must never start on a phone lying in a
+    /// meeting because a call ended or the Wi-Fi came back an hour after the music stopped.
+    static let autoResumeWindow: TimeInterval = 10 * 60
     /// A previous press this far into an item restarts it instead.
     static let restartPrevMs = 3000
     /// A held fast-forward stops this far before the end of the item.
@@ -82,7 +86,14 @@ import os
     private(set) var playing = false
     /// Paused by the system (an interruption, or the player on its own), not by the user: the end of an
     /// interruption may resume it. Any pause, play or load by the user clears it.
-    private(set) var pausedBySystem = false
+    private(set) var pausedBySystem = false {
+        didSet { if pausedBySystem { pausedBySystemAt = now() } }
+    }
+    private var pausedBySystemAt = Date.distantPast
+    /// The end of an interruption resumes: paused by the system, and not longer ago than `autoResumeWindow`.
+    var resumesAfterInterruption: Bool {
+        pausedBySystem && now().timeIntervalSince(pausedBySystemAt) <= Self.autoResumeWindow
+    }
     var prefs = NativePrefs(quality: "high", carLyrics: true) {
         didSet {
             if prefs.loudness != oldValue.loudness { loudnessChanged() }
@@ -154,7 +165,10 @@ import os
     private var knownMs = 0
     private var stallTimer: Cancellable?
     /// Stopped because the network was gone: starts again when it comes back.
-    private var stoppedOffline = false
+    private var stoppedOffline = false {
+        didSet { if stoppedOffline { stoppedOfflineAt = now() } }
+    }
+    private var stoppedOfflineAt = Date.distantPast
     /// What the network coming back does for a player `stoppedOffline`: play the interrupted current item again
     /// (`.replay`), go on to the next one (a track that ended with only streams after it), or ask the server for
     /// favorites (a cold start with nothing on the phone).
@@ -188,18 +202,13 @@ import os
     private var savedAt = 0
     private var ownDevice: String?
     private var greeted = false
-    /// The first hello's `onOpen`, held while the app is in the background: iOS launching Lark for the cache
-    /// refresh loads the page too, and its open preference must not start music on a phone nobody touched.
+    /// The first hello's `onOpen`, held while the app is not on screen: iOS launching Lark for the cache refresh
+    /// (or the car's play) loads the page too, and its open preference must not start music on a phone nobody
+    /// touched. `cameOnScreen()` runs it.
     private var deferredOnOpen: String?
-    /// The app is on screen, or about to be (`AppServices`, from the launch state and the scene phase). Becoming
-    /// so runs a deferred `onOpen`.
-    var isForeground = true {
-        didSet {
-            guard isForeground, !oldValue, let o = deferredOnOpen else { return }
-            deferredOnOpen = nil
-            runOnOpen(o)
-        }
-    }
+    /// The app is active, on screen, now (`AppServices`: the application state). Only then is it opened by
+    /// the user: a background launch, or an inactive app (launching, locked), is not.
+    var isOnScreen: () -> Bool = { true }
 
     init(backend: MediaBackend, api: LarkAPIProtocol, cache: CacheProviding, store: QueueStore, events: PlayEventQueue,
          network: NetworkStatus, now: @escaping () -> Date = Date.init, random: @escaping () -> Double = { .random(in: 0..<1) },
@@ -257,7 +266,14 @@ import os
         emitAll()
         guard !greeted else { return }     // only the first hello after a launch; a web reload just gets the state
         greeted = true
-        if isForeground { runOnOpen(onOpen) } else { deferredOnOpen = onOpen }
+        if isOnScreen() { runOnOpen(onOpen) } else { deferredOnOpen = onOpen }
+    }
+
+    /// The scene became active: the user opened the app, so a held `onOpen` runs now.
+    func cameOnScreen() {
+        guard let o = deferredOnOpen else { return }
+        deferredOnOpen = nil
+        runOnOpen(o)
     }
 
     private func runOnOpen(_ onOpen: String) {
@@ -397,7 +413,7 @@ import os
     /// callback from the old player is dropped. The listen in progress goes on (one play, not two).
     func mediaServicesReset() {
         let l = loaded
-        let wasPlaying = playing, wasSystemPaused = pausedBySystem
+        let wasPlaying = playing, wasSystemPaused = pausedBySystem, systemPausedAt = pausedBySystemAt
         syncPosition()
         cancelRetry(); disarmStall()
         preloadedNext = nil
@@ -412,7 +428,7 @@ import os
         let q = queue(l.kind)
         load(l.kind, index: q.index, startMs: q.positionMs, autoplay: wasPlaying)
         if var k = keep, k.trackId == listen?.trackId { k.lastMs = q.positionMs; listen = k }
-        if !wasPlaying { pausedBySystem = wasSystemPaused }
+        if !wasPlaying { pausedBySystem = wasSystemPaused; pausedBySystemAt = systemPausedAt }
         forceNowPlaying = true
         emitState(active); persist()
     }
@@ -1003,7 +1019,8 @@ import os
         if stoppedOffline {
             stoppedOffline = false
             error = nil
-            switch offlineResume {
+            let recent = now().timeIntervalSince(stoppedOfflineAt) <= Self.autoResumeWindow
+            switch recent ? offlineResume : nil {
             case .shuffle:
                 tasks.run { [weak self] in await self?.shuffleFavorites() }
             case .advance where active == .track && music.current != nil:

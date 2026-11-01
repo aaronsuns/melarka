@@ -53,7 +53,7 @@ launch with no window (the car).
 
 | type | fields | behaviour |
 |---|---|---|
-| `hello` | `onOpen` resume / shuffle_favorites / nothing | `emitAll()`; only the first hello after launch or reset acts on `onOpen`; in a background launch (the cache refresh) it waits until the app comes on screen, and is dropped if something played meanwhile (the car's play) |
+| `hello` | `onOpen` resume / shuffle_favorites / nothing | `emitAll()`; only the first hello after launch or reset acts on `onOpen`; it runs only while the app is active on screen (`UIApplication.applicationState == .active`); otherwise (a background launch, launching, the lock screen) it waits until the scene becomes active, and is dropped if something played meanwhile (the car's play) |
 | `setQueue` | `kind, items[], index, positionMs?, play, source` | no `positionMs` and same current id: an edit, playback continues; otherwise a new queue; empty items stop that kind |
 | `play` / `next` / `prev` | `kind` | on the active kind; on the other kind `play` switches, `next`/`prev` only move its index |
 | `pause` | `kind?` | absent or the active kind |
@@ -121,7 +121,8 @@ frames. (`Bridge/WebShell.swift`, `Bridge/PageLoad.swift`)
 - **Lookahead**: once the current track sounds, the next 2 tracks go to the cache.
 - **Network failures**: retry the same item at its position after 2, 5, 10 s. Episodes that fail
   save their position and hand over to music. Music offline: a cached item plays and the
-  interrupted one is requeued; nothing cached: stop and resume on reconnect. Otherwise the item is
+  interrupted one is requeued; nothing cached: stop and resume on reconnect, if it comes within
+  `autoResumeWindow` (10 min) of the stop; later, it stays stopped. Otherwise the item is
   failed for 30 min and the engine advances.
 - **Stall**: a remote track buffering 6 s while playing switches to a cached one (notice
   "Network too slow…") and requeues the stalled track.
@@ -163,8 +164,11 @@ frames. (`Bridge/WebShell.swift`, `Bridge/PageLoad.swift`)
   0, forward 1 s before the end so the item ends normally) or 120 steps (a lost release). Playing or
   paused is unchanged.
 - **Audio session**: playback category, activated only right before sound starts; interruptions
-  pause and resume when allowed; an unplugged route pauses; a media-services reset rebuilds the
+  pause and resume when allowed and within `autoResumeWindow` (10 min); an unplugged route pauses; a media-services reset rebuilds the
   player at its position.
+- **No unprompted sound**: the engine starts sound only for the user (the page while the app is
+  active, a remote command, an intent) or to undo a stop the user did not make within
+  `autoResumeWindow`. `NoUnpromptedPlaybackTests` holds every path that once broke this.
 - **Cold start from the car**: a play with nothing loaded resumes from disk synchronously (the
   saved music queue, or cached favorites shuffled), and only then reaches for the server.
 
@@ -220,7 +224,7 @@ frames. (`Bridge/WebShell.swift`, `Bridge/PageLoad.swift`)
 About 600 cases in `ios/Tests/` grouped as: bridge and protocol (WebMessage, BridgeWebView,
 Smoke); auth and wiring (AuthStore, AppServices, ServerURL, StayOffline, SettingsModel,
 Localization); API (LarkAPI); engine (PlayerEngine, EngineRobustness, NeverStop, ReconnectEngine,
-CarColdStart, PlayModes, SleepTimer, Gain, EpisodeProgress, Gapless, Lookahead); system
+CarColdStart, NoUnpromptedPlayback, PlayModes, SleepTimer, Gain, EpisodeProgress, Gapless, Lookahead); system
 (AVPlayerBackend, AudioSession, NowPlaying, RemoteCommandsModes, CarLyrics); sync and persistence
 (QueueSync, QueueStore, PlayEvent); cache (CacheStore, CacheWiring, FavoritesSync, OfflineLyrics);
 offline UI (OfflinePlayer); intents (Intent). Fakes: backend, API, cache, network, scheduler. The

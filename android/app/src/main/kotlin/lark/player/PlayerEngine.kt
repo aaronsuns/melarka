@@ -98,7 +98,11 @@ class PlayerEngine(
      * may resume it. Any pause, play or load by the user clears it.
      */
     var pausedBySystem = false
-        private set
+        private set(value) {
+            field = value
+            if (value) pausedBySystemAt = clock.now()
+        }
+    private var pausedBySystemAt: Instant = Instant.MIN
 
     var prefs = NativePrefs(quality = "high", carLyrics = true)
         set(value) {
@@ -199,8 +203,16 @@ class PlayerEngine(
     /** The last position the engine knows for the loaded item (load, ticks, seeks): a failed item can read 0. */
     private var knownMs = 0L
     private var stallTimer: Cancellable? = null
-    /** Stopped because the network was gone: starts again when it comes back. */
+    /** Stopped because the network was gone: starts again when it comes back, within [AUTO_RESUME_WINDOW]. */
     private var stoppedOffline = false
+        set(value) {
+            field = value
+            if (value) stoppedOfflineAt = clock.now()
+        }
+    private var stoppedOfflineAt: Instant = Instant.MIN
+
+    /** Longer ago than [AUTO_RESUME_WINDOW]: too late to start sound by itself. */
+    private fun tooLongAgo(at: Instant) = Duration.between(at, clock.now()) > AUTO_RESUME_WINDOW
 
     /**
      * What the network coming back does for a player [stoppedOffline]: play the interrupted current item again
@@ -895,6 +907,9 @@ class PlayerEngine(
 
     override fun backendStarted(generation: Int) {
         if (!isCurrent(generation)) return
+        // ExoPlayer resumed by itself when the focus came back: after a long call or meeting it stays paused.
+        if (pausedBySystem && tooLongAgo(pausedBySystemAt)) return pause()
+        pausedBySystem = false   // a resume within the window: playing again, so a later start is no "resume"
         cancelRetry()            // the retry worked: the next blip gets a fresh set, from where it is then
         disarmStall()
         playing = true; buffering = false; error = null
@@ -914,6 +929,12 @@ class PlayerEngine(
         playing = false; buffering = false; pausedBySystem = true
         if (active == Kind.episode) saveOutgoingEpisode()
         persist(); emitState(active)
+        // Still paused once the window is over: a user pause, so the focus coming back does not resume it.
+        // (The scheduler can be late while the phone sleeps; `backendStarted` catches a resume before it runs.)
+        val at = pausedBySystemAt
+        scheduler.after(AUTO_RESUME_WINDOW.seconds.toDouble() + 1) {
+            if (pausedBySystem && pausedBySystemAt == at && !playing) pause()
+        }
     }
 
     /**
@@ -1060,6 +1081,7 @@ class PlayerEngine(
             maybeRefill()
         }
         if (!stoppedOffline) return
+        if (tooLongAgo(stoppedOfflineAt)) return forgetOfflineStop()
         if (canAutoStart?.invoke() == false) {
             // Not now: paused by the system (no longer "offline"), resumed when the user is back or presses play.
             if (!deferredResume) {
@@ -1078,7 +1100,18 @@ class PlayerEngine(
         if (!deferredResume) return
         deferredResume = false
         if (detached || !stoppedOffline || !network.isOnline) return
+        if (tooLongAgo(stoppedOfflineAt)) return forgetOfflineStop()
         resumeAfterNetwork()
+    }
+
+    /** The network came back too late after an offline stop: it stays stopped, and only the user starts it. */
+    private fun forgetOfflineStop() {
+        stoppedOffline = false
+        deferredResume = false
+        pausedBySystem = false
+        error = null
+        offlineResume = OfflineResume.replay
+        emitState(active)
     }
 
     /** The app services dropped this engine (a server change, after [reset]): it reacts to nothing more. */
@@ -1661,6 +1694,11 @@ class PlayerEngine(
         const val RADIO_REFILL_SIZE = 10
         private val REFILLED = setOf(QueueSource.favorites, QueueSource.shuffle, QueueSource.radio)
         const val SHUFFLE_SIZE = 50
+        /**
+         * How long after a stop the user did not make (a call, the network going) the engine may start sound again by
+         * itself. Later, only the user starts it: music must never start on a phone lying in a meeting.
+         */
+        val AUTO_RESUME_WINDOW: Duration = Duration.ofMinutes(10)
         /** A previous press this far into an item restarts it instead. */
         const val RESTART_PREV_MS = 3000L
         /** A held fast-forward stops this far before the end of the item. */
