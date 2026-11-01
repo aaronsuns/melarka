@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.20] - 2026-11-01
+
 ### Fixed
 
 - **The iPhone app no longer starts music by itself** on a phone nobody touched. When iOS woke
@@ -389,7 +391,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.19...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.20...HEAD
+[0.2.20]: https://github.com/aaronsuns/melarka/compare/v0.2.19...v0.2.20
 [0.2.19]: https://github.com/aaronsuns/melarka/compare/v0.2.18...v0.2.19
 [0.2.18]: https://github.com/aaronsuns/melarka/compare/v0.2.17...v0.2.18
 [0.2.17]: https://github.com/aaronsuns/melarka/compare/v0.2.16...v0.2.17

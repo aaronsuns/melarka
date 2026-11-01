@@ -1,0 +1,1 @@
+Music no longer starts by itself on a phone nobody touched; after a long call or a network outage it waits for you to press play.

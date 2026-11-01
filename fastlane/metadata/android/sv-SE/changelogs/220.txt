@@ -1,0 +1,1 @@
+Musiken startar inte längre av sig själv på en telefon som ingen rört; efter ett långt samtal eller ett nätverksavbrott väntar den tills du trycker på spela.
