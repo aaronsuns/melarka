@@ -19,7 +19,7 @@ ARG TARGETOS TARGETARCH VERSION=dev
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
     -ldflags="-s -w -X github.com/aaronsuns/lark-server/internal/buildinfo.Version=${VERSION}" -o /out/lark ./cmd/lark
 
-FROM mirror.gcr.io/library/alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+FROM mirror.gcr.io/library/alpine:3.24@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="Melarka" \
       org.opencontainers.image.source="https://github.com/aaronsuns/melarka" \
