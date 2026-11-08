@@ -1,0 +1,15 @@
+Sharing something I built for my family and now use every day: Melarka, a self-hosted music server (Go + SQLite, one Docker container). It has replaced Spotify for us.
+
+- music from your own folders (it never rewrites your files or tags) or from YouTube: search, download a song or a whole playlist
+- streams lossless, or AAC 256k / 128k transcoded on the fly
+- synced lyrics; anyone can fix lyrics that run early or late
+- native iPhone and Android apps: background play, gapless, an offline cache of your favorites, and your favorites start by themselves when the phone connects to the car over Bluetooth, with the lyric line on the car display
+- one account per family member: own favorites, playlists, personal radio, nightly "For you" picks
+- follow YouTube channels without an account; new episodes download by themselves
+
+Install on any Linux box with Docker:
+curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh
+
+https://github.com/aaronsuns/melarka
+
+Free and open source. Feedback is very welcome, and if you like it, a star on GitHub helps a lot. (The video uses made-up demo songs.)

@@ -1,0 +1,13 @@
+TITLE: Show HN: Melarka – a self-hosted music server with native iPhone and Android apps
+URL: https://github.com/aaronsuns/melarka
+
+FIRST COMMENT:
+I built Melarka for my family because I wanted Spotify-like listening on our own music, and it has replaced Spotify for us. Songs come from our own folders or from YouTube (search and download through yt-dlp, or follow channels and let new episodes download by themselves).
+
+It is one Docker container: a Go server with SQLite, and a React web app embedded in the binary. It never writes to your audio files; titles, tags and lyrics overrides live in its own database. Streams are the original file when the player can play it, or AAC 256k / 128k transcoded on the fly and cached.
+
+The phone apps wrap the web app but play audio natively, because a web page can't play reliably in the background on iOS. That gives gapless playback, an offline cache of favorites (synced on Wi-Fi), and autoplay when the phone connects to the car: an iOS Shortcuts automation or Android's Bluetooth detection starts your favorites, and the current lyric line is shown as the track title on the car display. The iPhone app isn't in the App Store; you install it with SideStore and your own Apple ID. Android gets a signed APK on every release.
+
+Everyone in the household has their own account with their own favorites, playlists, radio and nightly "For you" picks. Lyrics are synced (embedded, .lrc, or online providers), and anyone can shift lyrics that run early or late.
+
+I use it every day, commuting and on walks. I'd love feedback on what's missing or confusing, especially on the install.

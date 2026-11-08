@@ -1,0 +1,17 @@
+TITLE: I built a self-hosted music server for my family, and it replaced Spotify for us
+
+I wanted Spotify-style listening without a subscription, on music we keep ourselves, so I built Melarka. I use it every day now:
+
+- **In the car on the way to work:** the phone connects to the car's Bluetooth and my favorites start playing by themselves, with the current lyric line on the car display.
+- **On walks:** favorites are cached on the phone, so no signal is no problem.
+- **At home:** everyone in the family has their own account with their own favorites, playlists and radio. A song one person adds is there for everyone.
+
+Songs come from your own music folders (it never touches your files) or from YouTube: search, download a song or a whole playlist, or follow channels and let new episodes download by themselves. Lyrics are synced, and anyone can nudge lyrics that run early or late.
+
+It's one Docker container (Go + SQLite) with a web app, a native iPhone app (installed through SideStore) and a native Android app (signed APK). Install on any Linux box with Docker:
+
+    curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh
+
+Free and open source: https://github.com/aaronsuns/melarka
+
+I'd love feedback: what's missing, what's confusing in the install, what you'd want next. And if you like it, a star on GitHub helps a lot.

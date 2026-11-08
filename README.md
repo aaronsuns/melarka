@@ -47,6 +47,8 @@ followed by a command that checks it worked.
 
 ## Screenshots
 
+A one-minute tour (demo data): <https://youtu.be/rkZQh5j8_ro>
+
 <!-- SCREENSHOTS -->
 <p align="center">
   <img src="docs/screenshots/phone-home.jpg" width="24%" alt="Home: shuffle favorites, shuffle all, personal radio, continue playing, For you, top tags">

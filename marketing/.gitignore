@@ -1,0 +1,5 @@
+# Regenerable: captures (tools/promo.spec.ts), voice/music work files and the rendered videos
+# (tools/build_video.py). The videos are published on YouTube and elsewhere.
+*/raw/
+*/work/
+*.mp4

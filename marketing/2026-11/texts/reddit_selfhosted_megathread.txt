@@ -1,0 +1,17 @@
+**Project Name:** Melarka
+
+**Repo/Website Link:** https://github.com/aaronsuns/melarka
+
+**Description:** A self-hosted music server for a household. I built it for my family and it replaced Spotify for us; I use it every day. Songs come from your own music folders (Melarka never rewrites your files or tags; titles, tags and lyrics overrides live in its own SQLite database) or from YouTube via yt-dlp: search, download a song or a whole playlist, or follow channels and let new episodes download by themselves.
+
+- one account per family member: own favorites, playlists, personal radio, nightly "For you" picks
+- streams the original file, or AAC 256k / 128k transcoded on the fly and cached
+- synced lyrics (embedded, .lrc, or online providers); anyone can shift lyrics that run early or late
+- native iPhone and Android apps: background play, gapless, an offline cache of favorites synced on Wi-Fi, and favorites start by themselves when the phone connects to the car over Bluetooth, with the current lyric line on the car display
+- a web app that installs to the home screen; English, 简体中文, 繁體中文, svenska
+
+**Deployment:** One Docker container (`ghcr.io/aaronsuns/melarka`) with a compose example. One-command installer: `curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh` (optionally with your music path at the end). Step-by-step docs in the README and docs/install.md; the iPhone app installs with SideStore (docs/iphone.md), Android gets a signed APK on every release (docs/android.md).
+
+**AI Involvement:** Built with heavy use of AI coding agents (Claude Code). I designed it, review and test every change, and run it daily for my family. The repo has an AGENTS.md, and the design specs are in docs/superpowers/.
+
+Feedback very welcome, especially on the install.
