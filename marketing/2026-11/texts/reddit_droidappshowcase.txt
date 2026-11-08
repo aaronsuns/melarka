@@ -1,0 +1,19 @@
+TITLE: Melarka: Android app for your own music server
+
+**What it is:** Melarka is a self-hosted music server I built for my family, and its native Android app. I use it every day; it replaced Spotify for us.
+
+**What the Android app does:**
+
+- plays in the background with lock-screen, notification, headphone and car (Bluetooth) controls
+- **car autoplay**: your favorites start by themselves when the phone connects to the car, with the current lyric line on the car's display
+- an offline cache of your favorites, synced on Wi-Fi, with a size limit you choose
+- gapless transitions, a sleep timer that fades out, volume normalization
+- launcher shortcuts (Shuffle Favorites, Resume) that automation apps can run too
+- synced lyrics; one account per family member with their own favorites, playlists and radio
+
+Songs come from your own music folders or from YouTube (search and download on the server). The server is one Docker container on a home machine or NAS; Android 8.0+.
+
+**Download:** signed APK on every GitHub release: https://github.com/aaronsuns/melarka/releases/latest (install guide: https://github.com/aaronsuns/melarka/blob/main/docs/android.md)
+**Website with a one-minute tour:** https://melarka.zexa.se
+
+Free and open source. Feedback very welcome, especially on the car and offline parts.

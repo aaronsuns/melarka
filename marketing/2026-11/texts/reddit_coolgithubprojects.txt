@@ -1,0 +1,14 @@
+TITLE: Melarka – self-hosted music server for a family, with native iPhone and Android apps (Go, SQLite, React)
+
+I built Melarka for my family and it replaced Spotify for us. One Docker container: a Go server with SQLite and an embedded React web app, plus native iPhone (Swift) and Android (Kotlin) apps.
+
+- songs from your own folders (never rewrites your files or tags) or from YouTube via yt-dlp
+- streams lossless, or AAC 256k/128k transcoded on the fly
+- synced lyrics; anyone can shift lyrics that run early or late
+- phone apps: background play, gapless, offline favorites, and favorites start by themselves when the phone connects to the car
+- one account per person: favorites, playlists, radio, nightly "For you" picks
+
+Repo: https://github.com/aaronsuns/melarka
+Website with a one-minute tour: https://melarka.zexa.se
+
+Feedback and stars welcome.
