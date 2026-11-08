@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Melarka – your family's own music server</title>
+<meta name="description" content="Melarka is a free, open-source, self-hosted music server for a family: songs from YouTube or your own folders, synced lyrics, car autoplay, offline favorites, one account per person, native iPhone and Android apps.">
+<meta property="og:title" content="Melarka – your family's own music server">
+<meta property="og:description" content="A self-hosted Spotify replacement: songs from YouTube or your own files, synced lyrics, car autoplay, offline favorites, native iPhone and Android apps. Free and open source.">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_en.jpg">
+<meta property="og:url" content="https://melarka.zexa.se/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<style>
+  :root {
+    --bg: #faf9fc; --fg: #16131c; --muted: #5f5a6b; --line: #e7e3ee; --card: #ffffff;
+    --accent: #1a9e5a; --accent-fg: #fff; --hero: #160f24; --hero-fg: #f5f2fa; --hero-muted: #c3b9d6; --green: #34d378;
+    --code: #f1eef6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #110d17; --fg: #eeeaf4; --muted: #a39bb2; --line: #282233; --card: #18131f; --accent: #34d378; --accent-fg: #0b1a12; --hero: #0d0914; --code: #1e1828; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans", sans-serif; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  header.top { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; color: var(--hero-fg); text-decoration: none; }
+  .brand img { width: 34px; height: 34px; border-radius: 9px; }
+  nav { display: flex; align-items: center; gap: 18px; }
+  nav a { color: var(--hero-muted); text-decoration: none; font-size: 15px; }
+  .lang-btn { font: inherit; font-size: 14px; color: var(--hero-fg); background: transparent; border: 1px solid #4a3d63; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+  .hero { background: radial-gradient(ellipse at top right, #3a1d52 0%, var(--hero) 60%); color: var(--hero-fg); padding: 0 0 64px; overflow: hidden; }
+  .hero-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 40px; align-items: center; padding-top: 40px; }
+  .hero h1 { font-size: clamp(32px, 5vw, 54px); line-height: 1.08; margin: 0 0 18px; letter-spacing: -0.02em; }
+  .hero h1 em { font-style: normal; color: var(--green); }
+  .hero p.lead { font-size: 19px; color: var(--hero-muted); margin: 0 0 28px; }
+  .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+  .cta { display: inline-flex; align-items: center; gap: 8px; background: var(--green); color: #07150d; font-weight: 700; padding: 13px 20px; border-radius: 12px; text-decoration: none; }
+  .cta.ghost { background: transparent; color: var(--hero-fg); border: 1px solid #4a3d63; }
+  .sub { color: var(--hero-muted); font-size: 14px; margin-top: 14px; opacity: .85; }
+  .video { justify-self: center; width: 100%; max-width: 340px; }
+  .video video { width: 100%; aspect-ratio: 9 / 16; border-radius: 22px; background: #000; display: block; box-shadow: 0 20px 70px rgba(0,0,0,.55); }
+  .video .caption { color: var(--hero-muted); font-size: 13px; text-align: center; margin-top: 10px; }
+  .video .caption a { color: var(--hero-muted); }
+  section { padding: 72px 0; border-bottom: 1px solid var(--line); }
+  h2 { font-size: 30px; margin: 0 0 12px; letter-spacing: -0.01em; line-height: 1.2; }
+  .muted { color: var(--muted); }
+  .story { max-width: 760px; font-size: 18px; }
+  .story p { margin: 0 0 14px; }
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 28px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .ico { font-size: 26px; margin-bottom: 8px; }
+  .shots { display: flex; gap: 16px; overflow-x: auto; padding: 8px 2px 18px; margin-top: 24px; scroll-snap-type: x mandatory; }
+  .shots figure { margin: 0; flex: 0 0 210px; scroll-snap-align: start; }
+  .shots img { width: 100%; height: auto; border-radius: 16px; border: 1px solid var(--line); display: block; }
+  .shots figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; text-align: center; }
+  .desk { margin-top: 26px; }
+  .desk img { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); display: block; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; font-size: 14px; line-height: 1.5; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  ol.steps { padding-left: 22px; } ol.steps li { margin: 8px 0; }
+  .apps { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 24px; }
+  details { border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; background: var(--card); margin-top: 12px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { color: var(--muted); margin: 10px 0 0; }
+  .star { text-align: center; }
+  .star .cta { margin-top: 10px; }
+  footer { padding: 36px 0 60px; color: var(--muted); font-size: 14px; }
+  footer a { color: var(--muted); }
+  /* language switch: everything bilingual carries data-l="en" or data-l="zh" */
+  html[data-lang="en"] [data-l="zh"], html[data-lang="zh"] [data-l="en"] { display: none !important; }
+  @media (max-width: 820px) { .hero-grid { grid-template-columns: 1fr; } .video { max-width: 300px; } nav a { display: none; } section { padding: 52px 0; } }
+</style>
+<script>
+  // Pick the language before the first paint: a saved choice, else the browser's.
+  (function () {
+    var l = null;
+    try { l = localStorage.getItem("melarka-lang"); } catch (e) {}
+    if (l !== "en" && l !== "zh") l = /^zh/i.test(navigator.language || "") ? "zh" : "en";
+    document.documentElement.dataset.lang = l;
+    document.documentElement.lang = l === "zh" ? "zh-Hans" : "en";
+  })();
+</script>
+</head>
+<body>
+<div class="hero">
+  <div class="wrap">
+    <header class="top">
+      <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+      <nav>
+        <a href="#features"><span data-l="en">Features</span><span data-l="zh">功能</span></a>
+        <a href="#install"><span data-l="en">Install</span><span data-l="zh">安装</span></a>
+        <a href="https://github.com/aaronsuns/melarka">GitHub</a>
+        <button class="lang-btn" id="lang-btn" type="button"><span data-l="en">中文</span><span data-l="zh">English</span></button>
+      </nav>
+    </header>
+    <div class="hero-grid">
+      <div>
+        <h1 data-l="en">Your family's own <em>Spotify</em>, on your own server.</h1>
+        <h1 data-l="zh">给全家用的音乐 App，<em>完美替代 Spotify</em>。</h1>
+        <p class="lead" data-l="en">Melarka is a self-hosted music server. Songs come from YouTube or your own music folders; everyone at home gets their own favorites, playlists, radio and synced lyrics, with native iPhone and Android apps. Free and open source.</p>
+        <p class="lead" data-l="zh">Melarka 是装在自己家里的音乐服务器。歌来自 YouTube 或你自己的本地音乐；全家每人一个账号，各自的收藏、歌单、私人电台和同步歌词，iPhone、安卓都有原生 App。开源免费。</p>
+        <div class="ctas">
+          <a class="cta" href="#install"><span data-l="en">Install in one command</span><span data-l="zh">一条命令安装</span></a>
+          <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ <span data-l="en">Star on GitHub</span><span data-l="zh">GitHub 点个 Star</span></a>
+        </div>
+        <div class="sub" data-l="en">Runs as one Docker container on any Linux machine or NAS. Your files are never modified.</div>
+        <div class="sub" data-l="zh">一个 Docker 容器，装在任何 Linux 电脑或 NAS 上。不会改动你的音乐文件。</div>
+      </div>
+      <div class="video">
+        <video data-l="en" controls playsinline preload="none" poster="/media/poster_en.jpg" src="/media/melarka_en.mp4"></video>
+        <video data-l="zh" controls playsinline preload="none" poster="/media/poster_zh.jpg" src="/media/melarka_zh.mp4"></video>
+        <div class="caption" data-l="en">A one-minute tour (demo songs) · <a href="https://youtu.be/rkZQh5j8_ro">on YouTube</a></div>
+        <div class="caption" data-l="zh">一分钟介绍（演示用的虚构歌曲）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="story">
+  <div class="wrap story">
+    <h2 data-l="en">Why I built it</h2>
+    <h2 data-l="zh">为什么做这个</h2>
+    <div data-l="en">
+      <p>I wanted Spotify-style listening for my family, on music we keep ourselves and without a subscription. So I built Melarka, and I use it every day.</p>
+      <p>On the way to work, the phone connects to the car's Bluetooth and my favorites start playing by themselves, with the lyric line on the car's screen. On walks, the favorites are already on the phone, so no signal is no problem. At home, everyone has their own account, and a song one of us adds is there for the whole family.</p>
+      <p>It has improved a lot from daily use. Try it, and tell me what you'd change.</p>
+    </div>
+    <div data-l="zh">
+      <p>我想让全家像用 Spotify 一样听歌，但听的是我们自己的音乐，也不用交会员费。于是做了 Melarka，现在每天都在用。</p>
+      <p>上下班开车，手机一连上车载蓝牙，收藏的歌自动开始放，车机屏幕上显示歌词。出去散步，收藏的歌早就缓存在手机里，没信号也照样听。在家里，每人一个账号，谁下载的好歌，全家都能听到。</p>
+      <p>天天用，一直在改进，好用得很。欢迎试用，提提意见。</p>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2 data-l="en">Everything a family listens with</h2>
+    <h2 data-l="zh">全家听歌需要的，都有</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">🎧</div>
+        <h3 data-l="en">YouTube or your own files</h3><h3 data-l="zh">YouTube 或本地音乐</h3>
+        <p data-l="en">Search YouTube and download a song or a whole playlist, or point Melarka at the music folders you already have.</p>
+        <p data-l="zh">在 YouTube 上搜索，下载单曲或整个歌单；或者直接用你已有的本地音乐文件夹。</p></div>
+      <div class="card"><div class="ico">🚗</div>
+        <h3 data-l="en">Plays when the car connects</h3><h3 data-l="zh">连上车载蓝牙自动播放</h3>
+        <p data-l="en">Your favorites start by themselves over Bluetooth, with the current lyric line on the car display.</p>
+        <p data-l="zh">手机连上车里的蓝牙，收藏的歌自动开始放，车机屏幕上显示当前这句歌词。</p></div>
+      <div class="card"><div class="ico">🚶</div>
+        <h3 data-l="en">Offline favorites</h3><h3 data-l="zh">离线缓存</h3>
+        <p data-l="en">Favorites are cached on the phone (on Wi-Fi, with a size limit you pick), so they keep playing in tunnels and dead zones.</p>
+        <p data-l="zh">收藏的歌在 Wi-Fi 下缓存到手机（大小上限你来定），隧道里、没信号也能接着听。</p></div>
+      <div class="card"><div class="ico">👨‍👩‍👧</div>
+        <h3 data-l="en">One account per person</h3><h3 data-l="zh">全家每人一个账号</h3>
+        <p data-l="en">Everyone gets their own favorites, playlists, personal radio and nightly "For you" picks.</p>
+        <p data-l="zh">每个人有自己的收藏、歌单、私人电台，每晚还有「为你推荐」。</p></div>
+      <div class="card"><div class="ico">🎤</div>
+        <h3 data-l="en">Synced lyrics</h3><h3 data-l="zh">逐行同步歌词</h3>
+        <p data-l="en">From the file, a .lrc next to it, or online. Lyrics running early or late? Anyone can shift them with a tap.</p>
+        <p data-l="zh">来自文件本身、旁边的 .lrc 或在线歌词。唱早了唱晚了？谁都能点一下就对齐。</p></div>
+      <div class="card"><div class="ico">📺</div>
+        <h3 data-l="en">Follow YouTube channels</h3><h3 data-l="zh">关注 YouTube 频道</h3>
+        <p data-l="en">No account needed. New episodes download by themselves and play with resume and speed control.</p>
+        <p data-l="zh">不需要账号。新节目自动下载，可以断点续听、调倍速。</p></div>
+      <div class="card"><div class="ico">📱</div>
+        <h3 data-l="en">Native iPhone and Android apps</h3><h3 data-l="zh">iPhone、安卓原生 App</h3>
+        <p data-l="en">Background play with lock-screen and car controls, gapless transitions, a sleep timer. Plus a web app for any browser.</p>
+        <p data-l="zh">后台播放、锁屏和车机控制、无缝衔接、睡眠定时。任何浏览器也能直接用网页版。</p></div>
+      <div class="card"><div class="ico">🔒</div>
+        <h3 data-l="en">Your music stays yours</h3><h3 data-l="zh">音乐留在自己家里</h3>
+        <p data-l="en">Runs on your machine. Melarka never rewrites your files or tags; names and lyrics you fix live in its own database.</p>
+        <p data-l="zh">跑在你自己的机器上。Melarka 从不改动你的文件和标签，改过的歌名、歌词存在它自己的数据库里。</p></div>
+      <div class="card"><div class="ico">🌐</div>
+        <h3 data-l="en">Four languages</h3><h3 data-l="zh">四种界面语言</h3>
+        <p data-l="en">English, 简体中文, 繁體中文 and svenska, chosen per person. Music metadata is never translated.</p>
+        <p data-l="zh">English、简体中文、繁體中文、svenska，每人自己选。歌曲信息不会被翻译。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="screens">
+  <div class="wrap">
+    <h2 data-l="en">See it</h2>
+    <h2 data-l="zh">看看界面</h2>
+    <p class="muted" data-l="en">Real screens with made-up demo songs.</p>
+    <p class="muted" data-l="zh">真实界面，歌曲是演示用的虚构数据。</p>
+    <div class="shots">
+      <figure><img src="/img/phone-home.jpg" width="585" height="1266" alt="Home" loading="lazy"><figcaption><span data-l="en">Home</span><span data-l="zh">首页</span></figcaption></figure>
+      <figure><img src="/img/phone-now-playing.jpg" width="585" height="1266" alt="Now Playing with synced lyrics" loading="lazy"><figcaption><span data-l="en">Synced lyrics</span><span data-l="zh">同步歌词</span></figcaption></figure>
+      <figure><img src="/img/phone-favorites.jpg" width="585" height="1266" alt="Favorites" loading="lazy"><figcaption><span data-l="en">Favorites</span><span data-l="zh">收藏</span></figcaption></figure>
+      <figure><img src="/img/phone-search.jpg" width="585" height="1266" alt="Search the library and YouTube" loading="lazy"><figcaption><span data-l="en">Search + YouTube</span><span data-l="zh">搜索 + YouTube</span></figcaption></figure>
+      <figure><img src="/img/phone-channels.jpg" width="585" height="1266" alt="Followed channels" loading="lazy"><figcaption><span data-l="en">Channels</span><span data-l="zh">频道</span></figcaption></figure>
+      <figure><img src="/img/phone-tags.jpg" width="585" height="1266" alt="Tags" loading="lazy"><figcaption><span data-l="en">Tags</span><span data-l="zh">标签</span></figcaption></figure>
+      <figure><img src="/img/phone-settings.jpg" width="585" height="1266" alt="Settings" loading="lazy"><figcaption><span data-l="en">Settings</span><span data-l="zh">设置</span></figcaption></figure>
+      <figure><img src="/img/android-home.png" alt="The Android app" loading="lazy"><figcaption><span data-l="en">Android app</span><span data-l="zh">安卓 App</span></figcaption></figure>
+    </div>
+    <div class="desk"><img src="/img/desktop-home.jpg" width="1280" height="800" alt="Melarka in a desktop browser" loading="lazy"></div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2 data-l="en">Install in one command</h2>
+    <h2 data-l="zh">一条命令安装</h2>
+    <p class="muted" data-l="en">On a Linux machine (or NAS) with Docker. Put your music folder at the end, or leave it out and add songs later:</p>
+    <p class="muted" data-l="zh">在装了 Docker 的 Linux 电脑或 NAS 上运行。命令最后加上你的音乐文件夹路径；不加也行，之后再放歌：</p>
+    <pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+    <ol class="steps" data-l="en">
+      <li>Open the address it prints and sign in as <code>admin</code> with the password it prints.</li>
+      <li>Add your family under <b>Admin → Users</b>.</li>
+      <li>For phones, put <a href="https://github.com/aaronsuns/melarka#reverse-proxy-and-https">HTTPS in front of it</a>, then install the apps.</li>
+    </ol>
+    <ol class="steps" data-l="zh">
+      <li>打开它显示的地址，用 <code>admin</code> 和它显示的密码登录。</li>
+      <li>在 <b>管理 → 用户</b> 里给家人建账号。</li>
+      <li>手机上用之前，先给它配好 <a href="https://github.com/aaronsuns/melarka#reverse-proxy-and-https">HTTPS</a>，再装 App。</li>
+    </ol>
+    <div class="apps">
+      <div class="card"><h3>iPhone</h3>
+        <p data-l="en">Installed with SideStore and your own (free) Apple ID; each release publishes the app for it. <a href="https://github.com/aaronsuns/melarka/blob/main/docs/iphone.md">Guide</a></p>
+        <p data-l="zh">用 SideStore 和你自己的（免费）Apple ID 安装，每次发布都会更新。<a href="https://github.com/aaronsuns/melarka/blob/main/docs/iphone.md">安装说明</a></p></div>
+      <div class="card"><h3>Android</h3>
+        <p data-l="en">A signed APK on every release. <a href="https://github.com/aaronsuns/melarka/releases/latest">Latest release</a> · <a href="https://github.com/aaronsuns/melarka/blob/main/docs/android.md">Guide</a></p>
+        <p data-l="zh">每次发布都有签名的 APK。<a href="https://github.com/aaronsuns/melarka/releases/latest">最新版本</a> · <a href="https://github.com/aaronsuns/melarka/blob/main/docs/android.md">安装说明</a></p></div>
+      <div class="card"><h3 data-l="en">Any browser</h3><h3 data-l="zh">任何浏览器</h3>
+        <p data-l="en">The web app installs to the home screen and runs full screen, with lock-screen controls and an offline cache.</p>
+        <p data-l="zh">网页版可以添加到主屏幕，全屏运行，也支持锁屏控制和离线缓存。</p></div>
+    </div>
+    <p class="muted" data-l="en" style="margin-top:22px">Step by step, configuration and upgrades: <a href="https://github.com/aaronsuns/melarka#readme">README</a> and <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>. Installing with an AI coding agent? Point it at <a href="https://github.com/aaronsuns/melarka/blob/main/AGENTS.md">AGENTS.md</a>.</p>
+    <p class="muted" data-l="zh" style="margin-top:22px">分步说明、配置和升级见 <a href="https://github.com/aaronsuns/melarka#readme">README</a> 和 <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>。用 AI 编程助手安装？让它读 <a href="https://github.com/aaronsuns/melarka/blob/main/AGENTS.md">AGENTS.md</a>。</p>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2 data-l="en">Questions</h2>
+    <h2 data-l="zh">常见问题</h2>
+    <details data-l="en"><summary>Is it free?</summary><p>Yes, free and open source. You run it on your own machine; there is no account with us and nothing to pay.</p></details>
+    <details data-l="zh"><summary>要钱吗？</summary><p>不要，开源免费。装在你自己的机器上，不需要在我们这里注册，也没有任何收费。</p></details>
+    <details data-l="en"><summary>What do I need?</summary><p>A Linux machine or NAS with Docker that stays on, and, for phones, an HTTPS address for it (a reverse proxy; the README shows how).</p></details>
+    <details data-l="zh"><summary>需要什么？</summary><p>一台一直开着、装了 Docker 的 Linux 电脑或 NAS；手机上用还需要给它配一个 HTTPS 地址（反向代理，README 里有步骤）。</p></details>
+    <details data-l="en"><summary>Why isn't the iPhone app in the App Store?</summary><p>It is a personal open-source project. SideStore signs it on your phone with your own Apple ID; a free one is enough.</p></details>
+    <details data-l="zh"><summary>iPhone App 为什么不在 App Store？</summary><p>这是个人开源项目。SideStore 用你自己的 Apple ID 在手机上签名安装，免费的 Apple ID 就够了。</p></details>
+    <details data-l="en"><summary>Does it change my music files?</summary><p>Never. It only reads them. Titles, tags and lyrics you edit are stored in Melarka's own database.</p></details>
+    <details data-l="zh"><summary>会改我的音乐文件吗？</summary><p>不会，只读取。你改的歌名、标签、歌词都存在 Melarka 自己的数据库里。</p></details>
+  </div>
+</section>
+
+<section class="star">
+  <div class="wrap">
+    <h2 data-l="en">Like it? Tell me.</h2>
+    <h2 data-l="zh">喜欢就告诉我</h2>
+    <p class="muted" data-l="en">Ideas, bugs and questions are welcome on GitHub, and a star helps other families find it.</p>
+    <p class="muted" data-l="zh">欢迎在 GitHub 上提意见、报 bug、提问；点个 Star，能让更多家庭看到它。</p>
+    <a class="cta" href="https://github.com/aaronsuns/melarka">★ github.com/aaronsuns/melarka</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Melarka · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <span data-l="en">made by <b>Zexa</b>, Stockholm</span><span data-l="zh"><b>Zexa</b> 出品，斯德哥尔摩</span></p>
+    <p data-l="en">This page uses no cookies and no tracking. Not affiliated with Spotify or YouTube.</p>
+    <p data-l="zh">本页面不使用 cookie，也没有任何跟踪。与 Spotify、YouTube 无关联。</p>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("lang-btn").addEventListener("click", function () {
+    var l = document.documentElement.dataset.lang === "zh" ? "en" : "zh";
+    document.documentElement.dataset.lang = l;
+    document.documentElement.lang = l === "zh" ? "zh-Hans" : "en";
+    try { localStorage.setItem("melarka-lang", l); } catch (e) {}
+    for (var v of document.querySelectorAll("video")) v.pause();
+  });
+</script>
+</body>
+</html>

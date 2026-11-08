@@ -1,5 +1,7 @@
 **Melarka** (internal code name `lark`) — a self-hosted music server with a web app, an iPhone app and an Android app.
 
+Website: **<https://melarka.zexa.se>** (a short tour, screenshots and the one-command install).
+
 # Melarka
 
 Melarka is a music server for a household. Point it at the music folders you already have, and
@@ -47,7 +49,7 @@ followed by a command that checks it worked.
 
 ## Screenshots
 
-A one-minute tour (demo data): <https://youtu.be/rkZQh5j8_ro>
+A one-minute tour (demo data): on [melarka.zexa.se](https://melarka.zexa.se) (English and 中文) or [YouTube](https://youtu.be/rkZQh5j8_ro).
 
 <!-- SCREENSHOTS -->
 <p align="center">
