@@ -2,3 +2,5 @@
 # (no force push), so these stay in history; oss-check skips them in its history scan only. Full SHAs.
 b5711d3ad0bcff87c39036fa2344a49ccf6f0867  # docs(fdroid) README step 1; reworded in the next commit
 c9474cf00a017e3986d70b1dc3446f6e8712f655  # docs(fdroid) README step 1 reworded (its diff removes the line)
+cf51fbc82ac3d9bac697f7914da89948d942d577  # site: landing page footer named a city; removed in the next commit
+58786e45769a6e32e6ba4cf51ecd61977342b650  # site: drop the city from the footer (its diff removes the line)
