@@ -14,6 +14,10 @@ Promo media for Melarka. Everything shown is the made-up demo library of
   ElevenLabs key in `~/.elevenlabs/key`. `VO_ONLY=1` makes only the voice lines;
   `tools/stt_check.py work/<lang>/vo.json` reads them back with speech-to-text, to catch
   misread words before rendering.
+- `tools/build_video_v2.py zh|en`: the second cut, `melarka_{zh,en}_v2.mp4` (~40 s). It opens on
+  the car: a drawn car screen, labelled as an illustration, showing what the apps really send it
+  (the lyric line as the title, "song · artist" under it), with the caption on screen from frame 0,
+  because a third of viewers left the first cut within 2 s. `ELEVEN_KEY` overrides the key file.
 - `tools/build_cards.py`: the cover images in `cards/`.
 - `texts/`: the post texts (Reddit, Hacker News, Facebook groups).
 

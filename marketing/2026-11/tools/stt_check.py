@@ -1,6 +1,6 @@
 """Speech-to-text every voice line (ElevenLabs scribe_v1) and print it next to the script."""
 import json, os, sys, uuid, urllib.request
-key = open(os.path.expanduser("~/.elevenlabs/key")).read().strip()
+key = os.environ.get("ELEVEN_KEY") or open(os.path.expanduser("~/.elevenlabs/key")).read().strip()
 for item in json.load(open(sys.argv[1])):
     b = uuid.uuid4().hex
     body = (f"--{b}\r\nContent-Disposition: form-data; name=\"model_id\"\r\n\r\nscribe_v1\r\n"
