@@ -96,11 +96,13 @@ class SmokeFlowTest {
 
         checkBridge()
 
-        // A favorite, played from the page (Library → Favorites, the first song).
-        eventually("the library tab") { onWebView().withElement(findElement(Locator.CSS_SELECTOR, "nav.tabs a[href='/library']")) }
-            .perform(webClick())
-        eventually("a favorite in the list", 30_000) { onWebView().withElement(findElement(Locator.CSS_SELECTOR, "ul.tracks button.track-main")) }
-            .perform(webClick())
+        // A favorite, played from the page (Library → Favorites, the first song). Find and click retry together: the
+        // list draws, then draws again when the favorites refresh, and a click on the first drawing's button fails
+        // with "Element is no longer attached to the DOM".
+        eventually("the library tab") { onWebView().withElement(findElement(Locator.CSS_SELECTOR, "nav.tabs a[href='/library']")).perform(webClick()) }
+        eventually("a favorite in the list", 30_000) {
+            onWebView().withElement(findElement(Locator.CSS_SELECTOR, "ul.tracks button.track-main")).perform(webClick())
+        }
         waitOnMain("the engine plays", 30_000) { services().engine?.playing == true && services().engine?.current != null }
 
         val c = Instrumented.mediaController().also { controller = it }
