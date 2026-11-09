@@ -9,7 +9,7 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/golang:1.26-alpine@sha256:27f2d3b83cfc5803c8078f8e730af0f7c431bf067afaec8f60a36fb763187cba AS build
+FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/golang:1.26-alpine@sha256:87c65a688975c0b1d4585d204874c45ca78354670e3a5f11368c5a492303d696 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
