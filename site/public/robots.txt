@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://melarka.zexa.se/sitemap.xml
