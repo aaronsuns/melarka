@@ -1,0 +1,12 @@
+分享一個我自己做、全家天天在用的音樂伺服器：Melarka 🎵 裝在自己家的 NAS 或電腦上，可以完全取代 Spotify。
+
+👉 介紹頁（有一分鐘影片）：https://melarka.zexa.se
+
+🎧 歌從哪來：YouTube 一搜就能下載，或直接用 NAS 上的本地音樂（從不改動你的檔案和標籤）
+🚗 開車：手機連上車載藍牙，收藏的歌自動開始播放，車機螢幕顯示歌詞
+🚶 沒訊號也能聽：收藏的歌離線快取在手機裡
+👨‍👩‍👧 全家每人一個帳號，各自的收藏、歌單、私人電台
+📱 iPhone、Android 原生 App，介面有繁體中文
+
+一個 Docker 容器（Go + SQLite），一條指令安裝，開源免費。歡迎試用、給意見，喜歡的話到 GitHub 點個 Star ⭐
+https://github.com/aaronsuns/melarka
