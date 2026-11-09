@@ -3,6 +3,7 @@ package lark
 import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.ConnectivityManager
 import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
@@ -74,6 +75,8 @@ object Instrumented {
         val verb = if (on) "enable" else "disable"
         shell("svc wifi $verb")
         shell("svc data $verb")
+        // Wi-Fi takes a moment to connect again; a test that starts before it does fails with "Network is unreachable".
+        if (on) waitFor("the phone is online", 30_000) { context.getSystemService(ConnectivityManager::class.java).activeNetwork != null }
     }
 
     /**

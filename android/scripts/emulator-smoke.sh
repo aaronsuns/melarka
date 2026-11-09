@@ -71,6 +71,8 @@ done
 for s in window_animation_scale transition_animation_scale animator_duration_scale; do "$ADB" shell settings put global "$s" 0; done
 "$ADB" shell svc wifi enable || true
 "$ADB" shell svc data enable || true
+# No "isn't responding" dialogs: on a slow runner one from the launcher covered the app's first screen.
+"$ADB" shell settings put global hide_error_dialogs 1
 
 echo "== waiting for the server"
 for _ in $(seq 1 180); do
