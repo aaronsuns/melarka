@@ -10,4 +10,4 @@ everything else is plain static assets.
 - The videos and cover cards come from `marketing/2026-11/` (`tools/build_video.py`,
   `tools/build_cards.py`); the screenshots from `docs/screenshots/`. Rebuild them there and copy
   them into `public/media/` and `public/img/`.
-- The page loads no external scripts, fonts or embeds and sets no cookies.
+- The page loads no external scripts, fonts or embeds and sets no cookies (the AlternativeTo badge is a local copy in `img/`, not hot-linked).

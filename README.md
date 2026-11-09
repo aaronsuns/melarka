@@ -2,6 +2,8 @@
 
 Website: **<https://melarka.zexa.se>** (a short tour, screenshots and the one-command install).
 
+[![Melarka on AlternativeTo](https://alternativeto.net/static/badges/badge-compact-color.svg)](https://alternativeto.net/software/melarka/about/?utm_source=badge&utm_medium=referral)
+
 # Melarka
 
 Melarka is a music server for a household. Point it at the music folders you already have, and
