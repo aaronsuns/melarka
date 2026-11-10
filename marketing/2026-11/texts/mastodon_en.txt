@@ -1,0 +1,8 @@
+I built Melarka, a self-hosted music server for my family, because no Subsonic client held up for us in the background and in the car.
+
+One Docker container (Go + SQLite), an account per person, synced lyrics, offline favorites, and native iPhone + Android apps that start playing when the phone connects to the car.
+
+Open source (AGPL), made with a lot of help from Claude Code.
+https://github.com/aaronsuns/melarka
+
+#selfhosted #homelab #opensource #music #foss

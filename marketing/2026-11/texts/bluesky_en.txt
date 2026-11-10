@@ -1,0 +1,3 @@
+I built Melarka, a self-hosted music server for my family: one Docker container, an account per person, synced lyrics, offline favorites, and native iPhone + Android apps that start playing when the phone connects to the car.
+
+Open source, made with Claude Code's help: melarka.zexa.se
