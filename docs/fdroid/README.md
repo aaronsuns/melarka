@@ -23,6 +23,9 @@ F-Droid needs, which are on `main` after it:
 - `android/version.properties` gives F-Droid's update check (`UpdateCheckData`) the versionCode; without it
   `fdroid checkupdates`, which the merge request pipeline runs, fails on every tag.
 
+The listing's icon is `fastlane/metadata/android/en-US/images/icon.png` (512 px, a copy of
+`web/public/icon-512.png`); IzzyOnDroid's scan of 0.2.17 noted it was missing, and F-Droid shows it in the store.
+
 The recipe here is the submitted 0.2.17 one. To make it for another release by hand, change the
 build entry to the new release X.Y.Z (code X*10000 + Y*100 + Z; the full commit hash of the tag):
 
