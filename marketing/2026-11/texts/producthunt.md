@@ -27,6 +27,6 @@ So I wrote the server and its apps together:
 
 It's one Docker container (Go + SQLite), installed with one command, and it's open source (AGPL-3.0).
 
-Honest caveats: it has its own API, so it isn't Subsonic-compatible. The iPhone app installs with SideStore, not the App Store, and the Android APK is on GitHub. And I built it with a lot of help from Claude Code: it wrote most of the code; I designed it, review it, and we use it every day.
+Honest caveats: it has its own API, so it isn't Subsonic-compatible. The iPhone app isn't in the App Store: you sign it with your own free Apple ID, easiest with a Mac (Xcode installs it and re-signs it weekly by itself), and the Android APK is on GitHub. And I built it with a lot of help from Claude Code: it wrote most of the code; I designed it, review it, and we use it every day.
 
 I'd love to hear what you'd want from it, and what breaks. Thanks for looking!
