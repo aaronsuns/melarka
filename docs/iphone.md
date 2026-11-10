@@ -15,11 +15,64 @@ native engine. That gives it what a web page on iOS can't do reliably:
 It needs iOS 17 or later and a Melarka server reachable over **HTTPS**. The app accepts plain
 `http://` only for `localhost` and `*.local` addresses, for development.
 
-The app is not in the App Store. Each release publishes an unsigned IPA and a source file for
-[SideStore](https://sidestore.io), which signs the app on your phone with your own Apple ID. A
-free Apple ID is enough.
+The app is not in the App Store. You install it yourself, signed with your own Apple ID; a free
+Apple ID is enough. There are two ways:
 
-## 1. Install SideStore (once per phone)
+- **With a Mac** (the easiest, if you have one): Xcode builds Melarka, puts it on the phone over a
+  cable or Wi-Fi, and keeps it signed by itself. Nothing extra on the phone.
+- **With SideStore**, an app on the phone that signs other apps. It needs a computer only for its
+  setup, but it also needs a VPN app on the phone and is more fragile.
+
+## Install with a Mac
+
+You need a Mac with a recent macOS, an iPhone with iOS 17 or later, and a free Apple ID. Once:
+
+1. Install **Xcode** from the Mac App Store and open it once, so it installs its components.
+2. In Xcode, open **Settings → Accounts**, tap **+** and sign in with your Apple ID.
+3. Install [Homebrew](https://brew.sh) if you don't have it, then run `brew install xcodegen` in
+   Terminal.
+4. Connect the iPhone to the Mac with a cable, unlock it and tap **Trust**. Then, on the phone,
+   turn on **Settings → Privacy & Security → Developer Mode**; the phone restarts. The switch only
+   appears after the phone has been connected to a Mac with Xcode.
+5. In Terminal:
+
+   ```sh
+   git clone https://github.com/aaronsuns/melarka.git ~/melarka
+   cd ~/melarka
+   xcrun devicectl list devices      # your iPhone, and its Identifier
+   mkdir -p ~/.config/melarka
+   echo 'MELARKA_DEVICE=<the Identifier from the list>' > ~/.config/melarka/resign.env
+   ios/scripts/resign.sh install     # builds and installs Melarka now, then keeps it signed
+   ```
+
+   The first build takes a few minutes. `ios/scripts/resign.sh status` shows when the installed
+   app expires.
+6. On the phone, open **Settings → General → VPN & Device Management**, tap your Apple ID under
+   *Developer App* and trust it. Then open Melarka and connect it to your server (below).
+
+**After that it looks after itself.** A free Apple ID signs an app for 7 days. `resign.sh`
+checks every 15 minutes; in the last 4 days it builds the newest Melarka release, signs it again
+and installs it over the app, by cable or over Wi-Fi. Your server address and sign-in stay. A new
+Melarka release is installed the same way, within 15 minutes of being published.
+
+- The Mac has to be **unlocked** now and then, with the phone on the same Wi-Fi or plugged in:
+  while the Mac's screen is locked, macOS keeps the Apple ID away from Xcode. Once in each 4-day
+  window is enough; the phone itself may stay locked.
+- When it needs you, it shows a Mac notification: Xcode signed out of the Apple ID (sign in again
+  in **Xcode → Settings → Accounts**), a build failed, or the app expires within 36 hours while the
+  Mac stayed locked or the phone out of reach. For a message on the phone as well, set `NOTIFY_CMD`
+  in `resign.env` to a command that sends one: it gets the subject as its last argument and the
+  details on standard input.
+- Logs are in `~/Library/Logs/melarka-resign/`; `ios/scripts/resign.sh uninstall` stops it.
+  Other settings are listed at the top of the script.
+- A free Apple ID can have at most three self-signed apps on a phone at a time.
+
+## Or: install with SideStore
+
+Each release also publishes an unsigned IPA and a source file for
+[SideStore](https://sidestore.io), which signs the app on your phone with your own Apple ID.
+
+### 1. Install SideStore (once per phone)
 
 SideStore's own guide, <https://docs.sidestore.io>, is the reference and is kept current; in
 short:
@@ -36,14 +89,14 @@ short:
 7. Open **LocalDevVPN** and tap **Connect**, then open **SideStore** and sign in with the same
    Apple ID.
 
-## 2. Add the Melarka source
+### 2. Add the Melarka source
 
 1. In SideStore, open the **Sources** tab and tap **+**.
 2. Enter `https://aaronsuns.github.io/melarka/source.json` and add it.
 3. Open the Melarka source and install **Melarka**. Keep LocalDevVPN connected while SideStore
    installs or refreshes apps.
 
-## 3. Connect to your server
+## Connect to your server
 
 1. Open Melarka. On first launch it asks for your server address, for example
    `https://music.example.com`.
@@ -86,7 +139,7 @@ English for every other language. There is no language setting in the app; chang
 The music pages inside the app are the web app, which keeps its own language: the server's default
 (`LARK_LANGUAGE`) or the one chosen in **Me → Settings**.
 
-## Updates and the 7-day refresh
+## Updates and the 7-day refresh with SideStore
 
 Apps signed with a free Apple ID expire after 7 days. SideStore refreshes them in the background
 while LocalDevVPN is connected; you can also refresh by hand in **My Apps**. If Melarka stops
@@ -97,47 +150,14 @@ and the server are released together, with the same version number.
 
 A free Apple ID can have at most three sideloaded apps active at a time, SideStore included.
 
-## Re-sign from a Mac (without SideStore)
+## From SideStore to a Mac
 
-If SideStore's refresh stops working, or you'd rather not depend on it, a Mac with Xcode can keep
-Melarka signed by itself. `ios/scripts/resign.sh` installs a background job that checks every 15
-minutes. When the app has fewer than 4 days left and the Mac is unlocked, it builds the newest Melarka release, signs it
-with a fresh 7-day profile, and installs it over the app on the phone, by USB or over Wi-Fi. Your
-server address and sign-in stay. A new Melarka release is installed the same way within 15 minutes
-of being published, or of the Mac's next unlock.
-
-You need:
-
-- A Mac with Xcode, signed in to the **same Apple ID** you sideloaded Melarka with
-  (**Xcode → Settings → Accounts**), and XcodeGen (`brew install xcodegen`).
-- The phone paired with that Mac: connect it by USB once and tap **Trust**. Developer Mode
-  must be on, as SideStore already needs.
-- The Mac **unlocked** for a moment while the phone is on the same Wi-Fi (or plugged in) during
-  the last 4 days of each week. The phone may be locked, but the Mac may not: while its screen is
-  locked, macOS keeps the Apple ID away from Xcode, so the job waits and renews within 15 minutes
-  of the next unlock.
-
-Set it up from a clone of this repository:
-
-```sh
-xcrun devicectl list devices                # note your phone's name or UDID
-mkdir -p ~/.config/melarka
-echo 'MELARKA_DEVICE=<name or UDID>' > ~/.config/melarka/resign.env
-ios/scripts/resign.sh install               # runs once now, then every 15 minutes
-ios/scripts/resign.sh status                # when the installed app expires
-```
-
-The first run renews right away. It reads your Apple ID's team from the Melarka that SideStore
-installed, so the new build replaces it in place. Without a sideloaded Melarka on the phone, set
-`MELARKA_TEAM=<team id>` in the same file. Other settings are listed at the top of the script.
-
-When it needs you, it shows a Mac notification. That happens when Xcode is not signed in to
-an Apple ID (sign in again in **Xcode → Settings → Accounts**), when a build fails, or when the app expires within 36 hours and
-the Mac has stayed locked or the phone out of reach. For a message on the phone as well, set `NOTIFY_CMD` to a command
-that sends one: it gets the subject as its last argument and the details on standard input.
-Logs are in `~/Library/Logs/melarka-resign/`. `ios/scripts/resign.sh uninstall` removes the job.
-
-Once the Mac keeps Melarka signed, you can delete SideStore, which frees one of the three app slots.
+If SideStore's refresh stops working, a Mac can take over: follow steps 1 to 5 of
+[Install with a Mac](#install-with-a-mac) with the phone that already has Melarka. `resign.sh` reads
+the Apple ID's team from the Melarka that SideStore installed, so the new build replaces it in place
+and your server and sign-in stay. The Mac must be signed in to the **same Apple ID** you used in
+SideStore. Once the Mac keeps Melarka signed, you can delete SideStore, which frees one of the
+three app slots.
 
 ## Without the app
 
@@ -164,6 +184,6 @@ locked; an older app that can't shows no timer.
 - **"Can't connect" on first launch**: open `https://<your server>/api/v1/info` in Safari on the
   phone. It must load without a certificate warning. Self-signed certificates don't work.
 - **The app won't open after a week**: the signature expired; refresh it in SideStore (see above),
-  or let a Mac re-sign it (`ios/scripts/resign.sh`, see "Re-sign from a Mac").
+  or let a Mac keep it signed (see "Install with a Mac").
 - **Install fails in SideStore**: make sure LocalDevVPN is connected, then try again. SideStore's
   documentation covers pairing-file and signing errors.

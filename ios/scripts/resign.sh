@@ -4,11 +4,12 @@
 # fewer than RENEW_DAYS left, or a newer release is out, and the Mac is unlocked, it builds the newest release tag
 # with a fresh profile and installs it over the app on the phone (USB, or Wi-Fi on the same network), which keeps
 # the app's data and sign-in.
-# Usage: resign.sh install | uninstall | run | status      (see docs/iphone.md "Re-sign from a Mac")
+# Usage: resign.sh install | uninstall | run | status      (see docs/iphone.md "Install with a Mac")
 #
 # Config, in ~/.config/melarka/resign.env (KEY=value lines) or the environment:
 #   MELARKA_DEVICE  the phone: its UDID or name, as `xcrun devicectl list devices` shows it (required)
-#   MELARKA_TEAM    the Apple ID's team id (10 characters); read from the installed app's bundle id if unset
+#   MELARKA_TEAM    the Apple ID's team id (10 characters); if unset, read from the installed app's bundle id,
+#                   or on a first install from the Apple ID in Xcode > Settings > Accounts
 #   MELARKA_BUNDLE  bundle id, default io.github.aaronsuns.melarka.$MELARKA_TEAM (what SideStore and
 #                   iloader install), so the first run upgrades a sideloaded app in place
 #   RENEW_DAYS      renew once fewer days than this are left (default 4)
@@ -34,6 +35,15 @@ RENEW_DAYS=${RENEW_DAYS:-4}
 WARN_HOURS=36   # Mac locked or phone unreachable this close to expiry: notify
 
 when() { date -r "$1" '+%a %d %b %H:%M'; }
+# The team of the Apple ID signed in to Xcode: its free Personal Team, or its only team. Empty when unclear.
+xcode_team() {
+  defaults export com.apple.dt.Xcode - 2>/dev/null |
+    plutil -extract IDEProvisioningTeamByIdentifier json -o - - 2>/dev/null |
+    /usr/bin/python3 -c 'import json, sys
+teams = [t for ts in json.load(sys.stdin).values() for t in ts]
+pick = [t for t in teams if t.get("isFreeProvisioningTeam")] or teams
+print(pick[0]["teamID"] if len(pick) == 1 else "")' 2>/dev/null
+}
 expires() { cat "$STATE/expires" 2>/dev/null || echo 0; }
 
 install_job() {
@@ -170,8 +180,14 @@ if [ -z "${MELARKA_TEAM:-}" ] && [ -z "${MELARKA_BUNDLE:-}" ]; then
   MELARKA_BUNDLE=$(grep -oE '"bundleIdentifier" *: *"io\.github\.aaronsuns\.melarka\.[A-Z0-9]{10}"' "$apps" |
     grep -oE 'io\.github[^"]*' | head -1)
   rm -f "$apps"
-  [ -n "$MELARKA_BUNDLE" ] || fail "no sideloaded Melarka on the phone to read the team id from; set MELARKA_TEAM"
-  MELARKA_TEAM=${MELARKA_BUNDLE##*.}
+  if [ -n "$MELARKA_BUNDLE" ]; then
+    MELARKA_TEAM=${MELARKA_BUNDLE##*.}
+  else
+    # A first install: no Melarka on the phone yet. Use the Apple ID's team from Xcode's accounts.
+    MELARKA_TEAM=$(xcode_team)
+    [ -n "$MELARKA_TEAM" ] || fail "no Melarka on the phone and no single team in Xcode > Settings > Accounts; set MELARKA_TEAM"
+    log "no Melarka on the phone yet: first install with Xcode's team $MELARKA_TEAM"
+  fi
 fi
 [ -n "${MELARKA_TEAM:-}" ] || fail "MELARKA_TEAM is not set"
 BUNDLE=${MELARKA_BUNDLE:-io.github.aaronsuns.melarka.$MELARKA_TEAM}

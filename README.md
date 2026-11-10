@@ -38,7 +38,7 @@ them from YouTube in the app (those go to `~/melarka/youtube`). Then:
 1. Open `http://127.0.0.1:4600` on the server and sign in as `admin`.
 2. Add your family under **Admin → Users**.
 3. To use it from phones, put [HTTPS in front of it](#reverse-proxy-and-https), then add it to
-   the home screen or install [the iPhone app](#the-iphone-app-sidestore).
+   the home screen or install [the iPhone app](#the-iphone-app).
 
 Run the same command again whenever you want to upgrade; your settings and data are kept. Run it
 with a path to switch to another music folder.
@@ -298,23 +298,23 @@ Both fetch the newest release (see the [releases](https://github.com/aaronsuns/m
 and [CHANGELOG.md](CHANGELOG.md)); database migrations run automatically at start. To stay on
 one release instead, add `MELARKA_VERSION=0.2.2` (or any release) to `.env`.
 
-## The iPhone app (SideStore)
+## The iPhone app
 
 The iPhone app is a native shell around the web app with its own playback engine: reliable
 background play, lock-screen and car controls, and an offline cache. It is not in the App Store;
-each release ships an unsigned IPA that you install with [SideStore](https://sidestore.io), which
-signs it on your phone with your own Apple ID.
+you install it signed with your own Apple ID (a free one is enough), in one of two ways:
 
-1. Install SideStore on the iPhone (once): install **LocalDevVPN** from the App Store, then run
-   **iloader** on a computer with the phone connected by USB and choose **Install SideStore**.
-2. In SideStore, open **Sources**, tap **+**, and add
-   `https://aaronsuns.github.io/melarka/source.json`.
-3. Open the Melarka source and install **Melarka**.
-4. Open Melarka, enter your server URL (for example `https://music.example.com`), and sign in.
+- **With a Mac** (easiest): install Xcode and sign in to your Apple ID there, connect the phone once,
+  and run `ios/scripts/resign.sh install` from a clone of this repository. It builds the newest
+  release, installs it, and re-signs it every week by itself.
+- **With [SideStore](https://sidestore.io)** on the phone: install SideStore once (with
+  **LocalDevVPN** and **iloader**), add the source
+  `https://aaronsuns.github.io/melarka/source.json` and install **Melarka** from it.
 
-Step-by-step instructions, the 7-day refresh and troubleshooting are in
-[docs/iphone.md](docs/iphone.md). Without the app, you can also open your Melarka address in
-Safari and tap Share → **Add to Home Screen**.
+Then open Melarka, enter your server URL (for example `https://music.example.com`), and sign in.
+Step-by-step instructions for both, and troubleshooting, are in [docs/iphone.md](docs/iphone.md).
+Without the app, you can also open your Melarka address in Safari and tap Share →
+**Add to Home Screen**.
 
 ## The Android app
 

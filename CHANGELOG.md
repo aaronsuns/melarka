@@ -7,6 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Changed
+
+- **Installing the iPhone app with a Mac no longer needs SideStore first.** `ios/scripts/resign.sh`
+  reads the Apple ID's team from Xcode when Melarka is not on the phone yet, so a Mac with Xcode can
+  do the first install and then keep the app signed. docs/iphone.md now starts with this route.
+
 ## [0.2.20] - 2026-11-01
 
 ### Fixed
