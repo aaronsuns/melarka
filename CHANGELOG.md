@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.21] - 2026-11-11
+
 ### Added
 
 - **An opt-in anonymous install count** (Admin → System, off by default). When an admin turns it on, the
@@ -15,6 +17,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ### Changed
 
+- Updated dependencies: the SQLite driver (1.61.1), the Go, Node and Alpine base images, and the web
+  app's test tools.
 - **Installing the iPhone app with a Mac no longer needs SideStore first.** `ios/scripts/resign.sh`
   reads the Apple ID's team from Xcode when Melarka is not on the phone yet, so a Mac with Xcode can
   do the first install and then keep the app signed. docs/iphone.md now starts with this route.
@@ -403,7 +407,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.20...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.21...HEAD
+[0.2.21]: https://github.com/aaronsuns/melarka/compare/v0.2.20...v0.2.21
 [0.2.20]: https://github.com/aaronsuns/melarka/compare/v0.2.19...v0.2.20
 [0.2.19]: https://github.com/aaronsuns/melarka/compare/v0.2.18...v0.2.19
 [0.2.18]: https://github.com/aaronsuns/melarka/compare/v0.2.17...v0.2.18

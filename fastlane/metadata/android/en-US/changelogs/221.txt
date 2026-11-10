@@ -1,0 +1,1 @@
+Admins can now opt in to an anonymous weekly install count (Admin → System, off by default). Updated dependencies.

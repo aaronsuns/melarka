@@ -1,0 +1,1 @@
+Administratörer kan nu slå på en anonym veckovis räkning av installationen (Admin → System, av som standard). Uppdaterade beroenden.
