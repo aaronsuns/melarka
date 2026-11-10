@@ -82,7 +82,10 @@
   details { border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; background: var(--card); margin-top: 12px; }
   summary { cursor: pointer; font-weight: 600; }
   details p { color: var(--muted); margin: 10px 0 0; }
+  .highlights { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); margin-top: 28px; }
+  .highlights img { width: 100%; height: auto; border-radius: 14px; display: block; }
   .star { text-align: center; }
+  .cta.coffee { background: #ff5e5b; color: #fff; }
   .star .cta { margin-top: 10px; }
   footer { padding: 36px 0 60px; color: var(--muted); font-size: 14px; }
   footer a { color: var(--muted); }
@@ -144,11 +147,13 @@
       <p>I wanted Spotify-style listening for my family, on music we keep ourselves and without a subscription. So I built Melarka, and I use it every day.</p>
       <p>On the way to work, the phone connects to the car's Bluetooth and my favorites start playing by themselves, with the lyric line on the car's screen. On walks, the favorites are already on the phone, so no signal is no problem. At home, everyone has their own account, and a song one of us adds is there for the whole family.</p>
       <p>It has improved a lot from daily use. Try it, and tell me what you'd change.</p>
+      <p class="muted">The longer story, and how it's built: <a href="https://dev.to/aaronsuns/i-replaced-spotify-for-my-family-with-a-music-server-i-built-and-its-own-phone-apps-2f8m">on dev.to</a>.</p>
     </div>
     <div data-l="zh">
       <p>我想让全家像用 Spotify 一样听歌，但听的是我们自己的音乐，也不用交会员费。于是做了 Melarka，现在每天都在用。</p>
       <p>上下班开车，手机一连上车载蓝牙，收藏的歌自动开始放，车机屏幕上显示歌词。出去散步，收藏的歌早就缓存在手机里，没信号也照样听。在家里，每人一个账号，谁下载的好歌，全家都能听到。</p>
       <p>天天用，一直在改进，好用得很。欢迎试用，提提意见。</p>
+      <p class="muted">更完整的故事和技术细节（英文）：<a href="https://dev.to/aaronsuns/i-replaced-spotify-for-my-family-with-a-music-server-i-built-and-its-own-phone-apps-2f8m">dev.to 上的文章</a>。</p>
     </div>
   </div>
 </section>
@@ -195,6 +200,10 @@
         <p data-l="en">English, 简体中文, 繁體中文 and svenska, chosen per person. Music metadata is never translated.</p>
         <p data-l="zh">English、简体中文、繁體中文、svenska，每人自己选。歌曲信息不会被翻译。</p></div>
     </div>
+    <div class="highlights" data-l="en">
+      <img src="/img/feature-lyrics-car.jpg" width="1270" height="760" alt="Synced lyrics in the app, on the lock screen and the car display; favorites start when the phone connects to the car" loading="lazy">
+      <img src="/img/feature-offline.jpg" width="1270" height="760" alt="Favorites cached on the phone keep playing with no signal" loading="lazy">
+    </div>
   </div>
 </section>
 
@@ -237,8 +246,8 @@
     </ol>
     <div class="apps">
       <div class="card"><h3>iPhone</h3>
-        <p data-l="en">Installed with SideStore and your own (free) Apple ID; each release publishes the app for it. <a href="https://github.com/aaronsuns/melarka/blob/main/docs/iphone.md">Guide</a></p>
-        <p data-l="zh">用 SideStore 和你自己的（免费）Apple ID 安装，每次发布都会更新。<a href="https://github.com/aaronsuns/melarka/blob/main/docs/iphone.md">安装说明</a></p></div>
+        <p data-l="en">Signed with your own (free) Apple ID. Easiest with a Mac: Xcode installs it and re-signs it every week by itself. Without a Mac: SideStore. <a href="https://github.com/aaronsuns/melarka/blob/main/docs/iphone.md">Guide</a></p>
+        <p data-l="zh">用你自己的（免费）Apple ID 签名安装。有 Mac 最简单：Xcode 装好后每周自动重新签名；没有 Mac 就用 SideStore。<a href="https://github.com/aaronsuns/melarka/blob/main/docs/iphone.md">安装说明</a></p></div>
       <div class="card"><h3>Android</h3>
         <p data-l="en">A signed APK on every release. <a href="https://github.com/aaronsuns/melarka/releases/latest">Latest release</a> · <a href="https://github.com/aaronsuns/melarka/blob/main/docs/android.md">Guide</a></p>
         <p data-l="zh">每次发布都有签名的 APK。<a href="https://github.com/aaronsuns/melarka/releases/latest">最新版本</a> · <a href="https://github.com/aaronsuns/melarka/blob/main/docs/android.md">安装说明</a></p></div>
@@ -259,8 +268,12 @@
     <details data-l="zh"><summary>要钱吗？</summary><p>不要，开源免费。装在你自己的机器上，不需要在我们这里注册，也没有任何收费。</p></details>
     <details data-l="en"><summary>What do I need?</summary><p>A Linux machine or NAS with Docker that stays on, and, for phones, an HTTPS address for it (a reverse proxy; the README shows how).</p></details>
     <details data-l="zh"><summary>需要什么？</summary><p>一台一直开着、装了 Docker 的 Linux 电脑或 NAS；手机上用还需要给它配一个 HTTPS 地址（反向代理，README 里有步骤）。</p></details>
-    <details data-l="en"><summary>Why isn't the iPhone app in the App Store?</summary><p>It is a personal open-source project. SideStore signs it on your phone with your own Apple ID; a free one is enough.</p></details>
-    <details data-l="zh"><summary>iPhone App 为什么不在 App Store？</summary><p>这是个人开源项目。SideStore 用你自己的 Apple ID 在手机上签名安装，免费的 Apple ID 就够了。</p></details>
+    <details data-l="en"><summary>Why isn't the iPhone app in the App Store?</summary><p>It is a free personal project, and the App Store costs $99 a year. You sign the app with your own Apple ID instead; a free one is enough. With a Mac, Xcode installs it and re-signs it every week by itself; without one, SideStore does it on the phone. <a href="https://github.com/aaronsuns/melarka/blob/main/docs/iphone.md">How</a></p></details>
+    <details data-l="zh"><summary>iPhone App 为什么不在 App Store？</summary><p>这是免费的个人项目，上 App Store 每年要 99 美元。所以改用你自己的 Apple ID 签名安装，免费的就够了。有 Mac 的话，Xcode 装好后每周自动重新签名；没有 Mac 就用 SideStore 在手机上签。<a href="https://github.com/aaronsuns/melarka/blob/main/docs/iphone.md">怎么装</a></p></details>
+    <details data-l="en"><summary>How is it different from Navidrome or Jellyfin?</summary><p>They are great servers that rely on other people's apps (Subsonic clients). Melarka comes with its own iPhone, Android and web apps, built together with the server, for things like car autoplay, lyrics on the car display, offline favorites and radio per person. The flip side: it is not Subsonic-compatible, so those apps don't work with it.</p></details>
+    <details data-l="zh"><summary>和 Navidrome、Jellyfin 有什么不同？</summary><p>它们是很好的服务器，但手机上要用别人做的 App（Subsonic 客户端）。Melarka 自带 iPhone、安卓和网页 App，和服务器一起设计，所以能做到车载自动播放、车机屏幕显示歌词、离线收藏、每人自己的电台。反过来说，它不兼容 Subsonic，那些客户端用不了。</p></details>
+    <details data-l="en"><summary>Was it built with AI?</summary><p>Yes, a lot. Melarka is built with Claude Code, an AI coding assistant, which writes most of the code, tests and docs. I design it, decide what goes in and review it; the full test suite runs on every change, and my family uses it every day.</p></details>
+    <details data-l="zh"><summary>是用 AI 做的吗？</summary><p>是的，用得很多。Melarka 是用 Claude Code（AI 编程助手）做的，大部分代码、测试和文档由它写；设计、取舍和审查是我来做。每次改动都会跑完整的自动测试，全家每天都在用。</p></details>
     <details data-l="en"><summary>Does it change my music files?</summary><p>Never. It only reads them. Titles, tags and lyrics you edit are stored in Melarka's own database.</p></details>
     <details data-l="zh"><summary>会改我的音乐文件吗？</summary><p>不会，只读取。你改的歌名、标签、歌词都存在 Melarka 自己的数据库里。</p></details>
   </div>
@@ -276,12 +289,15 @@
     <p class="muted" data-l="en">It is also on AlternativeTo, next to Spotify, Navidrome and Jellyfin: a like or a review there helps too.</p>
     <p class="muted" data-l="zh">它也上了 AlternativeTo（和 Spotify、Navidrome、Jellyfin 并列），在那里点个赞或写句评价也很有帮助。</p>
     <p><a href="https://alternativeto.net/software/melarka/about/?utm_source=badge&amp;utm_medium=referral"><img src="img/alternativeto-badge.svg" alt="Melarka on AlternativeTo" width="183" height="59"></a></p>
+    <p class="muted" data-l="en">Melarka is free, with no ads and nothing to pay. If it saves your family a subscription and you'd like to say thanks, you can buy me a coffee.</p>
+    <p class="muted" data-l="zh">Melarka 免费，没有广告，也不收费。如果它帮你家省了会员费，想表示感谢，可以请我喝杯咖啡。</p>
+    <a class="cta coffee" href="https://ko-fi.com/aaronsuns">☕ <span data-l="en">Buy me a coffee</span><span data-l="zh">请我喝杯咖啡</span></a>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <p>Melarka · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <span data-l="en">made by <b>Zexa</b></span><span data-l="zh"><b>Zexa</b> 出品</span></p>
+    <p>Melarka · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://ko-fi.com/aaronsuns">☕ Ko-fi</a> · <span data-l="en">made by <b>Zexa</b></span><span data-l="zh"><b>Zexa</b> 出品</span></p>
     <p data-l="en">This page uses no cookies and no tracking. Not affiliated with Spotify or YouTube.</p>
     <p data-l="zh">本页面不使用 cookie，也没有任何跟踪。与 Spotify、YouTube 无关联。</p>
   </div>

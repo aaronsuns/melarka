@@ -361,6 +361,11 @@ Melarka is a tool for listening to your own music collection at home.
 - [docs/architecture.md](docs/architecture.md): how the code is organised, and the HTTP API.
 - [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [CHANGELOG.md](CHANGELOG.md).
 
+## Support
+
+Melarka is free. If it saves your family a subscription and you'd like to say thanks, you can
+[buy me a coffee on Ko-fi](https://ko-fi.com/aaronsuns). Stars, bug reports and ideas help just as much.
+
 ## License
 
 Melarka is free software under the **GNU Affero General Public License v3.0 or later** (see
