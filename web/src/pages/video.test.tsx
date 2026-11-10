@@ -184,6 +184,9 @@ function watchRoutes(o: { video?: () => PreviewInfo; hd?: () => PreviewInfo; hdS
 
 async function waitForVideo(): Promise<HTMLVideoElement> {
   await waitFor(() => expect(document.querySelector("video.watch-video")).not.toBeNull());
+  // The page's "play" listener is added in an effect that can run after the <video> shows; a play fired before it
+  // was lost on a slow CI machine (the video never claimed the session). Let the pending effects run first.
+  await act(async () => {});
   return document.querySelector("video.watch-video") as HTMLVideoElement;
 }
 
