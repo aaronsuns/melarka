@@ -1,0 +1,13 @@
+分享一個我自己做、全家天天在用的 NAS 音樂伺服器：Melarka 🎵 裝在自己家的 NAS（Synology、QNAP 或任何能跑 Docker 的機器）上，我們家用它取代了 Spotify。
+
+🎧 直接讀 NAS 上的音樂資料夾，從不改動你的檔案和標籤（標題、歌詞的修正都存在它自己的資料庫）
+👨‍👩‍👧 全家每人一個帳號，各自的收藏、歌單、私人電台和每晚推薦
+🚗 開車：手機連上車載藍牙，收藏的歌自動開始播放，車機螢幕顯示歌詞
+🚶 沒訊號也能聽：收藏的歌離線快取在手機裡
+📱 iPhone、Android 原生 App，也能用瀏覽器，介面有繁體中文
+
+一個 Docker 容器（Go + SQLite），一條指令安裝，開源免費（AGPL-3.0）。
+👉 介紹頁（有一分鐘影片和安裝說明）：https://melarka.zexa.se
+GitHub：https://github.com/aaronsuns/melarka
+
+歡迎試用、給意見，在 NAS 上裝遇到問題也歡迎問我 🙏
