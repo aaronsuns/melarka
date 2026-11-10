@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { AuthProvider } from "../../auth/AuthProvider";
@@ -394,6 +394,26 @@ test("shows the current yt-dlp version and updates it", async () => {
   await userEvent.click(screen.getByRole("button", { name: "更新 yt-dlp" }));
   expect(await screen.findByText("已更新到 2026.09.01")).toBeInTheDocument();
   expect(screen.getByText("当前版本：2026.09.01")).toBeInTheDocument();
+});
+
+test("the anonymous install count is off until the admin turns it on", async () => {
+  const put = vi.fn((init: RequestInit) => ({ status: 200, body: JSON.parse(init.body as string) }));
+  renderWithApp(<SystemPage />, {
+    role: "admin",
+    path: "/admin/system",
+    routes: {
+      "GET /api/v1/admin/ytdlp": () => ({ body: { version: "2026.01.01", path: "/data/yt-dlp" } }),
+      "GET /api/v1/admin/usage-ping": () => ({ body: { enabled: false } }),
+      "PUT /api/v1/admin/usage-ping": put,
+    },
+  });
+  const box = await screen.findByRole("checkbox", { name: "每周发送匿名计数" });
+  expect(box).not.toBeChecked();
+  expect(screen.getByText(/随机编号和 Melarka 版本号/)).toBeInTheDocument();
+  await userEvent.click(box);
+  await waitFor(() => expect(box).toBeChecked());
+  expect(put).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(put.mock.calls[0][0].body as string)).toEqual({ enabled: true });
 });
 
 test("yt-dlp update shows a timeout message after 60s with no response", async () => {

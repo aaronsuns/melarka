@@ -1,9 +1,46 @@
 // Static assets, plus HTTP Range for the videos: iPhone Safari won't play an <video> whose server
 // ignores Range (it needs 206 Partial Content), and the assets binding answers ranges with the
 // whole file. The videos are small (~4 MB), so slicing the full asset is fine.
+// /api/ping: the opt-in usage ping from Melarka servers (internal/usageping in the server). Stores only
+// the random install id and the version, never the IP; each key expires 35 days after its last ping.
+const PING_TTL = 35 * 24 * 3600;
+const json = (body, status = 200, extra = {}) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...extra } });
+
+async function ping(request, env) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405);
+  if (Number(request.headers.get("Content-Length") || 0) > 1024) return json({ error: "too large" }, 413);
+  let p;
+  try { p = JSON.parse(await request.text()); } catch { return json({ error: "bad JSON" }, 400); }
+  const id = typeof p?.id === "string" ? p.id : "";
+  const version = typeof p?.version === "string" ? p.version : "";
+  if (!/^[0-9a-f]{32}$/.test(id) || !/^[0-9A-Za-z.+_-]{1,40}$/.test(version)) return json({ error: "bad ping" }, 400);
+  await env.PINGS.put("i:" + id, "", { expirationTtl: PING_TTL, metadata: { v: version } });
+  return new Response(null, { status: 204 });
+}
+
+// /api/ping/stats: how many installs pinged in the last 35 days, by version.
+async function stats(env) {
+  let installs = 0, cursor;
+  const versions = {};
+  do {
+    const page = await env.PINGS.list({ prefix: "i:", cursor });
+    for (const k of page.keys) {
+      installs++;
+      const v = k.metadata?.v || "?";
+      versions[v] = (versions[v] || 0) + 1;
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return json({ installs_35d: installs, versions }, 200, { "Cache-Control": "public, max-age=3600" });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/ping") return ping(request, env);
+    if (url.pathname === "/api/ping/stats") return stats(env);
+    if (url.pathname.startsWith("/api/")) return json({ error: "no such endpoint" }, 404);
     const range = request.headers.get("Range");
     if (!range || !url.pathname.endsWith(".mp4")) return env.ASSETS.fetch(request);
     const res = await env.ASSETS.fetch(new Request(url, { method: "GET" }));

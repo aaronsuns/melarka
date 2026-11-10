@@ -34,6 +34,7 @@ import (
 	"github.com/aaronsuns/lark-server/internal/stream"
 	"github.com/aaronsuns/lark-server/internal/tags"
 	"github.com/aaronsuns/lark-server/internal/trash"
+	"github.com/aaronsuns/lark-server/internal/usageping"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
 
@@ -198,6 +199,10 @@ func run(log *slog.Logger) error {
 		Tags:  tagStore, Vocab: vocab, Lyrics: lyricsSvc, Artwork: artworkSvc, Trash: trashSvc, Scans: scans, MusicRoot: cfg.MusicRoot, Log: log,
 		Downloads: downloads, YT: ytClient, YtDlpBin: ytdlpBin, YtDlpPath: cfg.YtDlpPath,
 	}
+	// The opt-in anonymous install count (Admin → System); off unless an admin turned it on.
+	srv.UsagePing = &usageping.Service{DB: d, Version: buildinfo.Version, Log: log}
+	pingDone := make(chan struct{})
+	go func() { defer close(pingDone); srv.UsagePing.Run(ctx) }()
 	// YouTube's tags for songs downloaded before they were kept (for tagging), at low priority.
 	metaDone := make(chan struct{})
 	go func() { defer close(metaDone); downloads.RunMetaBackfill(ctx, srv.SearchGate()) }()
@@ -276,6 +281,7 @@ func run(log *slog.Logger) error {
 	<-scanDone
 	<-downloadsDone
 	<-metaDone
+	<-pingDone
 	<-artistFixDone
 	<-lastfmDone
 	<-recsDone

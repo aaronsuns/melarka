@@ -77,6 +77,8 @@ func (s *Server) adminRoutes(adm chi.Router) {
 	adm.Put("/admin/tagging/batch", s.taggingBatch)
 	adm.Get("/admin/ytdlp", s.ytdlpInfo)
 	adm.Post("/admin/ytdlp/update", s.ytdlpUpdate)
+	adm.Get("/admin/usage-ping", s.usagePingGet)
+	adm.Put("/admin/usage-ping", s.usagePingPut)
 }
 
 func (s *Server) withID(w http.ResponseWriter, r *http.Request) (int64, bool) {

@@ -31,6 +31,7 @@ func TestAdminRoutesForbiddenForMembers(t *testing.T) {
 		{"GET", "/api/v1/admin/libraries"}, {"POST", "/api/v1/admin/libraries"}, {"DELETE", "/api/v1/admin/libraries/1"},
 		{"POST", "/api/v1/admin/scan"}, {"GET", "/api/v1/admin/scan/status"}, {"GET", "/api/v1/admin/tagging/pending"}, {"PUT", "/api/v1/admin/tagging/batch"},
 		{"GET", "/api/v1/admin/ytdlp"}, {"POST", "/api/v1/admin/ytdlp/update"},
+		{"GET", "/api/v1/admin/usage-ping"}, {"PUT", "/api/v1/admin/usage-ping"},
 		{"GET", "/api/v1/admin/lyrics/missing"}, {"GET", "/api/v1/admin/lyrics/missing/count"},
 		{"GET", "/api/v1/admin/metadata/review"}, {"GET", "/api/v1/admin/metadata/review/count"},
 		{"PUT", fmt.Sprintf("/api/v1/admin/metadata/review/%d", id)}, {"GET", fmt.Sprintf("/api/v1/admin/metadata/review/%d", id)},
@@ -499,5 +500,30 @@ func TestBrokenTracksTotalBeyondThePage(t *testing.T) {
 	}
 	if list.Total != 502 || len(list.Items) != 500 {
 		t.Fatalf("total=%d items=%d", list.Total, len(list.Items))
+	}
+}
+
+func TestUsagePingIsOffUntilAnAdminTurnsItOn(t *testing.T) {
+	s, ts := newTestServer(t)
+	adm := loginAs(t, s, "dad", "admin")
+	r, b := do(t, ts, adm, "GET", "/api/v1/admin/usage-ping", nil)
+	var got struct{ Enabled bool }
+	if r.StatusCode != 200 || json.Unmarshal(b, &got) != nil || got.Enabled {
+		t.Fatalf("default: %d %s", r.StatusCode, b)
+	}
+	if r, b := do(t, ts, adm, "PUT", "/api/v1/admin/usage-ping", map[string]any{"enabled": true}); r.StatusCode != 200 {
+		t.Fatalf("on: %d %s", r.StatusCode, b)
+	}
+	if on, _ := s.UsagePing.Enabled(context.Background()); !on {
+		t.Fatal("not on after PUT")
+	}
+	if r, _ := do(t, ts, adm, "PUT", "/api/v1/admin/usage-ping", map[string]any{}); r.StatusCode != 400 {
+		t.Fatalf("missing enabled: %d", r.StatusCode)
+	}
+	if r, _ := do(t, ts, adm, "PUT", "/api/v1/admin/usage-ping", map[string]any{"enabled": false}); r.StatusCode != 200 {
+		t.Fatal("off")
+	}
+	if on, _ := s.UsagePing.Enabled(context.Background()); on {
+		t.Fatal("still on")
 	}
 }

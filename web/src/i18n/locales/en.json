@@ -203,6 +203,10 @@
   "admin.system.path": "Path: {path}", "admin.system.update": "Update yt-dlp",
   "admin.system.updating": "Updating…", "admin.system.updated": "Updated to {version}",
   "admin.system.updateFailed": "Couldn't update it", "admin.system.updateTimeout": "Update timed out (60 seconds)",
+  "admin.system.pingTitle": "Count this install",
+  "admin.system.pingExplain": "Melarka has no analytics. If you like, let this server tell the project that one more home runs Melarka: about once a week it sends a random install number and the Melarka version to melarka.zexa.se, and nothing else (no names, no music, no addresses). Turning it off deletes the number.",
+  "admin.system.pingLabel": "Send the weekly anonymous count",
+  "admin.system.pingFailed": "Couldn't change it",
 
   "error.youtube_only": "only YouTube links are supported",
   "error.video_id_mismatch": "video id does not match the link",

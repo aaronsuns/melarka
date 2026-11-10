@@ -203,6 +203,10 @@
   "admin.system.path": "Sökväg: {path}", "admin.system.update": "Uppdatera yt-dlp",
   "admin.system.updating": "Uppdaterar…", "admin.system.updated": "Uppdaterad till {version}",
   "admin.system.updateFailed": "Det gick inte att uppdatera", "admin.system.updateTimeout": "Uppdateringen tog för lång tid (60 sekunder)",
+  "admin.system.pingTitle": "Räkna med den här installationen",
+  "admin.system.pingExplain": "Melarka har ingen statistik. Om du vill kan servern berätta för projektet att ett hem till använder Melarka: ungefär en gång i veckan skickar den ett slumpmässigt installationsnummer och Melarka-versionen till melarka.zexa.se, inget annat (inga namn, ingen musik, inga adresser). Stänger du av det raderas numret.",
+  "admin.system.pingLabel": "Skicka den anonyma veckoräkningen",
+  "admin.system.pingFailed": "Kunde inte ändra det",
 
   "error.youtube_only": "Endast YouTube-länkar stöds",
   "error.video_id_mismatch": "Video-id matchar inte länken",

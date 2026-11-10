@@ -361,6 +361,15 @@ Melarka is a tool for listening to your own music collection at home.
 - [docs/architecture.md](docs/architecture.md): how the code is organised, and the HTTP API.
 - [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [CHANGELOG.md](CHANGELOG.md).
 
+## Privacy
+
+Melarka has no analytics and no tracking. The server only reaches out for what you use: YouTube (search,
+downloads, channels), lyrics providers, and Last.fm if you configure it. The apps talk only to your server.
+
+One opt-in exception: an admin can tick **Admin → System → Send the weekly anonymous count**. The server then
+sends a random install number and its version, and nothing else, to `melarka.zexa.se` about once a week, so
+the project can count how many homes run Melarka. It is off by default; turning it off deletes the number.
+
 ## Support
 
 Melarka is free. If it saves your family a subscription and you'd like to say thanks, you can

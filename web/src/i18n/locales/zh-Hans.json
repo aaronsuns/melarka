@@ -200,6 +200,10 @@
   "admin.system.path": "路径：{path}", "admin.system.update": "更新 yt-dlp",
   "admin.system.updating": "更新中…", "admin.system.updated": "已更新到 {version}",
   "admin.system.updateFailed": "更新失败", "admin.system.updateTimeout": "更新超时（60 秒）",
+  "admin.system.pingTitle": "算上这一台",
+  "admin.system.pingExplain": "Melarka 没有任何统计。如果你愿意，可以让这台服务器告诉作者“又多了一个家庭在用”：大约每周一次，把一个随机编号和 Melarka 版本号发到 melarka.zexa.se，别的什么都不发（没有用户名、歌曲或地址）。关掉时会删除这个编号。",
+  "admin.system.pingLabel": "每周发送匿名计数",
+  "admin.system.pingFailed": "没能更改",
 
   "error.youtube_only": "只支持 YouTube 链接",
   "error.video_id_mismatch": "视频 ID 与链接不符",

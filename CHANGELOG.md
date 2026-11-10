@@ -7,6 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Added
+
+- **An opt-in anonymous install count** (Admin → System, off by default). When an admin turns it on, the
+  server sends a random install number and its version to melarka.zexa.se about once a week, so the project
+  can count how many homes run Melarka. Nothing else is sent; turning it off deletes the number.
+
 ### Changed
 
 - **Installing the iPhone app with a Mac no longer needs SideStore first.** `ios/scripts/resign.sh`

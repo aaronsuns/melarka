@@ -27,6 +27,7 @@ import (
 	"github.com/aaronsuns/lark-server/internal/stream"
 	"github.com/aaronsuns/lark-server/internal/tags"
 	"github.com/aaronsuns/lark-server/internal/trash"
+	"github.com/aaronsuns/lark-server/internal/usageping"
 	"github.com/aaronsuns/lark-server/internal/webui"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
@@ -79,6 +80,8 @@ type Server struct {
 	YtDlpBin  string
 	YtDlpPath string
 	ytdlpMu   sync.Mutex
+	// UsagePing is the opt-in anonymous install count (Admin → System).
+	UsagePing *usageping.Service
 	Log       *slog.Logger
 }
 

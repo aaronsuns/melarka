@@ -74,6 +74,65 @@ export default function SystemPage() {
       </div>
       {updateMsg && <p className="muted">{updateMsg}</p>}
       {updateError && <p className="error">{updateError}</p>}
+      <UsagePing />
     </>
+  );
+}
+
+// The opt-in anonymous install count (internal/usageping): off until an admin ticks it.
+function UsagePing() {
+  const t = useT();
+  const [on, setOn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .usagePing()
+      .then((r) => {
+        if (!cancelled) setOn(r.enabled);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setError(errorMessage(e, "common.loadFailed"));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function change(next: boolean) {
+    setBusy(true);
+    setError("");
+    try {
+      setOn((await api.setUsagePing(next)).enabled);
+    } catch (e) {
+      setError(errorMessage(e, "admin.system.pingFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="usage-ping">
+      <h3>{t("admin.system.pingTitle")}</h3>
+      {on !== null && (
+        <div className="field field-check">
+          <label className="field-check-row">
+            <input
+              type="checkbox"
+              className="switch"
+              aria-describedby="usage-ping-hint"
+              checked={on}
+              disabled={busy}
+              onChange={(e) => void change(e.target.checked)}
+            />
+            {t("admin.system.pingLabel")}
+          </label>
+          <span id="usage-ping-hint" className="small">{t("admin.system.pingExplain")}</span>
+        </div>
+      )}
+      {error && <p className="error">{error}</p>}
+    </section>
   );
 }
