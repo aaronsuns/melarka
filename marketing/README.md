@@ -19,6 +19,8 @@ Promo media for Melarka. Everything shown is the made-up demo library of
   (the lyric line as the title, "song · artist" under it), with the caption on screen from frame 0,
   because a third of viewers left the first cut within 2 s. `ELEVEN_KEY` overrides the key file.
 - `tools/build_cards.py`: the cover images in `cards/`.
+- `tools/build_ph_gallery.py`: the Product Hunt gallery (1270x760) and thumbnail in `producthunt/`;
+  the launch texts are `texts/producthunt.md`.
 - `texts/`: the post texts (Reddit, Hacker News, Facebook groups).
 
 The English video: https://youtu.be/rkZQh5j8_ro
