@@ -7,6 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Added
+
+- Settings has a "Feedback and ideas" link to GitHub Discussions.
+- docs/install.md "In mainland China" (with a Chinese summary): what works without YouTube, and how to give
+  the server a proxy (`HTTPS_PROXY`/`HTTP_PROXY` in `.env`) for the YouTube features.
+
 ## [0.2.21] - 2026-11-11
 
 ### Added

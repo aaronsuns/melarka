@@ -82,6 +82,7 @@ test("the footer shows the server version and links to the source (AGPL §13)", 
   });
   expect(await screen.findByText("版本 0.1.0", { exact: false })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "源代码" })).toHaveAttribute("href", "https://github.com/aaronsuns/melarka");
+  expect(screen.getByRole("link", { name: "意见反馈" })).toHaveAttribute("href", "https://github.com/aaronsuns/melarka/discussions");
 });
 
 test("no version line when the server reports none", async () => {

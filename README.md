@@ -120,6 +120,10 @@ In a desktop browser: Home and Albums. Demo data: invented songs and channels, g
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Languages**: English, 简体中文, 繁體中文, svenska. Music metadata is never translated.
 
+**In mainland China** (中国大陆): YouTube is blocked, so the YouTube features need a proxy on the
+server (the phones need none); your own music, lyrics and the apps work without one. See
+[docs/install.md](docs/install.md#in-mainland-china) (中文说明在同一节).
+
 ## Quick start (step by step)
 
 This is what [the installer](deploy/install.sh) does, if you'd rather run each step yourself.
@@ -353,7 +357,7 @@ Melarka is a tool for listening to your own music collection at home.
 
 ## More documentation
 
-- [docs/install.md](docs/install.md): installing, building from source, file ownership.
+- [docs/install.md](docs/install.md): installing, building from source, file ownership, using it in mainland China.
 - [docs/configuration.md](docs/configuration.md): every environment variable and `config.yaml` key, and how each feature uses them.
 - [docs/iphone.md](docs/iphone.md): the iPhone app.
 - [docs/android.md](docs/android.md): the Android app.
@@ -373,7 +377,9 @@ the project can count how many homes run Melarka. It is off by default; turning 
 ## Support
 
 Melarka is free. If it saves your family a subscription and you'd like to say thanks, you can
-[buy me a coffee on Ko-fi](https://ko-fi.com/aaronsuns). Stars, bug reports and ideas help just as much.
+[buy me a coffee on Ko-fi](https://ko-fi.com/aaronsuns). Stars, bug reports and ideas help just as much: tell us what is missing in
+[Discussions](https://github.com/aaronsuns/melarka/discussions) or open an
+[issue](https://github.com/aaronsuns/melarka/issues) (the "Feedback and ideas" link under Settings in the app goes there).
 
 ## License
 

@@ -148,6 +148,8 @@ export default function SettingsPage() {
       <p className="muted small">
         {version && <>{t("settings.version", { v: version })} · </>}
         <a href="https://github.com/aaronsuns/melarka" target="_blank" rel="noreferrer">{t("settings.source")}</a>
+        {" · "}
+        <a href="https://github.com/aaronsuns/melarka/discussions" target="_blank" rel="noreferrer">{t("settings.feedback")}</a>
       </p>
     </>
   );

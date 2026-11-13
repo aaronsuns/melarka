@@ -121,6 +121,38 @@ builds the web app and the binary `bin/lark`; note that `go build` alone embeds 
 page, so build the web app first and copy `web/dist/` to `internal/webui/dist/`, or serve it with
 `LARK_WEB_DIR=web/dist`. See [CONTRIBUTING.md](../CONTRIBUTING.md) for development.
 
+## In mainland China
+
+YouTube is blocked in mainland China. Everything that does not need YouTube works as usual: your
+own music folder, lyrics (NetEase, QQ Music and Kugou are among the lyrics sources), playlists,
+favorites, the offline cache and the apps. Search, downloads, channels, video and "For you" need
+YouTube.
+
+To use the YouTube features, only the **server** needs a way out; the phones never contact YouTube
+(thumbnails and videos come through your server). If you already run a proxy on your network
+(Clash, v2rayA and similar; Clash usually listens on port 7890), add these lines to `.env` and
+restart with `docker compose up -d`:
+
+```
+HTTPS_PROXY=http://192.168.1.10:7890
+HTTP_PROXY=http://192.168.1.10:7890
+NO_PROXY=localhost,127.0.0.1
+```
+
+Use your proxy's LAN address, not `127.0.0.1`: inside the container, `127.0.0.1` is the container
+itself. Both Melarka and yt-dlp read these variables, so the yt-dlp updates from GitHub go through
+the proxy too. Pulling `ghcr.io/aaronsuns/melarka` can also be slow without it.
+
+Planned: a source that works in China without a proxy (Bilibili, which yt-dlp already supports).
+If you want it, say so in [Discussions](https://github.com/aaronsuns/melarka/discussions); that
+decides what comes first.
+
+**中文简述：** 在中国大陆，YouTube 无法直接访问。本地音乐、歌词（歌词来源包括网易云、QQ 音乐、酷狗）、
+歌单、收藏、离线缓存和手机 App 都能正常使用；YouTube 搜索、下载、频道、视频和“为你推荐”需要服务器能访问
+YouTube。手机不需要翻墙，只有服务器需要：如果局域网里已有代理（如 Clash，端口通常是 7890），把上面三行
+写进 `.env`（地址换成代理机器的局域网 IP，不要写 127.0.0.1），再运行 `docker compose up -d`。
+计划支持 B 站作为国内可用的音源，想要的话请到 Discussions 留言。
+
 ## Upgrading and backups
 
 See [Backup, restore and upgrade](../README.md#backup-restore-and-upgrade) in the README. In
