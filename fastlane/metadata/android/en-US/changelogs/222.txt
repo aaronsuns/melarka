@@ -1,0 +1,1 @@
+A "Feedback and ideas" link in Settings. The anonymous weekly install count is now on by default and also sends rough ranges of users and songs; turn it off in Admin → System. Notes for mainland China in the install guide.

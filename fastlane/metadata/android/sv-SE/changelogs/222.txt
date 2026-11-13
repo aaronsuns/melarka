@@ -1,0 +1,1 @@
+En länk "Feedback och idéer" i Inställningar. Den anonyma veckovisa räkningen är nu på som standard och skickar även ungefärligt antal användare och låtar; stäng av den i Admin → System. Tips för Kina i installationsguiden.

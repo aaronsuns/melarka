@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.22] - 2026-11-13
+
 ### Changed
 
 - **The anonymous install count is now on by default**, for new installs and for existing ones on upgrade.
@@ -421,7 +423,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.21...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.22...HEAD
+[0.2.22]: https://github.com/aaronsuns/melarka/compare/v0.2.21...v0.2.22
 [0.2.21]: https://github.com/aaronsuns/melarka/compare/v0.2.20...v0.2.21
 [0.2.20]: https://github.com/aaronsuns/melarka/compare/v0.2.19...v0.2.20
 [0.2.19]: https://github.com/aaronsuns/melarka/compare/v0.2.18...v0.2.19
