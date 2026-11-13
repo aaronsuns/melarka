@@ -266,8 +266,8 @@ export const api = {
 
   ytdlpInfo: () => req<{ version: string; path: string }>("GET", "/admin/ytdlp"),
   ytdlpUpdate: () => req<{ version: string; path: string }>("POST", "/admin/ytdlp/update"),
-  usagePing: () => req<{ enabled: boolean }>("GET", "/admin/usage-ping"),
-  setUsagePing: (enabled: boolean) => req<{ enabled: boolean }>("PUT", "/admin/usage-ping", { enabled }),
+  usagePing: () => req<{ enabled: boolean; env_off?: boolean }>("GET", "/admin/usage-ping"),
+  setUsagePing: (enabled: boolean) => req<{ enabled: boolean; env_off?: boolean }>("PUT", "/admin/usage-ping", { enabled }),
 };
 
 export function streamUrl(id: number, q: Quality): string {

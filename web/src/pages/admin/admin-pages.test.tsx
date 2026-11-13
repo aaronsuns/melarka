@@ -396,24 +396,39 @@ test("shows the current yt-dlp version and updates it", async () => {
   expect(screen.getByText("当前版本：2026.09.01")).toBeInTheDocument();
 });
 
-test("the anonymous install count is off until the admin turns it on", async () => {
+test("the anonymous install count is on by default and the admin can turn it off", async () => {
   const put = vi.fn((init: RequestInit) => ({ status: 200, body: JSON.parse(init.body as string) }));
   renderWithApp(<SystemPage />, {
     role: "admin",
     path: "/admin/system",
     routes: {
       "GET /api/v1/admin/ytdlp": () => ({ body: { version: "2026.01.01", path: "/data/yt-dlp" } }),
-      "GET /api/v1/admin/usage-ping": () => ({ body: { enabled: false } }),
+      "GET /api/v1/admin/usage-ping": () => ({ body: { enabled: true, env_off: false } }),
       "PUT /api/v1/admin/usage-ping": put,
     },
   });
   const box = await screen.findByRole("checkbox", { name: "每周发送匿名计数" });
-  expect(box).not.toBeChecked();
-  expect(screen.getByText(/随机编号和 Melarka 版本号/)).toBeInTheDocument();
+  expect(box).toBeChecked();
+  expect(screen.getByText(/默认开启/)).toBeInTheDocument();
   await userEvent.click(box);
-  await waitFor(() => expect(box).toBeChecked());
+  await waitFor(() => expect(box).not.toBeChecked());
   expect(put).toHaveBeenCalledTimes(1);
-  expect(JSON.parse(put.mock.calls[0][0].body as string)).toEqual({ enabled: true });
+  expect(JSON.parse(put.mock.calls[0][0].body as string)).toEqual({ enabled: false });
+});
+
+test("LARK_USAGE_PING=off locks the anonymous count switch off", async () => {
+  renderWithApp(<SystemPage />, {
+    role: "admin",
+    path: "/admin/system",
+    routes: {
+      "GET /api/v1/admin/ytdlp": () => ({ body: { version: "2026.01.01", path: "/data/yt-dlp" } }),
+      "GET /api/v1/admin/usage-ping": () => ({ body: { enabled: false, env_off: true } }),
+    },
+  });
+  const box = await screen.findByRole("checkbox", { name: "每周发送匿名计数" });
+  expect(box).not.toBeChecked();
+  expect(box).toBeDisabled();
+  expect(screen.getByText(/LARK_USAGE_PING=off 关闭/)).toBeInTheDocument();
 });
 
 test("yt-dlp update shows a timeout message after 60s with no response", async () => {

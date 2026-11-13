@@ -204,9 +204,11 @@
   "admin.system.updating": "Updating…", "admin.system.updated": "Updated to {version}",
   "admin.system.updateFailed": "Couldn't update it", "admin.system.updateTimeout": "Update timed out (60 seconds)",
   "admin.system.pingTitle": "Count this install",
-  "admin.system.pingExplain": "Melarka has no analytics. If you like, let this server tell the project that one more home runs Melarka: about once a week it sends a random install number and the Melarka version to melarka.zexa.se, and nothing else (no names, no music, no addresses). Turning it off deletes the number.",
+  "admin.system.pingExplain": "On by default. About once a week this server tells melarka.zexa.se that one more home runs Melarka: a random install number, the Melarka version, the operating system, whether it runs in Docker, and the rough number of users and songs (ranges such as 2–5 or 1000–9999). Nothing else: no names, no songs, no addresses, and the site keeps no IP addresses. Turning it off deletes the number.",
   "admin.system.pingLabel": "Send the weekly anonymous count",
   "admin.system.pingFailed": "Couldn't change it",
+  "admin.system.pingEnvOff": "Off on this server (LARK_USAGE_PING=off).",
+  "error.usage_ping_env_off": "This server keeps it off (LARK_USAGE_PING=off)",
 
   "error.youtube_only": "only YouTube links are supported",
   "error.video_id_mismatch": "video id does not match the link",

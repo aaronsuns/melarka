@@ -503,12 +503,15 @@ func TestBrokenTracksTotalBeyondThePage(t *testing.T) {
 	}
 }
 
-func TestUsagePingIsOffUntilAnAdminTurnsItOn(t *testing.T) {
+func TestUsagePingIsOnUntilAnAdminTurnsItOff(t *testing.T) {
 	s, ts := newTestServer(t)
 	adm := loginAs(t, s, "dad", "admin")
 	r, b := do(t, ts, adm, "GET", "/api/v1/admin/usage-ping", nil)
-	var got struct{ Enabled bool }
-	if r.StatusCode != 200 || json.Unmarshal(b, &got) != nil || got.Enabled {
+	var got struct {
+		Enabled bool
+		EnvOff  bool `json:"env_off"`
+	}
+	if r.StatusCode != 200 || json.Unmarshal(b, &got) != nil || !got.Enabled || got.EnvOff {
 		t.Fatalf("default: %d %s", r.StatusCode, b)
 	}
 	if r, b := do(t, ts, adm, "PUT", "/api/v1/admin/usage-ping", map[string]any{"enabled": true}); r.StatusCode != 200 {
@@ -525,5 +528,14 @@ func TestUsagePingIsOffUntilAnAdminTurnsItOn(t *testing.T) {
 	}
 	if on, _ := s.UsagePing.Enabled(context.Background()); on {
 		t.Fatal("still on")
+	}
+	// LARK_USAGE_PING=off: the switch reports it and cannot turn it on.
+	s.UsagePing.Off = true
+	r, b = do(t, ts, adm, "GET", "/api/v1/admin/usage-ping", nil)
+	if json.Unmarshal(b, &got) != nil || got.Enabled || !got.EnvOff {
+		t.Fatalf("env off: %s", b)
+	}
+	if r, b := do(t, ts, adm, "PUT", "/api/v1/admin/usage-ping", map[string]any{"enabled": true}); r.StatusCode != 409 || !strings.Contains(string(b), "usage_ping_env_off") {
+		t.Fatalf("env off PUT: %d %s", r.StatusCode, b)
 	}
 }

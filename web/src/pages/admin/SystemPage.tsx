@@ -79,10 +79,11 @@ export default function SystemPage() {
   );
 }
 
-// The opt-in anonymous install count (internal/usageping): off until an admin ticks it.
+// The anonymous install count (internal/usageping): on by default; LARK_USAGE_PING=off locks it off.
 function UsagePing() {
   const t = useT();
   const [on, setOn] = useState<boolean | null>(null);
+  const [envOff, setEnvOff] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -91,7 +92,10 @@ function UsagePing() {
     api
       .usagePing()
       .then((r) => {
-        if (!cancelled) setOn(r.enabled);
+        if (!cancelled) {
+          setOn(r.enabled);
+          setEnvOff(!!r.env_off);
+        }
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(errorMessage(e, "common.loadFailed"));
@@ -124,12 +128,15 @@ function UsagePing() {
               className="switch"
               aria-describedby="usage-ping-hint"
               checked={on}
-              disabled={busy}
+              disabled={busy || envOff}
               onChange={(e) => void change(e.target.checked)}
             />
             {t("admin.system.pingLabel")}
           </label>
-          <span id="usage-ping-hint" className="small">{t("admin.system.pingExplain")}</span>
+          <span id="usage-ping-hint" className="small">
+            {t("admin.system.pingExplain")}
+            {envOff && <> {t("admin.system.pingEnvOff")}</>}
+          </span>
         </div>
       )}
       {error && <p className="error">{error}</p>}

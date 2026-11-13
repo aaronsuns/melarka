@@ -7,6 +7,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Changed
+
+- **The anonymous install count is now on by default**, for new installs and for existing ones on upgrade.
+  Besides the random install number and the version it now sends the OS, the CPU architecture, whether it
+  runs in Docker, and the rough number of users and songs as ranges (README "Privacy" lists every field).
+  Turn it off in Admin → System, or set `LARK_USAGE_PING=off` so nothing is ever sent; the log says it is on
+  at every start.
+
 ### Added
 
 - Settings has a "Feedback and ideas" link to GitHub Discussions.

@@ -367,12 +367,30 @@ Melarka is a tool for listening to your own music collection at home.
 
 ## Privacy
 
-Melarka has no analytics and no tracking. The server only reaches out for what you use: YouTube (search,
-downloads, channels), lyrics providers, and Last.fm if you configure it. The apps talk only to your server.
+Melarka has no tracking. The server only reaches out for what you use: YouTube (search, downloads,
+channels), lyrics providers, and Last.fm if you configure it. The apps talk only to your server.
 
-One opt-in exception: an admin can tick **Admin → System → Send the weekly anonymous count**. The server then
-sends a random install number and its version, and nothing else, to `melarka.zexa.se` about once a week, so
-the project can count how many homes run Melarka. It is off by default; turning it off deletes the number.
+**One exception, the anonymous install count (on by default).** About once a week the server sends this to
+`melarka.zexa.se`, so the project can count how many homes run Melarka and which versions and platforms to
+support:
+
+| Field | Example | |
+|---|---|---|
+| `id` | `3f9c…` (32 hex characters) | random, made by your server; not tied to you, your account or your IP |
+| `version` | `0.2.22` | the Melarka version |
+| `os`, `arch` | `linux`, `arm64` | |
+| `container` | `true` | whether it runs in Docker |
+| `users` | `2-5` | a range (1, 2-5, 6-20, 21+), never the exact number |
+| `tracks` | `1000-9999` | a range (0, 1-99, 100-999, 1000-9999, 10000+), never the exact number |
+
+Nothing else: no user names, songs, playlists, listening history, searches, file paths or settings. The
+apps send nothing; it is one count per server. The website does not store IP addresses; it keeps each id
+for 35 days after its last ping, and anyone can see the totals at
+[melarka.zexa.se/api/ping/stats](https://melarka.zexa.se/api/ping/stats).
+
+To turn it off: untick **Admin → System → Send the weekly anonymous count** (this deletes the id), or set
+`LARK_USAGE_PING=off` in `.env` before the first start, so nothing is ever sent. Existing installs that
+upgrade to 0.2.22 have it switched on as well; the server's log says so at every start while it is on.
 
 ## Support
 

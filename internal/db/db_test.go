@@ -33,7 +33,7 @@ func TestOpenMigratesAndIsIdempotent(t *testing.T) {
 	}
 	var n int
 	d.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&n)
-	if n != 30 {
+	if n != 31 {
 		t.Fatalf("migrations=%d", n)
 	}
 }

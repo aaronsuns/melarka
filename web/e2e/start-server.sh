@@ -64,4 +64,4 @@ FEED_PID=$!
 trap 'kill $FEED_PID 2>/dev/null; rm -rf "$TMP"' EXIT
 (cd "$ROOT" && go build -o "$TMP/lark" ./cmd/lark)
 LARK_WEB_DIR="$ROOT/web/dist" LARK_YOUTUBE_FEED_URL=http://127.0.0.1:4701/videos.xml LARK_YOUTUBE_THUMB_URL=http://127.0.0.1:4701/vi LARK_DATA_DIR="$TMP/data" LARK_LISTEN=127.0.0.1:4700 LARK_LANGUAGE=zh-Hans \
-  LARK_ADMIN_USER=admin LARK_ADMIN_PASSWORD="$LARK_E2E_PW" "$TMP/lark"
+  LARK_ADMIN_USER=admin LARK_ADMIN_PASSWORD="$LARK_E2E_PW" LARK_USAGE_PING=off "$TMP/lark"

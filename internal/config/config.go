@@ -187,6 +187,11 @@ type Config struct {
 	// removes itself and the app deletes what it cached. LARK_OFFLINE_CACHE
 	// (on/off) overrides it.
 	OfflineCache bool `yaml:"offline_cache"`
+
+	// UsagePing is the anonymous weekly install count (internal/usageping);
+	// default true, so the admin switch decides. LARK_USAGE_PING=off turns it
+	// off for good: nothing is sent and the switch cannot turn it on.
+	UsagePing bool `yaml:"-"`
 }
 
 func (c Config) DBPath() string   { return filepath.Join(c.DataDir, "lark.db") }
@@ -225,6 +230,7 @@ func Load() (Config, error) {
 		Channels:        ChannelsConfig{Enabled: true, PollInterval: 2 * time.Hour, KeepDays: 10, InitialBackfill: 3, MaxGB: 200, PreviewTTL: 24 * time.Hour, PreviewMaxGB: 10},
 	}
 	c.OfflineCache = true
+	c.UsagePing = true
 	path := env("LARK_CONFIG", filepath.Join(c.DataDir, "config.yaml"))
 	b, err := os.ReadFile(path)
 	switch {
@@ -254,6 +260,13 @@ func Load() (Config, error) {
 		c.OfflineCache = false
 	default:
 		return c, fmt.Errorf("LARK_OFFLINE_CACHE %q: must be on or off", v)
+	}
+	switch v := strings.ToLower(os.Getenv("LARK_USAGE_PING")); v {
+	case "", "on", "true", "1":
+	case "off", "false", "0":
+		c.UsagePing = false
+	default:
+		return c, fmt.Errorf("LARK_USAGE_PING %q: must be on or off", v)
 	}
 	if !refreshAtRe.MatchString(c.Recommendations.RefreshAt) {
 		return c, fmt.Errorf("recommendations.refresh_at %q: want HH:MM (00:00–23:59)", c.Recommendations.RefreshAt)

@@ -3,9 +3,11 @@ package usageping
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -38,15 +40,54 @@ func (f *fakeSite) server(t *testing.T) *httptest.Server {
 	return ts
 }
 
-func TestOffByDefaultAndNothingSent(t *testing.T) {
-	site := &fakeSite{}
-	s := &Service{DB: testutil.DB(t), URL: site.server(t).URL, Version: "1.2.3"}
-	ctx := context.Background()
-	if on, err := s.Enabled(ctx); err != nil || on {
-		t.Fatalf("enabled by default: %v %v", on, err)
+func TestOnByDefaultForEveryInstall(t *testing.T) {
+	s := &Service{DB: testutil.DB(t)}
+	if on, err := s.Enabled(context.Background()); err != nil || !on {
+		t.Fatalf("not on by default: %v %v", on, err)
 	}
-	if sent, err := s.SendIfDue(ctx); err != nil || sent || len(site.got) != 0 {
-		t.Fatalf("sent while off: %v %v %v", sent, err, site.got)
+}
+
+func TestEnvOffDeletesTheIDAndNeverSends(t *testing.T) {
+	site := &fakeSite{}
+	s := &Service{DB: testutil.DB(t), URL: site.server(t).URL, Version: "1", Off: true}
+	ctx := context.Background()
+	s.Run(ctx) // returns at once when Off
+	var n int
+	s.DB.QueryRow(`SELECT COUNT(*) FROM usage_ping`).Scan(&n)
+	if n != 0 {
+		t.Fatal("the id outlived LARK_USAGE_PING=off")
+	}
+	if on, _ := s.Enabled(ctx); on {
+		t.Fatal("enabled while off by env")
+	}
+	if err := s.SetEnabled(ctx, true); !errors.Is(err, ErrOff) {
+		t.Fatalf("switch overrode the env: %v", err)
+	}
+	if sent, _ := s.SendIfDue(ctx); sent || len(site.got) != 0 {
+		t.Fatal("sent while off by env")
+	}
+}
+
+func TestPayloadHasOnlyCoarseNumbers(t *testing.T) {
+	site := &fakeSite{}
+	s := &Service{DB: testutil.DB(t), URL: site.server(t).URL, Version: "1", InContainer: func() bool { return true }}
+	ctx := context.Background()
+	if sent, err := s.SendIfDue(ctx); err != nil || !sent {
+		t.Fatalf("%v %v", sent, err)
+	}
+	p := site.got[0]
+	if p.OS != runtime.GOOS || p.Arch != runtime.GOARCH || !p.Container || p.Users != "1" || p.Tracks != "0" {
+		t.Fatalf("payload %+v", p)
+	}
+	for n, want := range map[int]string{0: "1", 1: "1", 2: "2-5", 5: "2-5", 6: "6-20", 20: "6-20", 21: "21+"} {
+		if got := UsersRange(n); got != want {
+			t.Errorf("UsersRange(%d) = %s", n, got)
+		}
+	}
+	for n, want := range map[int]string{0: "0", 1: "1-99", 99: "1-99", 100: "100-999", 9999: "1000-9999", 10000: "10000+"} {
+		if got := TracksRange(n); got != want {
+			t.Errorf("TracksRange(%d) = %s", n, got)
+		}
 	}
 }
 
@@ -55,6 +96,7 @@ func TestSendsIDAndVersionOnlyThenWaitsAWeek(t *testing.T) {
 	now := time.Unix(1_800_000_000, 0)
 	s := &Service{DB: testutil.DB(t), URL: site.server(t).URL, Version: "1.2.3", Now: func() time.Time { return now }}
 	ctx := context.Background()
+	s.SetEnabled(ctx, false) // a fresh id, not the migration's
 	if err := s.SetEnabled(ctx, true); err != nil {
 		t.Fatal(err)
 	}
@@ -124,6 +166,7 @@ func TestRunPingsRightAfterTurningOn(t *testing.T) {
 	s := &Service{DB: testutil.DB(t), URL: site.server(t).URL, Version: "1"}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
+	s.SetEnabled(context.Background(), false)
 	go func() { s.Run(ctx); close(done) }()
 	defer func() { cancel(); <-done }()
 	if err := s.SetEnabled(context.Background(), true); err != nil {

@@ -48,7 +48,7 @@ Each package under `internal/` has one job:
 | `artwork` | covers from files, folders and online sources, with a resized cache |
 | `metareview` | the review list behind the names agent skill |
 | `trash` | moves deleted tracks to `.lark-trash/` and purges them after 30 days |
-| `usageping` | the opt-in anonymous install count (Admin → System): a random id and the version to melarka.zexa.se weekly; see docs/superpowers/specs/usage-ping-design.md |
+| `usageping` | the anonymous install count (on by default; Admin → System or LARK_USAGE_PING=off turns it off): a random id, the version, OS/arch, Docker or not, and user/song ranges to melarka.zexa.se weekly; see docs/superpowers/specs/usage-ping-design.md |
 | `ytdlp` | the only place that runs yt-dlp: search, playlists, downloads, self-update |
 | `download` | the YouTube download queue |
 | `recommend` | the nightly "For you" lists |

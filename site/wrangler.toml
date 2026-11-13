@@ -12,7 +12,7 @@ binding = "ASSETS"
 run_worker_first = ["/media/*", "/api/*"]
 html_handling = "drop-trailing-slash"
 
-# The opt-in usage ping from Melarka servers (internal/usageping): install id -> version, each key
+# The anonymous usage ping from Melarka servers (internal/usageping): install id -> version and coarse fields, each key
 # expiring 35 days after its last ping, so the key count is the installs active in the last month.
 [[kv_namespaces]]
 binding = "PINGS"

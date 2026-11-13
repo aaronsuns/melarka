@@ -1,9 +1,10 @@
-// Package usageping is the opt-in "count this install" ping. Melarka has no
-// analytics; an admin can turn this on (Admin → System) to tell the project the
-// install is running. About once a week the server then sends a random install
-// id and its version, and nothing else, to the Melarka website, which only
-// counts installs. Off by default; turning it off deletes the id, so turning
-// it on again counts as a new install.
+// Package usageping is the anonymous "count this install" ping. Melarka has no
+// analytics; this tells the project that the install is running. About once a
+// week the server sends a random install id, its version and a few coarse
+// numbers (see Payload), and nothing else, to the Melarka website, which only
+// counts. On by default (migration 0031); an admin turns it off in Admin →
+// System, or LARK_USAGE_PING=off keeps it off. Turning it off deletes the id,
+// so turning it on again counts as a new install.
 package usageping
 
 import (
@@ -18,6 +19,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -38,6 +41,12 @@ type Service struct {
 	Client  *http.Client     // a 15-second client when nil
 	Now     func() time.Time // time.Now when nil
 	Log     *slog.Logger
+	// Off is LARK_USAGE_PING=off: nothing is ever sent, the id is deleted
+	// when Run starts, and the admin switch cannot turn it on.
+	Off bool
+	// InContainer reports whether the server runs in a container; a check
+	// for /.dockerenv when nil.
+	InContainer func() bool
 
 	wakeOnce sync.Once
 	wake     chan struct{}
@@ -48,10 +57,63 @@ func (s *Service) wakeCh() chan struct{} {
 	return s.wake
 }
 
-// Payload is everything a ping sends.
+// ErrOff is returned when an admin tries to turn the ping on while
+// LARK_USAGE_PING=off.
+var ErrOff = errors.New("usage ping is off by LARK_USAGE_PING")
+
+// Payload is everything a ping sends. Users and Tracks are ranges, never
+// exact counts.
 type Payload struct {
-	ID      string `json:"id"`
-	Version string `json:"version"`
+	ID        string `json:"id"`
+	Version   string `json:"version"`
+	OS        string `json:"os"`
+	Arch      string `json:"arch"`
+	Container bool   `json:"container"`
+	Users     string `json:"users"`
+	Tracks    string `json:"tracks"`
+}
+
+// UsersRange and TracksRange turn a count into the coarse range a ping sends.
+func UsersRange(n int) string {
+	switch {
+	case n <= 1:
+		return "1"
+	case n <= 5:
+		return "2-5"
+	case n <= 20:
+		return "6-20"
+	}
+	return "21+"
+}
+
+func TracksRange(n int) string {
+	switch {
+	case n == 0:
+		return "0"
+	case n < 100:
+		return "1-99"
+	case n < 1000:
+		return "100-999"
+	case n < 10000:
+		return "1000-9999"
+	}
+	return "10000+"
+}
+
+func (s *Service) payload(ctx context.Context, id string) (Payload, error) {
+	var users, tracks int
+	if err := s.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&users); err != nil {
+		return Payload{}, err
+	}
+	if err := s.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM tracks WHERE status != 'trashed'`).Scan(&tracks); err != nil {
+		return Payload{}, err
+	}
+	inContainer := s.InContainer
+	if inContainer == nil {
+		inContainer = func() bool { _, err := os.Stat("/.dockerenv"); return err == nil }
+	}
+	return Payload{ID: id, Version: s.Version, OS: runtime.GOOS, Arch: runtime.GOARCH, Container: inContainer(),
+		Users: UsersRange(users), Tracks: TracksRange(tracks)}, nil
 }
 
 func (s *Service) now() time.Time {
@@ -62,6 +124,9 @@ func (s *Service) now() time.Time {
 }
 
 func (s *Service) Enabled(ctx context.Context) (bool, error) {
+	if s.Off {
+		return false, nil
+	}
 	var n int
 	err := s.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM usage_ping`).Scan(&n)
 	return n > 0, err
@@ -73,6 +138,9 @@ func (s *Service) SetEnabled(ctx context.Context, on bool) error {
 	if !on {
 		_, err := s.DB.ExecContext(ctx, `DELETE FROM usage_ping`)
 		return err
+	}
+	if s.Off {
+		return ErrOff
 	}
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
@@ -91,6 +159,9 @@ func (s *Service) SetEnabled(ctx context.Context, on bool) error {
 
 // SendIfDue pings when the ping is on and the last one is older than Interval.
 func (s *Service) SendIfDue(ctx context.Context) (bool, error) {
+	if s.Off {
+		return false, nil
+	}
 	var id string
 	var last int64
 	err := s.DB.QueryRowContext(ctx, `SELECT install_id, last_sent_at FROM usage_ping WHERE id = 1`).Scan(&id, &last)
@@ -104,7 +175,11 @@ func (s *Service) SendIfDue(ctx context.Context) (bool, error) {
 	if last > 0 && now.Sub(time.Unix(last, 0)) < Interval {
 		return false, nil
 	}
-	body, _ := json.Marshal(Payload{ID: id, Version: s.Version})
+	p, err := s.payload(ctx, id)
+	if err != nil {
+		return false, err
+	}
+	body, _ := json.Marshal(p)
 	url := s.URL
 	if url == "" {
 		url = DefaultURL
@@ -134,7 +209,14 @@ func (s *Service) SendIfDue(ctx context.Context) (bool, error) {
 
 // Run checks hourly (and right after the ping is turned on) whether a ping is due.
 // A failed ping is tried again at the next check.
+// With Off it deletes the id first and then never sends.
 func (s *Service) Run(ctx context.Context) {
+	if s.Off {
+		if _, err := s.DB.ExecContext(ctx, `DELETE FROM usage_ping`); err != nil && s.Log != nil {
+			s.Log.Warn("usage ping: delete id", "err", err)
+		}
+		return
+	}
 	wake := s.wakeCh()
 	t := time.NewTicker(checkEvery)
 	defer t.Stop()

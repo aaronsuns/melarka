@@ -200,7 +200,10 @@ func run(log *slog.Logger) error {
 		Downloads: downloads, YT: ytClient, YtDlpBin: ytdlpBin, YtDlpPath: cfg.YtDlpPath,
 	}
 	// The opt-in anonymous install count (Admin → System); off unless an admin turned it on.
-	srv.UsagePing = &usageping.Service{DB: d, Version: buildinfo.Version, Log: log}
+	srv.UsagePing = &usageping.Service{DB: d, Version: buildinfo.Version, Log: log, Off: !cfg.UsagePing}
+	if on, _ := srv.UsagePing.Enabled(ctx); on {
+		log.Info("anonymous usage count is on: about once a week a random install id, the version, OS and rough user/song counts go to melarka.zexa.se; turn it off in Admin → System or with LARK_USAGE_PING=off")
+	}
 	pingDone := make(chan struct{})
 	go func() { defer close(pingDone); srv.UsagePing.Run(ctx) }()
 	// YouTube's tags for songs downloaded before they were kept (for tagging), at low priority.

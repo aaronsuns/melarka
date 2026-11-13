@@ -23,6 +23,7 @@ or `.env`, and `docker compose restart melarka` a changed `config.yaml`.
 | `LARK_LANGUAGE` | none | overrides `language` from `config.yaml` |
 | `LARK_LASTFM_API_KEY` | none | turns on Last.fm tagging and Last.fm's similar tracks (see [Tags](#tags)) |
 | `LARK_OFFLINE_CACHE` | none | `on` or `off`; overrides `offline_cache` from `config.yaml` (see [Offline cache](#offline-cache)) |
+| `LARK_USAGE_PING` | `on` | `off` turns the anonymous weekly install count off for good: nothing is sent, the install id is deleted and Admin → System cannot turn it on (see the README, "Privacy") |
 | `LARK_WEB_DIR` | none | serve the web app from this directory instead of the embedded copy (development) |
 | `LARK_YOUTUBE_FEED_URL` | `https://www.youtube.com/feeds/videos.xml` | where channel feeds are read (tests point it at a local server) |
 | `LARK_YOUTUBE_THUMB_URL` | `https://i.ytimg.com/vi` | where the video thumbnail proxy reads YouTube thumbnails, as `<url>/<video id>/mqdefault.jpg` (tests point it at a local server) |

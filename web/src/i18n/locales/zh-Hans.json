@@ -201,9 +201,11 @@
   "admin.system.updating": "更新中…", "admin.system.updated": "已更新到 {version}",
   "admin.system.updateFailed": "更新失败", "admin.system.updateTimeout": "更新超时（60 秒）",
   "admin.system.pingTitle": "算上这一台",
-  "admin.system.pingExplain": "Melarka 没有任何统计。如果你愿意，可以让这台服务器告诉作者“又多了一个家庭在用”：大约每周一次，把一个随机编号和 Melarka 版本号发到 melarka.zexa.se，别的什么都不发（没有用户名、歌曲或地址）。关掉时会删除这个编号。",
+  "admin.system.pingExplain": "默认开启。大约每周一次，这台服务器告诉 melarka.zexa.se “又多了一个家庭在用”：发送一个随机编号、Melarka 版本号、操作系统、是否在 Docker 里运行，以及大致的用户数和歌曲数（只给范围，比如 2–5、1000–9999）。别的什么都不发：没有用户名、歌曲或地址，网站也不保存 IP 地址。关掉时会删除这个编号。",
   "admin.system.pingLabel": "每周发送匿名计数",
   "admin.system.pingFailed": "没能更改",
+  "admin.system.pingEnvOff": "这台服务器已用 LARK_USAGE_PING=off 关闭。",
+  "error.usage_ping_env_off": "服务器已关闭此项（LARK_USAGE_PING=off）",
 
   "error.youtube_only": "只支持 YouTube 链接",
   "error.video_id_mismatch": "视频 ID 与链接不符",

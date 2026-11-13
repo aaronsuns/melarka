@@ -300,3 +300,22 @@ func TestLoudnessConfig(t *testing.T) {
 		}
 	}
 }
+
+func TestUsagePingSwitch(t *testing.T) {
+	t.Setenv("LARK_DATA_DIR", t.TempDir())
+	t.Setenv("LARK_CONFIG", filepath.Join(t.TempDir(), "none.yaml"))
+	t.Setenv("LARK_USAGE_PING", "")
+	if c, err := Load(); err != nil || !c.UsagePing {
+		t.Fatalf("default on: %v %v", c.UsagePing, err)
+	}
+	for v, want := range map[string]bool{"off": false, "OFF": false, "false": false, "0": false, "on": true, "1": true} {
+		t.Setenv("LARK_USAGE_PING", v)
+		if c, err := Load(); err != nil || c.UsagePing != want {
+			t.Errorf("%s: %v %v", v, c.UsagePing, err)
+		}
+	}
+	t.Setenv("LARK_USAGE_PING", "maybe")
+	if _, err := Load(); err == nil {
+		t.Error("bad value accepted")
+	}
+}
