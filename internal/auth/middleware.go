@@ -66,3 +66,7 @@ func DeviceIDFrom(ctx context.Context) int64 {
 	d, _ := ctx.Value(deviceKey).(int64)
 	return d
 }
+
+// TokenFrom is the session token of r (Authorization header or cookie), for public
+// routes that act on an optional session, like signing in to one more account.
+func TokenFrom(r *http.Request) string { return tokenFrom(r) }

@@ -111,6 +111,8 @@ In a desktop browser: Home and Albums. Demo data: invented songs and channels, g
   play and favorite most.
 - **Tags**: browse and shuffle by genre, mood, scene, era and language. Tags come from folder
   names, Last.fm, an optional AI agent skill, or by hand.
+- **Quick account switch**: sign in to each family member's account once on a phone, then switch with
+  one tap under 我的 (Me), no password, so a child's songs stay out of a parent's favorites and "For you".
 - **Personal radio**, favorites, playlists, **My downloads**, and search that remembers your last
   20 searches.
 - **Offline cache** in the web app too: favorites stay on the phone at `high` quality under a

@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Added
+
+- **Quick account switch.** Me → "Add account" signs in to a family member's account once on this phone or
+  browser; after that, switching between the accounts there is one tap, with no password, so a child's
+  listening stays out of a parent's favorites and "For you". "Remove" signs one account out on this device;
+  "Sign out" now signs out every account on it.
+
 ## [0.2.22] - 2026-11-13
 
 ### Changed

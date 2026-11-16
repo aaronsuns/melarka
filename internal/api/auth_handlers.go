@@ -11,6 +11,9 @@ import (
 
 func (s *Server) authRoutes(a chi.Router) {
 	a.Post("/auth/logout", s.logout)
+	a.Get("/auth/accounts", s.linkedAccounts)
+	a.Post("/auth/switch", s.switchAccount)
+	a.Delete("/auth/accounts/{id}", s.unlinkAccount)
 	a.Get("/me", s.me)
 	a.Put("/me/password", s.changePassword)
 	a.Get("/devices", s.devices)
@@ -24,10 +27,22 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		Username   string `json:"username"`
 		Password   string `json:"password"`
 		DeviceName string `json:"device_name"`
+		// Link signs in to one more account on this browser or app (Settings → Accounts → Add account):
+		// the new session joins the current one's link group, so either can switch to the other.
+		Link bool `json:"link"`
 	}
 	if err := decodeJSON(r, &in); err != nil {
 		writeError(w, 400, err.Error())
 		return
+	}
+	var cur auth.User
+	var curDev int64
+	if in.Link {
+		var err error
+		if cur, curDev, err = s.Auth.Authenticate(r.Context(), auth.TokenFrom(r)); err != nil {
+			writeCoded(w, 401, "not_signed_in", "not signed in")
+			return
+		}
 	}
 	tok, u, err := s.Auth.Login(r.Context(), in.Username, in.Password, in.DeviceName)
 	if errors.Is(err, auth.ErrBadCredentials) {
@@ -43,16 +58,87 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, "login failed")
 		return
 	}
+	if in.Link {
+		_, dev, err := s.Auth.Authenticate(r.Context(), tok)
+		if err == nil && u.ID == cur.ID {
+			s.Auth.Logout(r.Context(), dev)
+			writeCoded(w, 409, "account_already_here", "that account is already signed in here")
+			return
+		}
+		if err == nil {
+			err = s.Auth.LinkDevice(r.Context(), curDev, dev)
+		}
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+	}
+	setSessionCookie(w, r, tok)
+	writeJSON(w, 200, map[string]any{"token": tok, "user": u})
+}
+
+func setSessionCookie(w http.ResponseWriter, r *http.Request, tok string) {
 	http.SetCookie(w, &http.Cookie{
 		Name: auth.CookieName, Value: tok, Path: "/", HttpOnly: true,
 		Secure:   r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https",
 		SameSite: http.SameSiteLaxMode, MaxAge: 10 * 365 * 24 * 3600,
 	})
+}
+
+// GET /auth/accounts: the accounts signed in on this browser or app (quick account switch).
+func (s *Server) linkedAccounts(w http.ResponseWriter, r *http.Request) {
+	a, err := s.Auth.LinkedAccounts(r.Context(), auth.DeviceIDFrom(r.Context()))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, 200, a)
+}
+
+// POST /auth/switch {"user_id"}: switch this browser or app to another of its accounts, no password.
+func (s *Server) switchAccount(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		UserID int64 `json:"user_id"`
+	}
+	if err := decodeJSON(r, &in); err != nil || in.UserID == 0 {
+		writeError(w, 400, "user_id is required")
+		return
+	}
+	tok, u, err := s.Auth.SwitchAccount(r.Context(), auth.DeviceIDFrom(r.Context()), in.UserID)
+	if errors.Is(err, auth.ErrNotFound) {
+		writeCoded(w, 404, "not_linked", "that account is not signed in here")
+		return
+	}
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	setSessionCookie(w, r, tok)
 	writeJSON(w, 200, map[string]any{"token": tok, "user": u})
 }
 
+// DELETE /auth/accounts/{id}: sign that account out on this browser or app.
+func (s *Server) unlinkAccount(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(r, "id")
+	if !ok {
+		writeError(w, 400, "bad id")
+		return
+	}
+	err := s.Auth.UnlinkAccount(r.Context(), auth.DeviceIDFrom(r.Context()), id)
+	switch {
+	case errors.Is(err, auth.ErrInvalid):
+		writeError(w, 400, "use sign out for the current account")
+	case errors.Is(err, auth.ErrNotFound):
+		writeCoded(w, 404, "not_linked", "that account is not signed in here")
+	case err != nil:
+		s.fail(w, err)
+	default:
+		w.WriteHeader(204)
+	}
+}
+
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
-	s.Auth.Logout(r.Context(), auth.DeviceIDFrom(r.Context()))
+	s.Auth.LogoutLinked(r.Context(), auth.DeviceIDFrom(r.Context())) // every account on this browser or app
 	http.SetCookie(w, &http.Cookie{Name: auth.CookieName, Value: "", Path: "/", MaxAge: -1})
 	w.WriteHeader(204)
 }

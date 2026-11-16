@@ -8,6 +8,10 @@ interface AuthState {
   loading: boolean;
   login(username: string, password: string): Promise<void>;
   logout(): Promise<void>;
+  /** Signs in to one more account on this device and switches to it (Settings → Accounts). */
+  addAccount(username: string, password: string): Promise<void>;
+  /** Switches to another account signed in on this device, without a password. */
+  switchAccount(userId: number): Promise<void>;
 }
 
 const Ctx = createContext<AuthState | null>(null);
@@ -58,7 +62,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading, login, logout]);
+  // A new user remounts the signed-in app (Gate keys it by user id), and in the native apps the effect
+  // above posts auth with the new userId, which switches native's user like any sign-in.
+  const addAccount = useCallback(async (u: string, p: string) => {
+    setUser(await api.addAccount(u, p));
+  }, []);
+  const switchAccount = useCallback(async (id: number) => {
+    setUser(await api.switchAccount(id));
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, loading, login, logout, addAccount, switchAccount }),
+    [user, loading, login, logout, addAccount, switchAccount],
+  );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

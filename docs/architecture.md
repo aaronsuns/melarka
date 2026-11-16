@@ -112,7 +112,9 @@ Releases build an unsigned IPA. SideStore signs it on the phone (see [iphone.md]
 JSON over HTTP under `/api/v1`. Sign in with `POST /auth/login`, then send the returned token as
 `Authorization: Bearer <token>`. Errors look like
 `{"error": "<English message>", "code": "<stable_code>"}`. `GET /info` needs no sign-in and
-returns the name, the version and a few public settings.
+returns the name, the version and a few public settings. Several accounts can be signed in on one
+browser or app and switch without a password (`GET /auth/accounts`, `POST /auth/switch`, `POST /auth/login`
+with `"link": true`; see [the design](superpowers/specs/quick-account-switch-design.md)).
 
 The routes are registered in [`internal/api/server.go`](../internal/api/server.go) and the
 `*_handlers.go` files next to it, grouped as: auth and devices, browse and search, streaming and

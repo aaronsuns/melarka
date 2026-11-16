@@ -623,6 +623,10 @@ input.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2
 .settings-group > .field { margin: 0; padding: 12px 0; }
 .settings-group > .field + .field, .settings-links > .settings-link + .settings-link { border-top: .5px solid var(--separator); }
 .settings-links { display: grid; padding: 0 16px; }
+/* 我的 → accounts on this device (quick account switch). */
+.accounts .account-row { display: flex; align-items: center; gap: 12px; }
+.accounts .account-switch { flex: 1; min-height: 44px; padding: 0; text-align: start; color: var(--accent); background: none; border: 0; font: inherit; }
+.accounts .account-add { display: grid; gap: 10px; }
 .settings-links > .settings-link { margin: 0; border-bottom: 0; }
 .tabs-brand { display: none; }
 @media (min-width: 900px) {

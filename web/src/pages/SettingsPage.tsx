@@ -7,6 +7,7 @@ import { usePlayer } from "../player/PlayerProvider";
 import { usePrefs } from "../prefs/PrefsProvider";
 import { hasNative, nativePlatform, nativePost } from "../native/bridge";
 import { OfflineSettings } from "./OfflineSettings";
+import { AccountsCard } from "./AccountsCard";
 import { getServerDefault, LANGUAGE_NAMES, LOCALES, useT, type Locale } from "../i18n/i18n";
 
 const isIOSSafari =
@@ -38,16 +39,20 @@ export default function SettingsPage() {
     return () => { live = false; };
   }, []);
 
+  // Before leaving this account (sign out or switch): stop, and send buffered play events while the
+  // session is still valid (they stay stored under this user's key if it takes too long).
+  async function beforeLeave() {
+    p.pause();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([p.flushEvents(), new Promise((r) => (timer = setTimeout(r, 3000)))]);
+    clearTimeout(timer);
+  }
+
   async function handleLogout() {
     if (loggingOut.current) return;
     loggingOut.current = true;
-    p.pause();
     try {
-      // Send buffered play events while the session is still valid (they
-      // stay stored under this user's key if it takes too long).
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      await Promise.race([p.flushEvents(), new Promise((r) => (timer = setTimeout(r, 3000)))]);
-      clearTimeout(timer);
+      await beforeLeave();
       await logout();
     } finally {
       loggingOut.current = false;
@@ -62,6 +67,7 @@ export default function SettingsPage() {
         {t("settings.signedInAs", { name: user?.username ?? "" })}
         {user?.role === "admin" ? t("settings.adminSuffix") : ""}
       </p>
+      <AccountsCard beforeLeave={beforeLeave} />
       <div className="settings-group">
       <label className="field">
         {t("settings.quality")}

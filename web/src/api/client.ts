@@ -116,6 +116,12 @@ async function req<T>(method: string, path: string, body?: unknown, opts: { noAu
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+export interface LinkedAccount {
+  user_id: number;
+  username: string;
+  current: boolean;
+}
+
 export const api = {
   // offline_cache false is the server's kill switch for the web offline cache;
   // channels false: Channels is switched off on the server.
@@ -123,6 +129,12 @@ export const api = {
   login: async (username: string, password: string) =>
     (await req<{ user: User }>("POST", "/auth/login", { username, password, device_name: deviceName() }, { noAuthRedirect: true })).user,
   logout: () => req<void>("POST", "/auth/logout"),
+  // Quick account switch (docs/superpowers/specs/quick-account-switch-design.md).
+  accounts: () => req<LinkedAccount[]>("GET", "/auth/accounts"),
+  addAccount: async (username: string, password: string) =>
+    (await req<{ user: User }>("POST", "/auth/login", { username, password, device_name: deviceName(), link: true })).user,
+  switchAccount: async (user_id: number) => (await req<{ user: User }>("POST", "/auth/switch", { user_id })).user,
+  removeAccount: (user_id: number) => req<void>("DELETE", `/auth/accounts/${user_id}`),
   me: () => req<User>("GET", "/me"),
   preferences: () => req<Prefs>("GET", "/me/preferences"),
   savePreferences: (p: Prefs) => req<Prefs>("PUT", "/me/preferences", p),
