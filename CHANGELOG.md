@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.23] - 2026-11-16
+
 ### Added
 
 - **Quick account switch.** Me → "Add account" signs in to a family member's account once on this phone or
@@ -430,7 +432,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.22...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.23...HEAD
+[0.2.23]: https://github.com/aaronsuns/melarka/compare/v0.2.22...v0.2.23
 [0.2.22]: https://github.com/aaronsuns/melarka/compare/v0.2.21...v0.2.22
 [0.2.21]: https://github.com/aaronsuns/melarka/compare/v0.2.20...v0.2.21
 [0.2.20]: https://github.com/aaronsuns/melarka/compare/v0.2.19...v0.2.20
