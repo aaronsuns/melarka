@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install a Self-Hosted Music Server with Docker – Melarka</title>
+<meta name="description" content="Install Melarka, a self-hosted music server, with one command or step by step with Docker Compose. Includes HTTPS for phones, backup and upgrade.">
+<link rel="canonical" href="https://melarka.zexa.se/install-self-hosted-music-server-docker">
+<meta property="og:title" content="Install a Self-Hosted Music Server with Docker – Melarka">
+<meta property="og:description" content="Install Melarka, a self-hosted music server, with one command or step by step with Docker Compose. Includes HTTPS for phones, backup and upgrade.">
+<meta property="og:url" content="https://melarka.zexa.se/install-self-hosted-music-server-docker">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_en.jpg">
+<meta property="og:locale" content="en_GB">
+<meta property="og:site_name" content="Melarka">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/guide.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Install a self-hosted music server with Docker","description":"Install Melarka, a self-hosted music server, with one command or step by step with Docker Compose. Includes HTTPS for phones, backup and upgrade.","inLanguage":"en","mainEntityOfPage":"https://melarka.zexa.se/install-self-hosted-music-server-docker","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"Install with Docker","item":"https://melarka.zexa.se/install-self-hosted-music-server-docker"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does Melarka run on a Raspberry Pi?","acceptedAnswer":{"@type":"Answer","text":"The Docker image is published for linux/amd64 and linux/arm64, and a small home server or Raspberry Pi-class machine is enough for a household."}},{"@type":"Question","name":"Can I use it without HTTPS?","acceptedAnswer":{"@type":"Answer","text":"On the server and your home network, yes, over plain HTTP. Phones outside the house and the iPhone app need an HTTPS address."}},{"@type":"Question","name":"Does it change my music folder?","acceptedAnswer":{"@type":"Answer","text":"No. It only reads it. If you want deleting a song to move the file into a .lark-trash folder, the folder must be writable by uid 1000."}},{"@type":"Question","name":"How do I upgrade?","acceptedAnswer":{"@type":"Answer","text":"Back up, then run the installer again, or docker compose pull and docker compose up -d."}}]}</script>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+  <nav><a href="/#guides">Guides</a><a href="/#install">Install</a><a href="https://github.com/aaronsuns/melarka">GitHub</a></nav>
+</div></div>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Melarka</a> › <a href="/#guides">Guides</a> › Install with Docker</nav>
+<h1>Install a self-hosted music server with Docker</h1>
+<p class="lead">Melarka runs as a single Docker container. You can install it with one command, or with a short docker-compose file if you like to see every step. Either way you end up with a server on port 4600 and an admin account.</p>
+
+<h2>What you need</h2>
+<ul>
+<li>A Linux host (amd64 or arm64) with Docker and Docker Compose v2. A small home server or Raspberry Pi-class machine is enough for a household.</li>
+<li>A directory of music files in any format ffmpeg reads (FLAC, MP3, AAC/M4A, Ogg, Opus, WAV), or none: you can download from YouTube instead.</li>
+<li>For phones and the iPhone app: a domain name and an HTTPS reverse proxy.</li>
+</ul>
+<h2>The one-command install</h2>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p>The installer sets up a Docker Compose service in <code>~/melarka</code> (or <code>/srv/melarka</code> when run as root), starts it, and prints the address and the admin password. Leave out the path and your music lives in <code>~/melarka/music</code>; YouTube downloads go to <code>~/melarka/youtube</code>. Read the script first if you like: it is <a href="https://github.com/aaronsuns/melarka/blob/main/deploy/install.sh">deploy/install.sh</a>.</p>
+<h2>Docker Compose, step by step</h2>
+<p>Save <a href="https://github.com/aaronsuns/melarka/blob/main/deploy/docker-compose.example.yml">deploy/docker-compose.example.yml</a> as <code>docker-compose.yml</code>, then in the same directory:</p>
+<pre><code>curl -fsSL -o config.yaml https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/config.example.yaml
+printf 'MUSIC_DIR=%s\nLARK_ADMIN_PASSWORD=%s\n' /path/to/your/music "$(openssl rand -base64 18)" &gt; .env
+mkdir -p data youtube channels previews &amp;&amp; sudo chown 1000:1000 data youtube channels previews
+docker compose up -d
+curl -fsS http://127.0.0.1:4600/api/v1/info</code></pre>
+<p>The container runs as uid 1000, not root, so the four directories must be owned by uid 1000 or the database cannot be written. Your music directory only needs to be readable. The image is <code>ghcr.io/aaronsuns/melarka</code>; pin a release with <code>MELARKA_VERSION</code> in <code>.env</code>.</p>
+<h2>First login and your family</h2>
+<ol>
+<li>Open <code>http://127.0.0.1:4600</code> on the server and sign in as <code>admin</code> with the generated password (<code>grep LARK_ADMIN_PASSWORD .env</code>).</li>
+<li>Change the password in <strong>Me, Change password</strong>.</li>
+<li>Add everyone under <strong>Admin, Users</strong>.</li>
+</ol>
+<h2>HTTPS for phones</h2>
+<p>The default listens on 127.0.0.1 only. For phones, put a reverse proxy in front. With Caddy, which gets the certificate itself, two lines are enough:</p>
+<pre><code>music.example.com {
+    reverse_proxy 127.0.0.1:4600 {
+        flush_interval -1
+    }
+}</code></pre>
+<p>The README also has an nginx example with a login rate limit. The iPhone app requires HTTPS.</p>
+<h2>Backup and upgrade</h2>
+<p>Back up <code>data/lark.db</code> (use <code>sqlite3 data/lark.db ".backup file.db"</code> while it runs, since it uses WAL mode), plus <code>channels/</code>, <code>youtube/</code>, <code>config.yaml</code> and <code>.env</code>. Your own music directory is never changed. To upgrade, run the installer again or <code>docker compose pull &amp;&amp; docker compose up -d</code>; database migrations run automatically.</p>
+<p>Next: install the iPhone or Android app and read <a href="/self-hosted-music-server-for-families">how a family uses it</a>. Comparing options first? See <a href="/navidrome-alternative">Navidrome alternative</a>.</p>
+<h2 id="install">Install in one command</h2>
+<div class="install">
+<p class="first">Needs a Linux machine or NAS with Docker.</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p><a class="cta" href="/#install">Install in one command</a> <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ Melarka on GitHub</a></p>
+<p>Step by step and configuration: <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>.</p>
+</div>
+<h2>FAQ</h2>
+<h3>Does Melarka run on a Raspberry Pi?</h3>
+<p>The Docker image is published for linux/amd64 and linux/arm64, and a small home server or Raspberry Pi-class machine is enough for a household.</p>
+<h3>Can I use it without HTTPS?</h3>
+<p>On the server and your home network, yes, over plain HTTP. Phones outside the house and the iPhone app need an HTTPS address.</p>
+<h3>Does it change my music folder?</h3>
+<p>No. It only reads it. If you want deleting a song to move the file into a .lark-trash folder, the folder must be writable by uid 1000.</p>
+<h3>How do I upgrade?</h3>
+<p>Back up, then run the installer again, or docker compose pull and docker compose up -d.</p>
+</main>
+<footer>
+<p><strong>More guides</strong></p>
+<ul><li><a href="/self-hosted-music-server-for-families" hreflang="en">Self-hosted music streaming for the whole family</a></li><li><a href="/navidrome-alternative" hreflang="en">Navidrome alternative: when Melarka fits better</a></li><li><a href="/youtube-to-self-hosted-music" hreflang="en">Download YouTube music to a self-hosted server</a></li><li><a href="undefined" hreflang="en">Self-hosted music with car Bluetooth autoplay</a></li><li><a href="/zh/self-hosted-music-server" hreflang="zh-Hans">自建音乐服务器：Docker 一条命令安装（中文）</a></li></ul>
+<p>Not affiliated with Spotify, YouTube, Navidrome, Jellyfin or Plex; names belong to their owners.</p>
+<p><a href="/">Melarka</a> · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://zexa.se">Zexa</a></p>
+</footer>
+</body>
+</html>

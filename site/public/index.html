@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Melarka – your family's own music server</title>
-<meta name="description" content="Melarka is a free, open-source, self-hosted music server for a family: songs from YouTube or your own folders, synced lyrics, car autoplay, offline favorites, one account per person, native iPhone and Android apps.">
+<meta name="description" content="Free, open-source self-hosted music server and Spotify alternative for families: YouTube or your files, synced lyrics, car autoplay, iPhone and Android apps.">
 <meta property="og:title" content="Melarka – your family's own music server">
 <meta property="og:description" content="A self-hosted Spotify replacement: songs from YouTube or your own files, synced lyrics, car autoplay, offline favorites, native iPhone and Android apps. Free and open source.">
 <meta property="og:image" content="https://melarka.zexa.se/img/cover_en.jpg">
@@ -24,6 +24,9 @@
  "license":"https://www.gnu.org/licenses/agpl-3.0.html",
  "sameAs":["https://github.com/aaronsuns/melarka"],
  "publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/","logo":"https://zexa.se/img/zexa-logo-512.png"}}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Is it free?", "acceptedAnswer": {"@type": "Answer", "text": "Yes, free and open source. You run it on your own machine; there is no account with us and nothing to pay."}}, {"@type": "Question", "name": "What do I need?", "acceptedAnswer": {"@type": "Answer", "text": "A Linux machine or NAS with Docker that stays on, and, for phones, an HTTPS address for it (a reverse proxy; the README shows how)."}}, {"@type": "Question", "name": "Why isn't the iPhone app in the App Store?", "acceptedAnswer": {"@type": "Answer", "text": "It is a free personal project, and the App Store costs $99 a year. You sign the app with your own Apple ID instead; a free one is enough. With a Mac, Xcode installs it and re-signs it every week by itself; without one, SideStore does it on the phone. How"}}, {"@type": "Question", "name": "How is it different from Navidrome or Jellyfin?", "acceptedAnswer": {"@type": "Answer", "text": "They are great servers that rely on other people's apps (Subsonic clients). Melarka comes with its own iPhone, Android and web apps, built together with the server, for things like car autoplay, lyrics on the car display, offline favorites and radio per person. The flip side: it is not Subsonic-compatible, so those apps don't work with it."}}, {"@type": "Question", "name": "Was it built with AI?", "acceptedAnswer": {"@type": "Answer", "text": "Yes, a lot. Melarka is built with Claude Code, an AI coding assistant, which writes most of the code, tests and docs. I design it, decide what goes in and review it; the full test suite runs on every change, and my family uses it every day."}}, {"@type": "Question", "name": "Does it change my music files?", "acceptedAnswer": {"@type": "Answer", "text": "Never. It only reads them. Titles, tags and lyrics you edit are stored in Melarka's own database."}}]}
 </script>
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/img/icon-192.png">
@@ -82,6 +85,7 @@
   details { border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; background: var(--card); margin-top: 12px; }
   summary { cursor: pointer; font-weight: 600; }
   details p { color: var(--muted); margin: 10px 0 0; }
+  a.guide { text-decoration: none; color: inherit; display: block; } a.guide:hover { border-color: var(--accent); }
   .highlights { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); margin-top: 28px; }
   .highlights img { width: 100%; height: auto; border-radius: 14px; display: block; }
   .star { text-align: center; }
@@ -111,6 +115,7 @@
     <header class="top">
       <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
       <nav>
+        <a href="#guides"><span data-l="en">Guides</span><span data-l="zh">指南</span></a>
         <a href="#features"><span data-l="en">Features</span><span data-l="zh">功能</span></a>
         <a href="#install"><span data-l="en">Install</span><span data-l="zh">安装</span></a>
         <a href="https://github.com/aaronsuns/melarka">GitHub</a>
@@ -261,6 +266,32 @@
   </div>
 </section>
 
+<section id="guides">
+  <div class="wrap">
+    <h2 data-l="en">Guides and comparisons</h2>
+    <h2 data-l="zh">指南与对比</h2>
+    <div data-l="en">
+    <div class="grid">
+      <a class="card guide" href="/spotify-alternative-self-hosted"><h3>Self-hosted Spotify alternative</h3><p>Why a family server, and what you trade off</p></a>
+      <a class="card guide" href="/self-hosted-music-server-for-families"><h3>Self-hosted music streaming for families</h3><p>One account per person, shared library</p></a>
+      <a class="card guide" href="/install-self-hosted-music-server-docker"><h3>Install with Docker</h3><p>One command, HTTPS, backup, upgrade</p></a>
+      <a class="card guide" href="/self-hosted-music-synced-lyrics"><h3>Synced lyrics</h3><p>From the file, .lrc or online; fix the timing</p></a>
+      <a class="card guide" href="/youtube-to-self-hosted-music"><h3>YouTube to your own server</h3><p>Songs, playlists and channels</p></a>
+      <a class="card guide" href="/self-hosted-music-server-car-autoplay"><h3>Car autoplay</h3><p>Favorites start when the car connects</p></a>
+    </div>
+    <h3 style="margin-top:28px">Compare</h3>
+    <p><a href="/navidrome-alternative">Navidrome alternative</a> · <a href="/jellyfin-music-alternative">Jellyfin music alternative</a> · <a href="/plexamp-alternative">Plexamp alternative</a> · <a href="/subsonic-alternative">Subsonic alternative</a></p>
+    </div>
+    <div data-l="zh">
+    <div class="grid">
+      <a class="card guide" href="/zh/spotify-alternative"><h3>Spotify 替代</h3><p>给全家用的自建音乐服务器</p></a>
+      <a class="card guide" href="/zh/self-hosted-music-server"><h3>自建音乐服务器</h3><p>Docker 一条命令安装</p></a>
+    </div>
+    <p class="muted">其余指南和对比为英文：<a href="/navidrome-alternative">Navidrome alternative</a> · <a href="/jellyfin-music-alternative">Jellyfin music alternative</a> · <a href="/spotify-alternative-self-hosted">Spotify alternative</a></p>
+    </div>
+  </div>
+</section>
+
 <section id="faq">
   <div class="wrap">
     <h2 data-l="en">Questions</h2>
@@ -299,6 +330,8 @@
 <footer>
   <div class="wrap">
     <p>Melarka · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://ko-fi.com/aaronsuns">☕ Ko-fi</a> · <span data-l="en">made by </span><a href="https://zexa.se"><img class="zexa-mark" src="/img/zexa-logo.svg" alt=""><b>Zexa</b></a><span data-l="zh"> 出品</span></p>
+    <p data-l="en"><a href="/spotify-alternative-self-hosted">Spotify alternative</a> · <a href="/navidrome-alternative">Navidrome alternative</a> · <a href="/jellyfin-music-alternative">Jellyfin music alternative</a> · <a href="/plexamp-alternative">Plexamp alternative</a> · <a href="/subsonic-alternative">Subsonic alternative</a> · <a href="/self-hosted-music-server-for-families">Music server for families</a> · <a href="/self-hosted-music-synced-lyrics">Synced lyrics</a> · <a href="/youtube-to-self-hosted-music">YouTube music</a> · <a href="/install-self-hosted-music-server-docker">Install with Docker</a> · <a href="/self-hosted-music-server-car-autoplay">Car autoplay</a></p>
+    <p data-l="zh"><a href="/zh/spotify-alternative">Spotify 替代</a> · <a href="/zh/self-hosted-music-server">自建音乐服务器</a></p>
     <p data-l="en">This page uses no cookies and no tracking. Not affiliated with Spotify or YouTube.</p>
     <p data-l="zh">本页面不使用 cookie，也没有任何跟踪。与 Spotify、YouTube 无关联。</p>
   </div>

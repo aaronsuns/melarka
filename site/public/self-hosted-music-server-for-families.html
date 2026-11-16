@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-Hosted Music Streaming for Families – Melarka</title>
+<meta name="description" content="A self-hosted music server for the whole family: one account per person, shared songs, personal radio, lyrics and phone apps. Free, open source, one container.">
+<link rel="canonical" href="https://melarka.zexa.se/self-hosted-music-server-for-families">
+<link rel="alternate" hreflang="en" href="https://melarka.zexa.se/self-hosted-music-server-for-families">
+<link rel="alternate" hreflang="zh-Hans" href="https://melarka.zexa.se/zh/self-hosted-music-server">
+<link rel="alternate" hreflang="x-default" href="https://melarka.zexa.se/self-hosted-music-server-for-families">
+<meta property="og:title" content="Self-Hosted Music Streaming for Families – Melarka">
+<meta property="og:description" content="A self-hosted music server for the whole family: one account per person, shared songs, personal radio, lyrics and phone apps. Free, open source, one container.">
+<meta property="og:url" content="https://melarka.zexa.se/self-hosted-music-server-for-families">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_en.jpg">
+<meta property="og:locale" content="en_GB">
+<meta property="og:site_name" content="Melarka">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/guide.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Self-hosted music streaming for the whole family","description":"A self-hosted music server for the whole family: one account per person, shared songs, personal radio, lyrics and phone apps. Free, open source, one container.","inLanguage":"en","mainEntityOfPage":"https://melarka.zexa.se/self-hosted-music-server-for-families","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"Music server for families","item":"https://melarka.zexa.se/self-hosted-music-server-for-families"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Can each family member have their own favorites and playlists?","acceptedAnswer":{"@type":"Answer","text":"Yes. Each person has their own account with favorites, playlists, history, radio and language."}},{"@type":"Question","name":"Do we share the music library?","acceptedAnswer":{"@type":"Answer","text":"Yes. The library is shared, so a song one person adds is available to everyone."}},{"@type":"Question","name":"Does it work for children's phones?","acceptedAnswer":{"@type":"Answer","text":"Yes, with the iPhone, Android or web app. You create accounts under Admin, Users. Melarka has no tracking and the apps only talk to your server."}},{"@type":"Question","name":"What happens to songs nobody plays?","acceptedAnswer":{"@type":"Answer","text":"Songs added after the first scan start as pending; three plays keep a song automatically, and a deleted song waits 30 days in the trash."}}]}</script>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+  <nav><a href="/#guides">Guides</a><a href="/#install">Install</a><a href="https://github.com/aaronsuns/melarka">GitHub</a></nav>
+</div></div>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Melarka</a> › <a href="/#guides">Guides</a> › Music server for families</nav>
+<h1>Self-hosted music streaming for the whole family</h1>
+<p class="lead">A family shares a lot of music and very different tastes. Most self-hosted servers handle shared storage well and per-person listening less well. Melarka is designed for a household: everyone has their own account and phone app, and everyone benefits from the songs any one of you adds.</p>
+
+<h2>One library, one account per person</h2>
+<p>You add your family under <strong>Admin, Users</strong>. From then on each person signs in on their own phone and has their own:</p>
+<ul>
+<li>favorites and dislikes;</li>
+<li>playlists and play history;</li>
+<li>personal radio and a nightly "For you" list of YouTube songs they do not have yet, based on what they play and favorite most;</li>
+<li>interface language: English, 简体中文, 繁體中文 or svenska, chosen per person (music metadata is never translated).</li>
+</ul>
+<p>The library underneath is shared. A song one person adds, by download or by copying it to the music folder, is there for everyone. That is the main difference from a streaming plan where each person builds their own library.</p>
+<h2>Keeping the shared library tidy</h2>
+<p>Songs added after the first scan start as <em>pending</em>. Three plays keep a song automatically, so a one-off track does not clutter the library for long. A deleted song waits 30 days in the trash before it is gone. Admins can fix titles, artists, albums and years as overrides, without touching the files, and manage users, pending songs, downloads, trash and libraries from one admin console.</p>
+<h2>Phones, car and tablets for every family member</h2>
+<p>There are native iPhone and Android apps, and a web app that installs to the home screen of any phone and runs full screen. Favorites can be cached on the phone for tunnels and dead zones, and the Android app can start your favorites when the phone connects to the car. See the <a href="/self-hosted-music-server-car-autoplay">car autoplay guide</a>.</p>
+<h2>Private by design</h2>
+<p>Melarka has no tracking. Your server only contacts the services you use: YouTube for search and downloads, lyrics sources, and Last.fm if you configure it. The apps talk only to your server; the phone never contacts YouTube directly. Nothing about your family's listening leaves the house. (An anonymous weekly install count, with no user names, songs or history, can be switched off in Admin, System.)</p>
+<h2>What you need at home</h2>
+<ul>
+<li>A Linux machine or NAS with Docker (amd64 or arm64) that stays on. A small home server is enough.</li>
+<li>A domain name and an HTTPS reverse proxy to use it from phones outside the house; the README shows Caddy and nginx.</li>
+<li>Music folders, YouTube downloads, or both.</li>
+</ul>
+<p>Install steps are in the <a href="/install-self-hosted-music-server-docker">Docker install guide</a>. For how this compares with a streaming subscription, see <a href="/spotify-alternative-self-hosted">Spotify alternative</a>.</p>
+<h2>Limits to know about</h2>
+<p>Melarka is a music server, not a catalogue: you bring the music. It is Linux-and-Docker only on the server side. The iPhone app is signed with your own Apple ID rather than installed from the App Store, and each phone needs to reach the server over HTTPS.</p>
+<h2 id="install">Install in one command</h2>
+<div class="install">
+<p class="first">Needs a Linux machine or NAS with Docker.</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p><a class="cta" href="/#install">Install in one command</a> <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ Melarka on GitHub</a></p>
+<p>Step by step and configuration: <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>.</p>
+</div>
+<h2>FAQ</h2>
+<h3>Can each family member have their own favorites and playlists?</h3>
+<p>Yes. Each person has their own account with favorites, playlists, history, radio and language.</p>
+<h3>Do we share the music library?</h3>
+<p>Yes. The library is shared, so a song one person adds is available to everyone.</p>
+<h3>Does it work for children's phones?</h3>
+<p>Yes, with the iPhone, Android or web app. You create accounts under Admin, Users. Melarka has no tracking and the apps only talk to your server.</p>
+<h3>What happens to songs nobody plays?</h3>
+<p>Songs added after the first scan start as pending; three plays keep a song automatically, and a deleted song waits 30 days in the trash.</p>
+</main>
+<footer>
+<p><strong>More guides</strong></p>
+<ul><li><a href="/spotify-alternative-self-hosted" hreflang="en">A self-hosted Spotify alternative for the family</a></li><li><a href="undefined" hreflang="en">Self-hosted music with car Bluetooth autoplay</a></li><li><a href="undefined" hreflang="en">Install a self-hosted music server with Docker</a></li><li><a href="undefined" hreflang="en">Download YouTube music to a self-hosted server</a></li><li><a href="/zh/self-hosted-music-server" hreflang="zh-Hans">自建音乐服务器：Docker 一条命令安装（中文）</a></li></ul>
+<p>Not affiliated with Spotify, YouTube, Navidrome, Jellyfin or Plex; names belong to their owners.</p>
+<p><a href="/">Melarka</a> · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://zexa.se">Zexa</a></p>
+</footer>
+</body>
+</html>

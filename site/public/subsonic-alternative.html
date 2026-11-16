@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subsonic Alternative: Self-Hosted Music Servers Compared</title>
+<meta name="description" content="Subsonic, Airsonic, Navidrome and Melarka compared. What the Subsonic API gives you, and when a server with its own apps is a better fit for a family.">
+<link rel="canonical" href="https://melarka.zexa.se/subsonic-alternative">
+<meta property="og:title" content="Subsonic Alternative: Self-Hosted Music Servers Compared">
+<meta property="og:description" content="Subsonic, Airsonic, Navidrome and Melarka compared. What the Subsonic API gives you, and when a server with its own apps is a better fit for a family.">
+<meta property="og:url" content="https://melarka.zexa.se/subsonic-alternative">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_en.jpg">
+<meta property="og:locale" content="en_GB">
+<meta property="og:site_name" content="Melarka">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/guide.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"A Subsonic alternative: Navidrome, Airsonic or Melarka","description":"Subsonic, Airsonic, Navidrome and Melarka compared. What the Subsonic API gives you, and when a server with its own apps is a better fit for a family.","inLanguage":"en","mainEntityOfPage":"https://melarka.zexa.se/subsonic-alternative","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"Subsonic alternative","item":"https://melarka.zexa.se/subsonic-alternative"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is Melarka compatible with the Subsonic API?","acceptedAnswer":{"@type":"Answer","text":"No. Melarka has its own API and apps, so Subsonic clients cannot connect to it."}},{"@type":"Question","name":"What is the best open-source Subsonic alternative?","acceptedAnswer":{"@type":"Answer","text":"For Subsonic compatibility, Navidrome is the most widely used. Melarka is an alternative when you want a server with its own phone apps, car autoplay and YouTube downloads instead."}},{"@type":"Question","name":"Can I import my Subsonic playlists?","acceptedAnswer":{"@type":"Answer","text":"No importer exists. Point Melarka at the same music folder and rebuild favorites and playlists."}}]}</script>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+  <nav><a href="/#guides">Guides</a><a href="/#install">Install</a><a href="https://github.com/aaronsuns/melarka">GitHub</a></nav>
+</div></div>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Melarka</a> › <a href="/#guides">Guides</a> › Subsonic alternative</nav>
+<h1>A Subsonic alternative: Navidrome, Airsonic or Melarka</h1>
+<p class="lead">Subsonic started a whole family of self-hosted music servers. Today most people who want "Subsonic" actually want its API: any compatible server plus any compatible phone app. This page sorts out the options and says where Melarka, which is not Subsonic-compatible, fits.</p>
+
+<h2>What the Subsonic API is</h2>
+<p>The Subsonic API is a protocol that many music servers and many apps understand. Servers such as Navidrome and Airsonic-Advanced implement it, and so do others, and clients exist for iPhone, Android, desktop and the web. The advantage is choice: you can change the server without changing the app, or the other way round. If that flexibility matters to you, pick a Subsonic-compatible server, with Navidrome the most active common choice today.</p>
+<h2>Options at a glance</h2>
+<div class="tablewrap"><table><thead><tr><th></th><th>Subsonic API servers</th><th>Melarka</th></tr></thead><tbody><tr><td>Compatible apps</td><td>Many third-party apps, free and paid</td><td>Own iPhone, Android and web apps only</td></tr><tr><td>Phone app quality</td><td>Depends on the app you pick</td><td>One app built together with the server</td></tr><tr><td>YouTube downloads</td><td>Not part of the protocol</td><td>Built in: songs, playlists, channels</td></tr><tr><td>Per-person radio and For you</td><td>Varies by server and client</td><td>Built in, per user</td></tr><tr><td>Car autoplay</td><td>Depends on the app</td><td>Android setting and iPhone Shortcuts, documented</td></tr><tr><td>Open source</td><td>Navidrome and Airsonic-Advanced: yes</td><td>Yes, AGPL-3.0</td></tr></tbody></table></div>
+<h2>Why choose Melarka over a Subsonic server</h2>
+<p>A fair reason: you would rather have one product than assemble a server, an app and a few plugins. Melarka's server and apps are designed together, so features that need both sides, such as car autoplay, the current lyric line on the lock screen and car display, an offline cache of favorites and lyrics you can shift, work out of the box. Each family member signs in to their own account, and the nightly "For you" list is based on what that person plays.</p>
+<h2>Why not</h2>
+<p>If you already use a Subsonic client you love, or want to mix and match apps, Melarka cannot help: it does not implement the API, so those apps will not connect. There is also no importer from Subsonic-style servers. Your files carry over (Melarka reads the same folder); playlists and favorites do not.</p>
+<h2>What about the original Subsonic?</h2>
+<p>The original Subsonic server moved to a paid license model some years ago, and community projects such as Airsonic and later Navidrome carried the open-source line forward. Check the current terms of any project before you choose; they change.</p>
+<h2>Trying Melarka next to your current server</h2>
+<p>Because Melarka only reads your music folder, you can run it beside Navidrome or Airsonic on another port. Install with the <a href="/install-self-hosted-music-server-docker">one-line Docker installer</a>, point it at the same folder and see whether the apps suit your family. Read the full <a href="/navidrome-alternative">Navidrome comparison</a> for details.</p>
+<h2 id="install">Install in one command</h2>
+<div class="install">
+<p class="first">Needs a Linux machine or NAS with Docker.</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p><a class="cta" href="/#install">Install in one command</a> <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ Melarka on GitHub</a></p>
+<p>Step by step and configuration: <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>.</p>
+</div>
+<h2>FAQ</h2>
+<h3>Is Melarka compatible with the Subsonic API?</h3>
+<p>No. Melarka has its own API and apps, so Subsonic clients cannot connect to it.</p>
+<h3>What is the best open-source Subsonic alternative?</h3>
+<p>For Subsonic compatibility, Navidrome is the most widely used. Melarka is an alternative when you want a server with its own phone apps, car autoplay and YouTube downloads instead.</p>
+<h3>Can I import my Subsonic playlists?</h3>
+<p>No importer exists. Point Melarka at the same music folder and rebuild favorites and playlists.</p>
+</main>
+<footer>
+<p><strong>More guides</strong></p>
+<ul><li><a href="/navidrome-alternative" hreflang="en">Navidrome alternative: when Melarka fits better</a></li><li><a href="/jellyfin-music-alternative" hreflang="en">Jellyfin music alternative</a></li><li><a href="/plexamp-alternative" hreflang="en">Plexamp alternative without a Plex account</a></li><li><a href="undefined" hreflang="en">Self-hosted music streaming for the whole family</a></li><li><a href="undefined" hreflang="en">Install a self-hosted music server with Docker</a></li></ul>
+<p>Not affiliated with Spotify, YouTube, Navidrome, Jellyfin or Plex; names belong to their owners.</p>
+<p><a href="/">Melarka</a> · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://zexa.se">Zexa</a></p>
+</footer>
+</body>
+</html>

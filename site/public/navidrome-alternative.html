@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navidrome Alternative with Its Own Phone Apps – Melarka</title>
+<meta name="description" content="An honest Navidrome comparison with Melarka, a self-hosted music server with its own iPhone and Android apps, synced lyrics and YouTube downloads.">
+<link rel="canonical" href="https://melarka.zexa.se/navidrome-alternative">
+<meta property="og:title" content="Navidrome Alternative with Its Own Phone Apps – Melarka">
+<meta property="og:description" content="An honest Navidrome comparison with Melarka, a self-hosted music server with its own iPhone and Android apps, synced lyrics and YouTube downloads.">
+<meta property="og:url" content="https://melarka.zexa.se/navidrome-alternative">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_en.jpg">
+<meta property="og:locale" content="en_GB">
+<meta property="og:site_name" content="Melarka">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/guide.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"A Navidrome alternative with its own phone apps","description":"An honest Navidrome comparison with Melarka, a self-hosted music server with its own iPhone and Android apps, synced lyrics and YouTube downloads.","inLanguage":"en","mainEntityOfPage":"https://melarka.zexa.se/navidrome-alternative","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"Navidrome alternative","item":"https://melarka.zexa.se/navidrome-alternative"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is Melarka better than Navidrome?","acceptedAnswer":{"@type":"Answer","text":"It depends on what you need. Navidrome is more mature and works with many Subsonic apps. Melarka suits a family that wants its own phone apps, car autoplay, per-person accounts and YouTube downloads in one product."}},{"@type":"Question","name":"Does Melarka work with Subsonic apps?","acceptedAnswer":{"@type":"Answer","text":"No. Melarka has its own API and its own apps. If you rely on a Subsonic client, stay with Navidrome."}},{"@type":"Question","name":"Can Melarka read my existing music folder?","acceptedAnswer":{"@type":"Answer","text":"Yes. Point the installer at the folder. Melarka only reads it and never changes your files or tags."}},{"@type":"Question","name":"Can I run Navidrome and Melarka side by side?","acceptedAnswer":{"@type":"Answer","text":"Yes. Run them on different ports with the same music folder. Each keeps its own favorites and playlists."}}]}</script>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+  <nav><a href="/#guides">Guides</a><a href="/#install">Install</a><a href="https://github.com/aaronsuns/melarka">GitHub</a></nav>
+</div></div>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Melarka</a> › <a href="/#guides">Guides</a> › Navidrome alternative</nav>
+<h1>A Navidrome alternative with its own phone apps</h1>
+<p class="lead">Navidrome is one of the best self-hosted music servers: light, fast and open source. If it already works for you, there is no reason to switch. This page is for people who want something different, and it says plainly where Navidrome is the better choice.</p>
+
+<h2>Where Navidrome is better</h2>
+<ul>
+<li><strong>Subsonic API and a big choice of apps.</strong> Navidrome speaks the Subsonic API, so dozens of third-party clients work with it on every platform. Melarka is not Subsonic-compatible, so those apps cannot connect to it.</li>
+<li><strong>Maturity and community.</strong> Navidrome has been around much longer, has a large user base and plenty of guides and integrations.</li>
+<li><strong>Very light and focused.</strong> It is a single music server that does one job and stays out of the way.</li>
+<li><strong>Large libraries.</strong> It is built around a big, well-tagged collection of files.</li>
+</ul>
+<h2>Where Melarka fits</h2>
+<p>Melarka is a Navidrome alternative for a household that wants an all-in-one product: the server and the apps are designed together. That shows up in a few places:</p>
+<ul>
+<li><strong>Native iPhone and Android apps included.</strong> Background play, gapless transitions, lock-screen and car controls, and an offline cache of your favorites. With Navidrome you pick and sometimes pay for a third-party app.</li>
+<li><strong>Car autoplay.</strong> On Android your favorites start when the phone connects to the car's Bluetooth; on iPhone a Shortcuts automation does the same. The current lyric line shows on the lock screen and the car display.</li>
+<li><strong>One account per family member.</strong> Favorites, playlists, history, language and a nightly "For you" list are per person.</li>
+<li><strong>YouTube built in.</strong> Search YouTube, download a song or a whole playlist (up to 200 entries), preview before keeping, and follow channels. Navidrome does not download music for you.</li>
+<li><strong>Synced lyrics with fixes.</strong> Lyrics come from the file, a .lrc beside it, or online sources, and anyone can shift lyrics that run early or late.</li>
+<li><strong>One-command install</strong> with Docker, which prints the address and the admin password.</li>
+</ul>
+<h2>Side by side</h2>
+<div class="tablewrap"><table><thead><tr><th></th><th>Navidrome</th><th>Melarka</th></tr></thead><tbody><tr><td>License</td><td>Open source</td><td>Open source (AGPL-3.0)</td></tr><tr><td>Apps</td><td>Web UI; use any Subsonic-compatible app</td><td>Own web, iPhone and Android apps</td></tr><tr><td>Subsonic API</td><td>Yes</td><td>No</td></tr><tr><td>Multiple users</td><td>Yes</td><td>Yes, with per-person favorites, radio and language</td></tr><tr><td>YouTube downloads</td><td>No</td><td>Yes, songs, playlists and channels</td></tr><tr><td>Synced lyrics</td><td>Depends on server version and client; check its docs</td><td>Built in, with online sources and shifting</td></tr><tr><td>Car autoplay</td><td>Depends on the app you choose</td><td>Built into the Android app; Shortcuts on iPhone</td></tr><tr><td>Install</td><td>Docker or a binary</td><td>One-line installer for Docker</td></tr></tbody></table></div>
+<h2>Can I use both?</h2>
+<p>Yes, and that is a reasonable way to try Melarka. Both servers can read the same music folder, since Melarka only reads your files. Run Melarka on another port, give it the same folder, and compare. Tags and favorites are kept separately by each server.</p>
+<h2>Migrating from Navidrome</h2>
+<p>There is no importer for Navidrome's database, so favorites and playlists do not carry over automatically. Your music files do: point Melarka at the same folder and it scans them. Plan to rebuild favorites and playlists by hand, or by marking favorites as you listen.</p>
+<p>If you are comparing options more widely, see the <a href="/subsonic-alternative">Subsonic alternative</a> and <a href="/jellyfin-music-alternative">Jellyfin music alternative</a> guides.</p>
+<h2 id="install">Install in one command</h2>
+<div class="install">
+<p class="first">Needs a Linux machine or NAS with Docker.</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p><a class="cta" href="/#install">Install in one command</a> <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ Melarka on GitHub</a></p>
+<p>Step by step and configuration: <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>.</p>
+</div>
+<h2>FAQ</h2>
+<h3>Is Melarka better than Navidrome?</h3>
+<p>It depends on what you need. Navidrome is more mature and works with many Subsonic apps. Melarka suits a family that wants its own phone apps, car autoplay, per-person accounts and YouTube downloads in one product.</p>
+<h3>Does Melarka work with Subsonic apps?</h3>
+<p>No. Melarka has its own API and its own apps. If you rely on a Subsonic client, stay with Navidrome.</p>
+<h3>Can Melarka read my existing music folder?</h3>
+<p>Yes. Point the installer at the folder. Melarka only reads it and never changes your files or tags.</p>
+<h3>Can I run Navidrome and Melarka side by side?</h3>
+<p>Yes. Run them on different ports with the same music folder. Each keeps its own favorites and playlists.</p>
+</main>
+<footer>
+<p><strong>More guides</strong></p>
+<ul><li><a href="undefined" hreflang="en">Subsonic alternative</a></li><li><a href="undefined" hreflang="en">Jellyfin music alternative</a></li><li><a href="undefined" hreflang="en">Plexamp alternative without a Plex account</a></li><li><a href="/spotify-alternative-self-hosted" hreflang="en">A self-hosted Spotify alternative for the family</a></li><li><a href="undefined" hreflang="en">Install a self-hosted music server with Docker</a></li></ul>
+<p>Not affiliated with Spotify, YouTube, Navidrome, Jellyfin or Plex; names belong to their owners.</p>
+<p><a href="/">Melarka</a> · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://zexa.se">Zexa</a></p>
+</footer>
+</body>
+</html>

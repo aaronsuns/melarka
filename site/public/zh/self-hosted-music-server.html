@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自建音乐服务器：Docker 一条命令安装 – Melarka</title>
+<meta name="description" content="自建音乐服务器怎么搭？Melarka 用 Docker 一条命令安装，全家每人一个账号，自带 iPhone、安卓和网页 App，支持同步歌词、离线缓存和 YouTube 下载，开源免费。">
+<link rel="canonical" href="https://melarka.zexa.se/zh/self-hosted-music-server">
+<link rel="alternate" hreflang="zh-Hans" href="https://melarka.zexa.se/zh/self-hosted-music-server">
+<link rel="alternate" hreflang="en" href="https://melarka.zexa.se/self-hosted-music-server-for-families">
+<link rel="alternate" hreflang="x-default" href="https://melarka.zexa.se/self-hosted-music-server-for-families">
+<meta property="og:title" content="自建音乐服务器：Docker 一条命令安装 – Melarka">
+<meta property="og:description" content="自建音乐服务器怎么搭？Melarka 用 Docker 一条命令安装，全家每人一个账号，自带 iPhone、安卓和网页 App，支持同步歌词、离线缓存和 YouTube 下载，开源免费。">
+<meta property="og:url" content="https://melarka.zexa.se/zh/self-hosted-music-server">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_zh.jpg">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:site_name" content="Melarka">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/guide.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"自建音乐服务器：给全家用，一条命令装好","description":"自建音乐服务器怎么搭？Melarka 用 Docker 一条命令安装，全家每人一个账号，自带 iPhone、安卓和网页 App，支持同步歌词、离线缓存和 YouTube 下载，开源免费。","inLanguage":"zh-Hans","mainEntityOfPage":"https://melarka.zexa.se/zh/self-hosted-music-server","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"指南","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"自建音乐服务器","item":"https://melarka.zexa.se/zh/self-hosted-music-server"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"自建音乐服务器需要什么设备？","acceptedAnswer":{"@type":"Answer","text":"一台一直开着、装了 Docker 的 Linux 电脑或 NAS（amd64 或 arm64）。一台小型家用服务器就够一个家庭用。"}},{"@type":"Question","name":"会改动我的音乐文件吗？","acceptedAnswer":{"@type":"Answer","text":"不会，Melarka 只读取。改过的歌名、标签和歌词存在它自己的数据库里。"}},{"@type":"Question","name":"手机上怎么用？","acceptedAnswer":{"@type":"Answer","text":"有 iPhone、安卓原生 App 和网页版。手机在外面使用需要给服务器配 HTTPS 地址。"}},{"@type":"Question","name":"要钱吗？","acceptedAnswer":{"@type":"Answer","text":"不要，开源免费，也不需要在我们这里注册。"}}]}</script>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+  <nav><a href="/#guides">指南</a><a href="/#install">安装</a><a href="https://github.com/aaronsuns/melarka">GitHub</a></nav>
+</div></div>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Melarka</a> › <a href="/#guides">指南</a> › 自建音乐服务器</nav>
+<h1>自建音乐服务器：给全家用，一条命令装好</h1>
+<p class="lead">自建音乐服务器的好处是音乐留在自己手里，不用订阅，也不会下架。Melarka 把服务器和手机 App 一起做好了：装好之后，全家人各自用自己的账号听歌。</p>
+
+<h2>需要什么</h2>
+<ul>
+<li>一台一直开着的 Linux 电脑或 NAS（amd64 或 arm64），装有 Docker 和 Docker Compose v2。一台小型家用服务器，或树莓派级别的机器，够一个家庭用。</li>
+<li>一个音乐文件夹（FLAC、MP3、AAC/M4A、Ogg、Opus、WAV 等 ffmpeg 能读的格式）；没有也行，可以之后从 YouTube 下载。</li>
+<li>手机上使用：一个域名，加 HTTPS 反向代理（iPhone App 必须用 HTTPS）。</li>
+</ul>
+<h2>一条命令安装</h2>
+<p>在服务器上运行下面的命令，最后换成你的音乐文件夹路径；不加路径，音乐就放在 <code>~/melarka/music</code>。安装脚本会配好 Docker Compose 服务（普通用户装在 <code>~/melarka</code>，root 装在 <code>/srv/melarka</code>）、启动，并打印地址和管理员密码。</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p>然后：</p>
+<ol>
+<li>在服务器上打开 <code>http://127.0.0.1:4600</code>，用 <code>admin</code> 和打印出来的密码登录。</li>
+<li>在 <strong>管理 → 用户</strong> 里给家人建账号。</li>
+<li>手机上用之前，配好 HTTPS（README 有 Caddy 和 nginx 示例），再装 App。</li>
+</ol>
+<h2>全家每人一个账号</h2>
+<p>每个人有自己的收藏、歌单、播放历史、私人电台和每晚的「为你推荐」，界面语言也各自选（English、简体中文、繁體中文、svenska）。曲库是共享的：谁下载的好歌，全家都能听到。</p>
+<h2>同步歌词、离线缓存、车载播放</h2>
+<ul>
+<li><strong>同步歌词</strong>：来自文件本身、旁边的 .lrc 或在线歌词源（默认 LRCLIB、网易云、QQ 音乐、酷狗）；歌词唱早了唱晚了，谁都能点一下对齐。</li>
+<li><strong>离线缓存</strong>：收藏的歌在 Wi-Fi 下缓存到手机，隧道里没信号也能听。</li>
+<li><strong>车载</strong>：安卓 App 可在手机连上车载蓝牙时自动播放收藏；iPhone 用「快捷指令」自动化实现。车机屏幕显示当前这句歌词。</li>
+</ul>
+<h2>在中国大陆使用</h2>
+<p>你自己的音乐、歌词和 App 不需要任何代理。YouTube 搜索、下载和频道被屏蔽，需要在服务器上配置代理，手机不需要。网易云、QQ 音乐、酷狗是非官方接口，可能随时失效，可以在 <code>lyrics.providers</code> 里去掉。详见 <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md#in-mainland-china">docs/install.md</a>。</p>
+<h2>备份和升级</h2>
+<p>备份 <code>data/lark.db</code>（运行中请用 <code>sqlite3 data/lark.db ".backup 文件名.db"</code>）、<code>channels/</code>、<code>youtube/</code>、<code>config.yaml</code> 和 <code>.env</code>。你自己的音乐目录从不会被改动。升级：重新运行安装命令，或 <code>docker compose pull &amp;&amp; docker compose up -d</code>。</p>
+<p>英文完整指南：<a href="/install-self-hosted-music-server-docker">install a self-hosted music server with Docker</a>。想先比较：<a href="/zh/spotify-alternative">Spotify 替代</a>。</p>
+<h2 id="install">一条命令安装</h2>
+<div class="install">
+<p class="first">需要装了 Docker 的 Linux 电脑或 NAS。</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p><a class="cta" href="/#install">一条命令安装</a> <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ GitHub 项目</a></p>
+<p>分步安装和配置见 <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>.</p>
+</div>
+<h2>常见问题</h2>
+<h3>自建音乐服务器需要什么设备？</h3>
+<p>一台一直开着、装了 Docker 的 Linux 电脑或 NAS（amd64 或 arm64）。一台小型家用服务器就够一个家庭用。</p>
+<h3>会改动我的音乐文件吗？</h3>
+<p>不会，Melarka 只读取。改过的歌名、标签和歌词存在它自己的数据库里。</p>
+<h3>手机上怎么用？</h3>
+<p>有 iPhone、安卓原生 App 和网页版。手机在外面使用需要给服务器配 HTTPS 地址。</p>
+<h3>要钱吗？</h3>
+<p>不要，开源免费，也不需要在我们这里注册。</p>
+</main>
+<footer>
+<p><strong>相关指南</strong></p>
+<ul><li><a href="/zh/spotify-alternative" hreflang="zh-Hans">Spotify 替代：给全家用的自建音乐服务器（中文）</a></li><li><a href="/self-hosted-music-server-for-families" hreflang="en">Self-hosted music streaming for the whole family</a></li><li><a href="/install-self-hosted-music-server-docker" hreflang="en">Install a self-hosted music server with Docker</a></li><li><a href="/self-hosted-music-synced-lyrics" hreflang="en">Self-hosted music with synced lyrics</a></li></ul>
+<p>Melarka 与 Spotify、YouTube、Navidrome、Jellyfin、Plex 无关联，各名称归其所有者。</p>
+<p><a href="/">Melarka</a> · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://zexa.se">Zexa</a></p>
+</footer>
+</body>
+</html>

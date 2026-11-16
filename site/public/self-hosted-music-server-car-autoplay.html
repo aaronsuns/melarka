@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Car Bluetooth Autoplay for Self-Hosted Music – Melarka</title>
+<meta name="description" content="Make your own music server play when the phone connects to the car: Melarka's Android car autoplay and iPhone Shortcuts, with the lyric line on the display.">
+<link rel="canonical" href="https://melarka.zexa.se/self-hosted-music-server-car-autoplay">
+<meta property="og:title" content="Car Bluetooth Autoplay for Self-Hosted Music – Melarka">
+<meta property="og:description" content="Make your own music server play when the phone connects to the car: Melarka's Android car autoplay and iPhone Shortcuts, with the lyric line on the display.">
+<meta property="og:url" content="https://melarka.zexa.se/self-hosted-music-server-car-autoplay">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_en.jpg">
+<meta property="og:locale" content="en_GB">
+<meta property="og:site_name" content="Melarka">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/guide.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Car autoplay for your self-hosted music","description":"Make your own music server play when the phone connects to the car: Melarka's Android car autoplay and iPhone Shortcuts, with the lyric line on the display.","inLanguage":"en","mainEntityOfPage":"https://melarka.zexa.se/self-hosted-music-server-car-autoplay","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"Car autoplay","item":"https://melarka.zexa.se/self-hosted-music-server-car-autoplay"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does Melarka start playing when my phone connects to the car?","acceptedAnswer":{"@type":"Answer","text":"Yes. On Android, turn on Car autoplay in the app's settings and choose your car. On iPhone, add a Shortcuts automation with Melarka's Shuffle Favorites action."}},{"@type":"Question","name":"Does it work with Android Auto or CarPlay?","acceptedAnswer":{"@type":"Answer","text":"This page does not claim support for them. Melarka's guides describe Bluetooth car autoplay and car controls; check the Android and iPhone guides for the current state."}},{"@type":"Question","name":"Do lyrics show on the car display?","acceptedAnswer":{"@type":"Answer","text":"Yes, the current lyric line is shown on the lock screen and car display."}},{"@type":"Question","name":"What if there is no mobile signal?","acceptedAnswer":{"@type":"Answer","text":"Cached favorites keep playing without a signal."}}]}</script>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+  <nav><a href="/#guides">Guides</a><a href="/#install">Install</a><a href="https://github.com/aaronsuns/melarka">GitHub</a></nav>
+</div></div>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Melarka</a> › <a href="/#guides">Guides</a> › Car autoplay</nav>
+<h1>Car autoplay for your self-hosted music</h1>
+<p class="lead">A good test of a music app is the first five seconds of the drive. With Melarka your favorites can start by themselves when the phone connects to the car's Bluetooth, with the current lyric line on the car display. Here is how it works on each phone.</p>
+
+<h2>Android: the Car autoplay setting</h2>
+<p>Most cars send a "play" command when Bluetooth connects, and Android passes it to the app that played last, so Melarka resumes its last queue. For a sure start, Melarka has a dedicated setting:</p>
+<ol>
+<li>In Melarka's settings turn on <strong>Car autoplay</strong>. On Android 12 and later, allow <strong>Nearby devices</strong> when asked, which is needed to list the cars paired with your phone.</li>
+<li>Choose your car from the list (pair it in Android's Bluetooth settings first).</li>
+<li>Android asks once to confirm that Melarka may use the car. Confirm.</li>
+</ol>
+<p>From then on, when the car connects, Melarka shuffles your favorites, even in the background. If music is already playing because the car's own "play" came first, nothing changes. Android 8 to 11 do not wake the app for the car, so autoplay works only while Melarka is already running there; Android 12 and later is the smooth case. Battery optimisation settings can stop background play on some phones, and the <a href="https://github.com/aaronsuns/melarka/blob/main/docs/android.md">Android guide</a> lists them.</p>
+<h2>iPhone: a Shortcuts automation</h2>
+<p>iOS passes the car's "play" command to the app that played last. For a sure start, create an automation in the Shortcuts app: <strong>Bluetooth</strong>, pick your car, <strong>Is Connected</strong>, <strong>Run Immediately</strong>, and add Melarka's <strong>Shuffle Favorites</strong> action. The <a href="https://github.com/aaronsuns/melarka/blob/main/docs/iphone.md">iPhone guide</a> has the step-by-step instructions and a way to test it.</p>
+<h2>What shows on the car display</h2>
+<p>Both apps pass the current lyric line to the lock screen and car display, and support shuffle and repeat on car head units that show them. Synced lyrics depend on finding your song, see <a href="/self-hosted-music-synced-lyrics">synced lyrics</a>.</p>
+<h2>When there is no signal on the road</h2>
+<p>Favorites are cached on the phone (on Wi-Fi, under a size limit you set), so they keep playing in tunnels and dead zones. Start autoplay from the cache and the drive does not depend on mobile data.</p>
+<h2>Needs</h2>
+<ul>
+<li>The Melarka server on your network behind HTTPS, for the apps to reach from outside the house.</li>
+<li>The native app. The web app can be added to the home screen, but car autoplay is a feature of the native iPhone and Android apps.</li>
+</ul>
+<p>The <a href="/install-self-hosted-music-server-docker">install guide</a> covers the server side, and <a href="/self-hosted-music-server-for-families">the family guide</a> explains accounts, so each driver starts their own favorites.</p>
+<h2 id="install">Install in one command</h2>
+<div class="install">
+<p class="first">Needs a Linux machine or NAS with Docker.</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p><a class="cta" href="/#install">Install in one command</a> <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ Melarka on GitHub</a></p>
+<p>Step by step and configuration: <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>.</p>
+</div>
+<h2>FAQ</h2>
+<h3>Does Melarka start playing when my phone connects to the car?</h3>
+<p>Yes. On Android, turn on Car autoplay in the app's settings and choose your car. On iPhone, add a Shortcuts automation with Melarka's Shuffle Favorites action.</p>
+<h3>Does it work with Android Auto or CarPlay?</h3>
+<p>This page does not claim support for them. Melarka's guides describe Bluetooth car autoplay and car controls; check the Android and iPhone guides for the current state.</p>
+<h3>Do lyrics show on the car display?</h3>
+<p>Yes, the current lyric line is shown on the lock screen and car display.</p>
+<h3>What if there is no mobile signal?</h3>
+<p>Cached favorites keep playing without a signal.</p>
+</main>
+<footer>
+<p><strong>More guides</strong></p>
+<ul><li><a href="/self-hosted-music-synced-lyrics" hreflang="en">Self-hosted music with synced lyrics</a></li><li><a href="/self-hosted-music-server-for-families" hreflang="en">Self-hosted music streaming for the whole family</a></li><li><a href="/spotify-alternative-self-hosted" hreflang="en">A self-hosted Spotify alternative for the family</a></li><li><a href="/install-self-hosted-music-server-docker" hreflang="en">Install a self-hosted music server with Docker</a></li><li><a href="/jellyfin-music-alternative" hreflang="en">Jellyfin music alternative</a></li></ul>
+<p>Not affiliated with Spotify, YouTube, Navidrome, Jellyfin or Plex; names belong to their owners.</p>
+<p><a href="/">Melarka</a> · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://zexa.se">Zexa</a></p>
+</footer>
+</body>
+</html>

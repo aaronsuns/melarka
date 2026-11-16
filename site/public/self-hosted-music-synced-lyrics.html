@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-Hosted Music Server with Synced Lyrics – Melarka</title>
+<meta name="description" content="How to get synced, line-by-line lyrics on a self-hosted music server: from the file, a .lrc, or online sources, with fixes for lyrics that run early or late.">
+<link rel="canonical" href="https://melarka.zexa.se/self-hosted-music-synced-lyrics">
+<meta property="og:title" content="Self-Hosted Music Server with Synced Lyrics – Melarka">
+<meta property="og:description" content="How to get synced, line-by-line lyrics on a self-hosted music server: from the file, a .lrc, or online sources, with fixes for lyrics that run early or late.">
+<meta property="og:url" content="https://melarka.zexa.se/self-hosted-music-synced-lyrics">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_en.jpg">
+<meta property="og:locale" content="en_GB">
+<meta property="og:site_name" content="Melarka">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/guide.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Self-hosted music with synced lyrics","description":"How to get synced, line-by-line lyrics on a self-hosted music server: from the file, a .lrc, or online sources, with fixes for lyrics that run early or late.","inLanguage":"en","mainEntityOfPage":"https://melarka.zexa.se/self-hosted-music-synced-lyrics","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"Synced lyrics","item":"https://melarka.zexa.se/self-hosted-music-synced-lyrics"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does Melarka support synced lyrics?","acceptedAnswer":{"@type":"Answer","text":"Yes. It reads lyrics from the file, from a .lrc file next to it, or from online services, and shows the current line in the app, on the lock screen and on the car display."}},{"@type":"Question","name":"What if the lyrics are early or late?","acceptedAnswer":{"@type":"Answer","text":"Anyone can shift them or align them to the line being sung from the Now Playing screen. You can also report wrong lyrics to get the next best version."}},{"@type":"Question","name":"Can I turn off online lyrics?","acceptedAnswer":{"@type":"Answer","text":"Yes. Remove providers from lyrics.providers in config.yaml, or leave only embedded lyrics and .lrc files."}},{"@type":"Question","name":"Does it change my files?","acceptedAnswer":{"@type":"Answer","text":"No. Lyrics and fixes are stored in Melarka's own database."}}]}</script>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+  <nav><a href="/#guides">Guides</a><a href="/#install">Install</a><a href="https://github.com/aaronsuns/melarka">GitHub</a></nav>
+</div></div>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Melarka</a> › <a href="/#guides">Guides</a> › Synced lyrics</nav>
+<h1>Self-hosted music with synced lyrics</h1>
+<p class="lead">Synced lyrics, with the current line highlighted as the song plays, are one of the first things people miss when they leave a streaming service. A self-hosted server can have them too. This page explains where Melarka gets lyrics and how to fix them when they are wrong.</p>
+
+<h2>Where the lyrics come from</h2>
+<p>When a song has no stored lyrics, Melarka looks in this order, keeping the best match it finds:</p>
+<ol>
+<li><strong>The file itself</strong>: lyrics embedded in the tags.</li>
+<li><strong>A .lrc file next to the song</strong>: the common format for timed lyrics.</li>
+<li><strong>Online lyrics services</strong>: by default LRCLIB, then NetEase, QQ Music and Kugou.</li>
+</ol>
+<p>The order is configurable: <code>lyrics.providers</code> in <code>config.yaml</code> lists the sources in ranking order, and you can remove any to switch it off. The configuration reference is in the <a href="https://github.com/aaronsuns/melarka/blob/main/docs/configuration.md">docs</a>. NetEase, QQ Music and Kugou are unofficial services that may break or change at any time, which is why they can be switched off.</p>
+<h2>Fixing lyrics that run early or late</h2>
+<p>Wrong timing is the usual complaint with synced lyrics, since a lyrics file is matched to one version of a song while your copy may start a second earlier or later. In Melarka anyone, not only the admin, can fix it from the Now Playing screen:</p>
+<ul>
+<li><strong>Shift</strong> the lyrics earlier or later;</li>
+<li><strong>align to the line being sung</strong>, so the app sets the offset for you;</li>
+<li><strong>report wrong lyrics</strong>, which brings up the next best version.</li>
+</ul>
+<p>Fixes are stored in Melarka's database and your files are never changed.</p>
+<h2>Lyrics on the lock screen and in the car</h2>
+<p>The iPhone and Android apps show the current lyric line on the lock screen and on the car display, in addition to the full synced lyrics in the app. Combined with <a href="/self-hosted-music-server-car-autoplay">car autoplay</a>, your favorites can start when you get in and the lyrics follow along.</p>
+<h2>Good to know</h2>
+<ul>
+<li>Melarka includes no lyrics. They are fetched from the sources you allow, on your server.</li>
+<li>Online lyrics depend on those services having your song; very obscure tracks or YouTube-only songs with unusual names may need the title fixed first. Admins can edit titles and artists as overrides, and an optional AI agent skill can clean up messy YouTube names in batches. A cleaner title usually finds lyrics better.</li>
+<li>If you have your own .lrc files, putting them next to the songs is the most reliable route.</li>
+</ul>
+<h2>Other servers and lyrics</h2>
+<p>Many servers can show lyrics, depending on the server version and the app you use. Melarka's approach is to handle fetching, ranking and fixing in one place, with its own apps displaying them. If you are weighing options, compare the <a href="/navidrome-alternative">Navidrome alternative</a> page.</p>
+<h2 id="install">Install in one command</h2>
+<div class="install">
+<p class="first">Needs a Linux machine or NAS with Docker.</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p><a class="cta" href="/#install">Install in one command</a> <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ Melarka on GitHub</a></p>
+<p>Step by step and configuration: <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>.</p>
+</div>
+<h2>FAQ</h2>
+<h3>Does Melarka support synced lyrics?</h3>
+<p>Yes. It reads lyrics from the file, from a .lrc file next to it, or from online services, and shows the current line in the app, on the lock screen and on the car display.</p>
+<h3>What if the lyrics are early or late?</h3>
+<p>Anyone can shift them or align them to the line being sung from the Now Playing screen. You can also report wrong lyrics to get the next best version.</p>
+<h3>Can I turn off online lyrics?</h3>
+<p>Yes. Remove providers from lyrics.providers in config.yaml, or leave only embedded lyrics and .lrc files.</p>
+<h3>Does it change my files?</h3>
+<p>No. Lyrics and fixes are stored in Melarka's own database.</p>
+</main>
+<footer>
+<p><strong>More guides</strong></p>
+<ul><li><a href="/spotify-alternative-self-hosted" hreflang="en">A self-hosted Spotify alternative for the family</a></li><li><a href="/navidrome-alternative" hreflang="en">Navidrome alternative: when Melarka fits better</a></li><li><a href="undefined" hreflang="en">Self-hosted music with car Bluetooth autoplay</a></li><li><a href="undefined" hreflang="en">Download YouTube music to a self-hosted server</a></li><li><a href="/self-hosted-music-server-for-families" hreflang="en">Self-hosted music streaming for the whole family</a></li></ul>
+<p>Not affiliated with Spotify, YouTube, Navidrome, Jellyfin or Plex; names belong to their owners.</p>
+<p><a href="/">Melarka</a> · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://zexa.se">Zexa</a></p>
+</footer>
+</body>
+</html>

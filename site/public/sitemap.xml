@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://melarka.zexa.se/</loc><lastmod>2026-11-09</lastmod></url>
+  <url><loc>https://melarka.zexa.se/</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/install-self-hosted-music-server-docker</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/jellyfin-music-alternative</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/navidrome-alternative</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/plexamp-alternative</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/self-hosted-music-server-car-autoplay</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/self-hosted-music-server-for-families</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/self-hosted-music-synced-lyrics</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/spotify-alternative-self-hosted</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/subsonic-alternative</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/youtube-to-self-hosted-music</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/zh/self-hosted-music-server</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://melarka.zexa.se/zh/spotify-alternative</loc><lastmod>2026-11-16</lastmod></url>
 </urlset>

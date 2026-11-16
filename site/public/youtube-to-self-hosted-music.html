@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YouTube Music to Your Self-Hosted Server – Melarka</title>
+<meta name="description" content="Search YouTube from your own music server, download songs or whole playlists, preview before keeping, and follow channels. How Melarka does it, and the limits.">
+<link rel="canonical" href="https://melarka.zexa.se/youtube-to-self-hosted-music">
+<meta property="og:title" content="YouTube Music to Your Self-Hosted Server – Melarka">
+<meta property="og:description" content="Search YouTube from your own music server, download songs or whole playlists, preview before keeping, and follow channels. How Melarka does it, and the limits.">
+<meta property="og:url" content="https://melarka.zexa.se/youtube-to-self-hosted-music">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_en.jpg">
+<meta property="og:locale" content="en_GB">
+<meta property="og:site_name" content="Melarka">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/guide.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"YouTube to self-hosted music: how Melarka does it","description":"Search YouTube from your own music server, download songs or whole playlists, preview before keeping, and follow channels. How Melarka does it, and the limits.","inLanguage":"en","mainEntityOfPage":"https://melarka.zexa.se/youtube-to-self-hosted-music","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"YouTube to self-hosted music","item":"https://melarka.zexa.se/youtube-to-self-hosted-music"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Can I download a YouTube playlist to my own server?","acceptedAnswer":{"@type":"Answer","text":"Yes. Melarka downloads a whole playlist, up to 200 entries, and turns it into a Melarka playlist."}},{"@type":"Question","name":"Does the phone talk to YouTube?","acceptedAnswer":{"@type":"Answer","text":"No. Searches, thumbnails and videos all go through your server, which is the only machine that contacts YouTube."}},{"@type":"Question","name":"Is it legal?","acceptedAnswer":{"@type":"Answer","text":"That depends on what you download and where you live. You are responsible for following YouTube's terms and local copyright law."}},{"@type":"Question","name":"Does it work in China?","acceptedAnswer":{"@type":"Answer","text":"The YouTube features need a proxy on the server because YouTube is blocked there. Your own music, lyrics and the apps work without one."}}]}</script>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+  <nav><a href="/#guides">Guides</a><a href="/#install">Install</a><a href="https://github.com/aaronsuns/melarka">GitHub</a></nav>
+</div></div>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Melarka</a> › <a href="/#guides">Guides</a> › YouTube to self-hosted music</nav>
+<h1>YouTube to self-hosted music: how Melarka does it</h1>
+<p class="lead">A lot of music you care about lives only on YouTube. Melarka lets you search it from the app, download songs and playlists to your own server, and listen on any phone without YouTube ever seeing the phone. This page covers what it does and what to watch out for.</p>
+
+<h2>Search and download</h2>
+<p>From the search screen you can search your library and YouTube together, with view counts shown. Download a single song, a whole playlist (up to 200 entries), or paste a link. A downloaded playlist becomes a Melarka playlist. Downloads are saved as m4a in a library called <code>youtube</code>, separate from your own music folders. The download engine is <a href="https://github.com/yt-dlp/yt-dlp">yt-dlp</a>, which ships in the Docker image; admins can update it from the admin console.</p>
+<h2>Preview before you keep</h2>
+<p>Play any YouTube video as a preview before deciding to keep it. <strong>Keep</strong> moves it into your music or your channels without a second download, and previews that you do not keep are temporary.</p>
+<h2>Follow YouTube channels without an account</h2>
+<p>The <strong>Channels</strong> section follows channels (podcasts, talks, music shows) without a YouTube account. New episodes download by themselves and play with resume and speed control. They expire after a while unless you keep them, so storage does not grow without limit.</p>
+<h2>Watch videos through your server</h2>
+<p>The <strong>Video</strong> section searches and plays YouTube videos through your server, with your own history and suggestions. The phone never contacts YouTube directly: searches, thumbnails and videos all come through the server, which is the only machine that talks to YouTube.</p>
+<h2>Nightly suggestions</h2>
+<p>Every night Melarka suggests YouTube songs you do not have yet, based on what you play and favorite most, in the <strong>For you</strong> list. You choose what to download.</p>
+<h2>Tidying up names</h2>
+<p>YouTube titles are messy: "Official Video", extra tags, the artist in the wrong place. Admins can edit title, artist, album and year as overrides, and an optional AI agent skill can clean up names in batches. Clean names also help <a href="/self-hosted-music-synced-lyrics">lyrics matching</a>.</p>
+<h2>In mainland China</h2>
+<p>YouTube is blocked in mainland China, so the YouTube features need a proxy on the server; phones need none. Your own music, lyrics and the apps work without one. See <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md#in-mainland-china">docs/install.md</a>.</p>
+<h2>Responsible use</h2>
+<p class="note">You are responsible for what you download. Follow YouTube's Terms of Service and the copyright law where you live, and download only what you are allowed to. Melarka ships no music, lyrics, covers or videos. Downloaders can also break when YouTube changes; the admin console can update yt-dlp, but a failure now and then is normal.</p>
+<p>Melarka is a tool for listening to your own collection at home. For the bigger picture see the <a href="/spotify-alternative-self-hosted">Spotify alternative</a> guide.</p>
+<h2 id="install">Install in one command</h2>
+<div class="install">
+<p class="first">Needs a Linux machine or NAS with Docker.</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p><a class="cta" href="/#install">Install in one command</a> <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ Melarka on GitHub</a></p>
+<p>Step by step and configuration: <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>.</p>
+</div>
+<h2>FAQ</h2>
+<h3>Can I download a YouTube playlist to my own server?</h3>
+<p>Yes. Melarka downloads a whole playlist, up to 200 entries, and turns it into a Melarka playlist.</p>
+<h3>Does the phone talk to YouTube?</h3>
+<p>No. Searches, thumbnails and videos all go through your server, which is the only machine that contacts YouTube.</p>
+<h3>Is it legal?</h3>
+<p>That depends on what you download and where you live. You are responsible for following YouTube's terms and local copyright law.</p>
+<h3>Does it work in China?</h3>
+<p>The YouTube features need a proxy on the server because YouTube is blocked there. Your own music, lyrics and the apps work without one.</p>
+</main>
+<footer>
+<p><strong>More guides</strong></p>
+<ul><li><a href="/spotify-alternative-self-hosted" hreflang="en">A self-hosted Spotify alternative for the family</a></li><li><a href="/self-hosted-music-synced-lyrics" hreflang="en">Self-hosted music with synced lyrics</a></li><li><a href="/self-hosted-music-server-for-families" hreflang="en">Self-hosted music streaming for the whole family</a></li><li><a href="undefined" hreflang="en">Install a self-hosted music server with Docker</a></li><li><a href="/jellyfin-music-alternative" hreflang="en">Jellyfin music alternative</a></li></ul>
+<p>Not affiliated with Spotify, YouTube, Navidrome, Jellyfin or Plex; names belong to their owners.</p>
+<p><a href="/">Melarka</a> · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://zexa.se">Zexa</a></p>
+</footer>
+</body>
+</html>

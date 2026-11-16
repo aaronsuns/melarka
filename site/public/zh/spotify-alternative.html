@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spotify 替代方案：全家自建音乐服务器 Melarka</title>
+<meta name="description" content="想找 Spotify 替代品？Melarka 是开源免费的自建音乐服务器：全家每人一个账号，同步歌词、车载蓝牙自动播放、离线缓存，iPhone 和安卓都有原生 App，Docker 一条命令安装。">
+<link rel="canonical" href="https://melarka.zexa.se/zh/spotify-alternative">
+<link rel="alternate" hreflang="zh-Hans" href="https://melarka.zexa.se/zh/spotify-alternative">
+<link rel="alternate" hreflang="en" href="https://melarka.zexa.se/spotify-alternative-self-hosted">
+<link rel="alternate" hreflang="x-default" href="https://melarka.zexa.se/spotify-alternative-self-hosted">
+<meta property="og:title" content="Spotify 替代方案：全家自建音乐服务器 Melarka">
+<meta property="og:description" content="想找 Spotify 替代品？Melarka 是开源免费的自建音乐服务器：全家每人一个账号，同步歌词、车载蓝牙自动播放、离线缓存，iPhone 和安卓都有原生 App，Docker 一条命令安装。">
+<meta property="og:url" content="https://melarka.zexa.se/zh/spotify-alternative">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://melarka.zexa.se/img/cover_zh.jpg">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:site_name" content="Melarka">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/guide.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Spotify 替代：给全家用的自建音乐服务器","description":"想找 Spotify 替代品？Melarka 是开源免费的自建音乐服务器：全家每人一个账号，同步歌词、车载蓝牙自动播放、离线缓存，iPhone 和安卓都有原生 App，Docker 一条命令安装。","inLanguage":"zh-Hans","mainEntityOfPage":"https://melarka.zexa.se/zh/spotify-alternative","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"指南","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"Spotify 替代","item":"https://melarka.zexa.se/zh/spotify-alternative"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"有免费的自建 Spotify 替代品吗？","acceptedAnswer":{"@type":"Answer","text":"有。Melarka 开源免费（AGPL-3.0），装在你自己的机器上，没有订阅，也不需要在我们这里注册。音乐由你自己提供。"}},{"@type":"Question","name":"Melarka 能放 Spotify 上的歌吗？","acceptedAnswer":{"@type":"Answer","text":"不能。Melarka 没有授权曲库，播放的是你自己的音乐文件夹和从 YouTube 下载的歌，适合听自己留存的音乐。"}},{"@type":"Question","name":"支持 iPhone 和安卓吗？","acceptedAnswer":{"@type":"Answer","text":"支持，有原生 iPhone 和安卓 App，也有任何浏览器都能用的网页版。iPhone App 用你自己的 Apple ID 安装，不走 App Store。"}},{"@type":"Question","name":"全家可以用同一个服务器吗？","acceptedAnswer":{"@type":"Answer","text":"可以。每人一个账号，各有收藏、歌单、电台、历史和界面语言。"}}]}</script>
+</head>
+<body>
+<div class="bar"><div class="in">
+  <a class="brand" href="/"><img src="/img/icon-192.png" alt="">Melarka</a>
+  <nav><a href="/#guides">指南</a><a href="/#install">安装</a><a href="https://github.com/aaronsuns/melarka">GitHub</a></nav>
+</div></div>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Melarka</a> › <a href="/#guides">指南</a> › Spotify 替代</nav>
+<h1>Spotify 替代：给全家用的自建音乐服务器</h1>
+<p class="lead">Spotify 是订阅别人的曲库；自建音乐服务器则是把音乐留在自己家里，不怕下架，也不怕涨价。Melarka 是开源免费的家庭音乐服务器，自带 iPhone、安卓和网页 App，用起来像流媒体。</p>
+
+<h2>用 Melarka 替代 Spotify，能做到什么</h2>
+<div class="tablewrap"><table><thead><tr><th></th><th>Spotify</th><th>Melarka</th></tr></thead><tbody><tr><td>音乐来源</td><td>Spotify 授权的曲库</td><td>你自己的本地音乐文件夹，加上从 YouTube 下载的歌。Melarka 本身不带任何音乐</td></tr><tr><td>费用</td><td>按月订阅</td><td>开源免费（AGPL-3.0）；只需自己的服务器和电费</td></tr><tr><td>账号</td><td>每人一个，或家庭套餐</td><td>全家每人一个账号，各有收藏、歌单、私人电台、历史和界面语言</td></tr><tr><td>歌词</td><td>App 内同步歌词</td><td>来自文件本身、旁边的 .lrc 或在线歌词；唱早了唱晚了，谁都能点一下对齐</td></tr><tr><td>离线</td><td>订阅用户可下载</td><td>收藏的歌缓存到手机，大小上限自己定</td></tr><tr><td>车载</td><td>车机 App、蓝牙</td><td>手机连上车载蓝牙，收藏的歌自动开始放，车机屏幕显示当前这句歌词</td></tr></tbody></table></div>
+<p>实话实说：Spotify 的曲库和推荐远比自建的大。如果你常听的就是几百首老歌、自己有的或能下载到的歌，自建很划算；如果你天天追新歌和播客，Spotify 还是要留着。</p>
+<h2>手机上的自建音乐流媒体</h2>
+<p>服务器是装在家里 Linux 电脑或 NAS 上的一个 Docker 容器，配好 HTTPS 后，在外面用流量也能听。音质分三档：<code>lossless</code>（播放器能播就直接给原文件）、<code>high</code>（AAC 最高 256 kbps）、<code>saver</code>（AAC 最高 128 kbps），实时转码并缓存。</p>
+<p>iPhone 和安卓 App 自带原生播放引擎：后台播放、无缝衔接、锁屏和车机控制、渐弱的睡眠定时、音量均衡。网页版也可以添加到主屏幕，全屏运行。</p>
+<h2>歌从哪里来</h2>
+<p>指向你已有的音乐文件夹即可（FLAC、MP3、AAC/M4A、Ogg、Opus、WAV 等 ffmpeg 能读的格式）。Melarka 只读取，不会改动文件和标签，改过的歌名、歌词存在它自己的数据库里。其他的歌，可以在 App 里搜索 YouTube，下载单曲或整个歌单（最多 200 首）。<strong>请自行遵守 YouTube 服务条款和当地版权法，只下载你有权下载的内容。</strong></p>
+<p>在中国大陆：YouTube 被屏蔽，所以 YouTube 相关功能需要服务器上配置代理（手机不需要）；你自己的音乐、歌词和 App 不需要代理。详见 <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md#in-mainland-china">docs/install.md</a>（中文说明在同一节）。</p>
+<h2>安装难不难</h2>
+<p>需要一台一直开着、装了 Docker 的机器。之后一条命令（见下）会配好 Docker Compose、启动并显示地址和管理员密码。手机上使用需要再配一个 HTTPS 反向代理，README 里有 Caddy 和 nginx 的例子。</p>
+<p>需要知道的限制：iPhone App 不在 App Store，要用你自己的（免费）Apple ID 签名安装，有 Mac 用 Xcode，没有 Mac 用 SideStore；安卓每次发布都有签名的 APK。</p>
+<p>更多：<a href="/zh/self-hosted-music-server">自建音乐服务器指南</a>，英文版 <a href="/spotify-alternative-self-hosted">self-hosted Spotify alternative</a>。</p>
+<h2 id="install">一条命令安装</h2>
+<div class="install">
+<p class="first">需要装了 Docker 的 Linux 电脑或 NAS。</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/aaronsuns/melarka/main/deploy/install.sh | sh -s -- /path/to/your/music</code></pre>
+<p><a class="cta" href="/#install">一条命令安装</a> <a class="cta ghost" href="https://github.com/aaronsuns/melarka">★ GitHub 项目</a></p>
+<p>分步安装和配置见 <a href="https://github.com/aaronsuns/melarka/blob/main/docs/install.md">docs/install.md</a>.</p>
+</div>
+<h2>常见问题</h2>
+<h3>有免费的自建 Spotify 替代品吗？</h3>
+<p>有。Melarka 开源免费（AGPL-3.0），装在你自己的机器上，没有订阅，也不需要在我们这里注册。音乐由你自己提供。</p>
+<h3>Melarka 能放 Spotify 上的歌吗？</h3>
+<p>不能。Melarka 没有授权曲库，播放的是你自己的音乐文件夹和从 YouTube 下载的歌，适合听自己留存的音乐。</p>
+<h3>支持 iPhone 和安卓吗？</h3>
+<p>支持，有原生 iPhone 和安卓 App，也有任何浏览器都能用的网页版。iPhone App 用你自己的 Apple ID 安装，不走 App Store。</p>
+<h3>全家可以用同一个服务器吗？</h3>
+<p>可以。每人一个账号，各有收藏、歌单、电台、历史和界面语言。</p>
+</main>
+<footer>
+<p><strong>相关指南</strong></p>
+<ul><li><a href="/zh/self-hosted-music-server" hreflang="zh-Hans">自建音乐服务器：Docker 一条命令安装（中文）</a></li><li><a href="/spotify-alternative-self-hosted" hreflang="en">A self-hosted Spotify alternative for the family</a></li><li><a href="/youtube-to-self-hosted-music" hreflang="en">Download YouTube music to a self-hosted server</a></li><li><a href="/install-self-hosted-music-server-docker" hreflang="en">Install a self-hosted music server with Docker</a></li></ul>
+<p>Melarka 与 Spotify、YouTube、Navidrome、Jellyfin、Plex 无关联，各名称归其所有者。</p>
+<p><a href="/">Melarka</a> · <a href="https://github.com/aaronsuns/melarka">GitHub</a> · <a href="https://github.com/aaronsuns/melarka/issues">Issues</a> · <a href="https://zexa.se">Zexa</a></p>
+</footer>
+</body>
+</html>
