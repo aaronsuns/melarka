@@ -22,8 +22,12 @@ off in Admin → System → "Send the weekly anonymous count"; `LARK_USAGE_PING=
 - `users`: a range of the user count (`1`, `2-5`, `6-20`, `21+`);
 - `tracks`: a range of the non-trashed tracks (`0`, `1-99`, `100-999`, `1000-9999`, `10000+`).
 
-`POST https://melarka.zexa.se/api/ping` with that JSON, at the first hourly check after start and then at
-most once every 7 days (a failed ping is retried at the next check). No user names, exact counts, songs,
+`POST https://melarka.zexa.se/api/ping` with that JSON, at the first hourly check after start (this counts the
+install), once more 24 hours later (`FollowUp`) and then at most once every 7 days (a failed ping is retried at
+the next check). The second ping exists because the first goes out while the library is still empty and the
+website keeps only the newest ping per id: without it an install reported `tracks: "0"` for a whole week (found
+2026-11-18: 18 of 19 installs). The follow-up is scheduled by writing `last_sent_at = now - 7 days + 24 hours`
+after the first ping, so no migration or new column is needed. No user names, exact counts, songs,
 history, paths or settings. The apps send nothing; one ping per install, not per person. The log says the
 count is on at every start while it is.
 
@@ -38,7 +42,7 @@ variable. The README must list every field; a new field needs a README change in
 - `LARK_USAGE_PING=off` (`config.UsagePing`, `Service.Off`): `Run` deletes the row and returns,
   `Enabled` is false, `SetEnabled(true)` returns `ErrOff` (API 409 `usage_ping_env_off`).
 - `usageping.Service`: `Enabled`, `SetEnabled(on)` (on: insert a new id if none; off: delete the row),
-  `SendIfDue`, `Run` (hourly ticker plus a wake-up when turned on). `last_sent_at` is only updated for the id
+  `SendIfDue` (the very first ping, `last_sent_at = 0`, schedules the follow-up), `Run` (hourly ticker plus a wake-up when turned on). `last_sent_at` is only updated for the id
   that was sent, so turning it off during a request cannot bring the row back.
 - API (admin only): `GET /api/v1/admin/usage-ping` → `{"enabled": bool, "env_off": bool}`; `PUT` with `{"enabled": bool}`.
 

@@ -372,7 +372,7 @@ Melarka is a tool for listening to your own music collection at home.
 Melarka has no tracking. The server only reaches out for what you use: YouTube (search, downloads,
 channels), lyrics providers, and Last.fm if you configure it. The apps talk only to your server.
 
-**One exception, the anonymous install count (on by default).** About once a week the server sends this to
+**One exception, the anonymous install count (on by default).** About once a week (and once more a day after the first start, when your library has been scanned) the server sends this to
 `melarka.zexa.se`, so the project can count how many homes run Melarka and which versions and platforms to
 support:
 
