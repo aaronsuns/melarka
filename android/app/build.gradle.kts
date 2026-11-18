@@ -42,6 +42,11 @@ android {
     buildTypes {
         release {
             signingConfig = releaseSigning
+            // R8: shrink, optimize and obfuscate the release build (F-Droid asks for it). The keep rules for the
+            // libraries that need them are in proguard-rules.pro; the others ship their own consumer rules.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
@@ -58,8 +63,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     testOptions {
@@ -74,7 +79,7 @@ android {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 dependencies {

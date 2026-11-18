@@ -4,7 +4,7 @@
 # 127.0.0.1:4700, which the emulator reaches as 10.0.2.2:4700 (plain http there is allowed in debug builds only).
 #
 # Usage: android/scripts/emulator-smoke.sh [extra gradle args, e.g. -Pandroid.testInstrumentationRunnerArguments.class=lark.SmokeFlowTest]
-# Needs Go, Node (only when web/dist is missing), Python 3, ffmpeg, a JDK 17 and the Android SDK (ANDROID_HOME).
+# Needs Go, Node (only when web/dist is missing), Python 3, ffmpeg, a JDK 21 and the Android SDK (ANDROID_HOME).
 # Boots the AVD $LARK_AVD (default lark_api35) headless unless a device is attached already (CI: the emulator runner
 # boots one), and shuts it down again if it booted it. The server's admin password is made up for this run (a test
 # value, like the e2e tests'), handed to the tests as an instrumentation argument.

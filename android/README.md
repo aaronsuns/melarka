@@ -5,7 +5,7 @@ Design: `docs/superpowers/specs/android-client-design.md`; plan: `docs/superpowe
 
 ## Build and test
 
-Needs JDK 17 and the Android SDK (platform 35, build-tools 35.0.0). Nothing is installed on the
+Needs JDK 21 and the Android SDK (platform 35, build-tools 35.0.0). Nothing is installed on the
 development Mac; builds run on a machine reachable over SSH:
 
 ```sh
@@ -17,7 +17,7 @@ android/scripts/remote.sh smoke   # the emulator smoke test (below)
 ```
 
 The script syncs `android/`, `ios/project.yml` (the version) and `docs/brand` to `~/lark-android-build`,
-and sets `JAVA_HOME` (Homebrew `openjdk@17`) and `ANDROID_HOME`
+and sets `JAVA_HOME` (Homebrew `openjdk@21`) and `ANDROID_HOME`
 (`/opt/homebrew/share/android-commandlinetools`) itself. With a local JDK and SDK, `cd android && ./gradlew
 testDebugUnitTest lintDebug assembleDebug` is the same build.
 

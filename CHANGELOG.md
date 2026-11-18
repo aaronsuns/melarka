@@ -7,6 +7,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Changed
+
+- **Android: the release build is shrunk with R8 and built with JDK 21** (F-Droid review). The F-Droid recipe
+  and CI use JDK 21.
+
+### Fixed
+
+- **The anonymous install count reported an empty library.** The first count is sent at the first start, when
+  the library has not been scanned yet, and the website keeps only the newest one per install, so most installs
+  showed "0 songs" for a week. A second count now follows 24 hours after the first, then once a week as before.
+  Nothing new is sent: same fields, same coarse ranges.
+
 ## [0.2.23] - 2026-11-16
 
 ### Added
