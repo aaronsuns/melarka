@@ -1,6 +1,7 @@
 // Package usageping is the anonymous "count this install" ping. Melarka has no
 // analytics; this tells the project that the install is running. About once a
-// week the server sends a random install id, its version and a few coarse
+// week (and once more a day after the first start, when the library has been
+// scanned) the server sends a random install id, its version and a few coarse
 // numbers (see Payload), and nothing else, to the Melarka website, which only
 // counts. On by default (migration 0031); an admin turns it off in Admin →
 // System, or LARK_USAGE_PING=off keeps it off. Turning it off deletes the id,
@@ -30,6 +31,11 @@ const DefaultURL = "https://melarka.zexa.se/api/ping"
 
 // Interval is how often an enabled install pings.
 const Interval = 7 * 24 * time.Hour
+
+// FollowUp is how long after an install's very first ping the second one is sent. The first ping goes out at
+// the first start, when the library is usually still empty (tracks "0"); the website keeps only the newest ping
+// per install id, so without this the install would report an empty library for a whole Interval.
+const FollowUp = 24 * time.Hour
 
 // checkEvery is how often Run looks whether a ping is due.
 const checkEvery = time.Hour
@@ -202,8 +208,13 @@ func (s *Service) SendIfDue(ctx context.Context) (bool, error) {
 	if res.StatusCode/100 != 2 {
 		return false, fmt.Errorf("usage ping: %s", res.Status)
 	}
+	// After the very first ping, pretend the last one was Interval-FollowUp ago, so the next is due in FollowUp.
+	stamp := now
+	if last == 0 {
+		stamp = now.Add(FollowUp - Interval)
+	}
 	// Only if the ping is still on: turning it off while the request ran must not bring the row back.
-	_, err = s.DB.ExecContext(ctx, `UPDATE usage_ping SET last_sent_at = ? WHERE id = 1 AND install_id = ?`, now.Unix(), id)
+	_, err = s.DB.ExecContext(ctx, `UPDATE usage_ping SET last_sent_at = ? WHERE id = 1 AND install_id = ?`, stamp.Unix(), id)
 	return err == nil, err
 }
 

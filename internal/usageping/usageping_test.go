@@ -91,7 +91,7 @@ func TestPayloadHasOnlyCoarseNumbers(t *testing.T) {
 	}
 }
 
-func TestSendsIDAndVersionOnlyThenWaitsAWeek(t *testing.T) {
+func TestSendsIDAndVersionOnlyThenFollowsUpAfterADayThenWaitsAWeek(t *testing.T) {
 	site := &fakeSite{}
 	now := time.Unix(1_800_000_000, 0)
 	s := &Service{DB: testutil.DB(t), URL: site.server(t).URL, Version: "1.2.3", Now: func() time.Time { return now }}
@@ -106,12 +106,22 @@ func TestSendsIDAndVersionOnlyThenWaitsAWeek(t *testing.T) {
 	if len(site.got) != 1 || site.got[0].Version != "1.2.3" || !regexp.MustCompile(`^[0-9a-f]{32}$`).MatchString(site.got[0].ID) {
 		t.Fatalf("payload %+v", site.got)
 	}
+	// The second ping comes a day after the first (the library is scanned by then), not a week after.
+	now = now.Add(FollowUp - time.Minute)
+	if sent, _ := s.SendIfDue(ctx); sent {
+		t.Fatal("follow-up ping came before a day")
+	}
+	now = now.Add(2 * time.Minute)
+	if sent, _ := s.SendIfDue(ctx); !sent || len(site.got) != 2 || site.got[1].ID != site.got[0].ID {
+		t.Fatalf("follow-up ping: %v %+v", sent, site.got)
+	}
+	// From then on once a week.
 	now = now.Add(Interval - time.Minute)
 	if sent, _ := s.SendIfDue(ctx); sent {
 		t.Fatal("pinged again within the week")
 	}
 	now = now.Add(2 * time.Minute)
-	if sent, _ := s.SendIfDue(ctx); !sent || len(site.got) != 2 || site.got[1].ID != site.got[0].ID {
+	if sent, _ := s.SendIfDue(ctx); !sent || len(site.got) != 3 {
 		t.Fatalf("weekly ping: %v %+v", sent, site.got)
 	}
 	// Turning it on again keeps the id.
@@ -183,4 +193,27 @@ func TestRunPingsRightAfterTurningOn(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	t.Fatal("no ping after turning it on")
+}
+
+func TestFollowUpPingReportsTheScannedLibrary(t *testing.T) {
+	site := &fakeSite{}
+	now := time.Unix(1_800_000_000, 0)
+	s := &Service{DB: testutil.DB(t), URL: site.server(t).URL, Version: "1", Now: func() time.Time { return now }}
+	ctx := context.Background()
+	s.SetEnabled(ctx, false)
+	s.SetEnabled(ctx, true)
+	s.SendIfDue(ctx) // first start: nothing scanned yet
+	if site.got[0].Tracks != "0" {
+		t.Fatalf("first ping %+v", site.got[0])
+	}
+	if _, err := s.DB.Exec(`INSERT OR IGNORE INTO libraries(id, name, root) VALUES (1, 'm', '/music')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.DB.Exec(`INSERT INTO tracks(library_id, rel_path, size, mtime, fingerprint, added_at) VALUES (1, 'a.mp3', 1, 1, 'x', 1)`); err != nil {
+		t.Fatal(err)
+	}
+	now = now.Add(FollowUp + time.Minute)
+	if sent, _ := s.SendIfDue(ctx); !sent || site.got[1].Tracks != "1-99" {
+		t.Fatalf("follow-up %v %+v", sent, site.got)
+	}
 }
