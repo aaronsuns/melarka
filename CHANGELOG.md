@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Added
+
+- **Update notice for admins.** About once a day the server asks `api.github.com` for Melarka's latest
+  release; when it is newer than the running version, Admin → System shows "Melarka X is available (you
+  have Y)" with a link to the release notes and the Docker update steps, and you can dismiss it. The request
+  is public and carries nothing about your install (no id, no version, generic User-Agent); only admins see the
+  answer. Set `LARK_UPDATE_CHECK=off` and nothing is ever sent. Dev builds are never told they are behind.
+  The Android and iPhone apps do not show it yet.
+
 ## [0.2.23] - 2026-11-16
 
 ### Added

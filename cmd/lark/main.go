@@ -34,6 +34,7 @@ import (
 	"github.com/aaronsuns/lark-server/internal/stream"
 	"github.com/aaronsuns/lark-server/internal/tags"
 	"github.com/aaronsuns/lark-server/internal/trash"
+	"github.com/aaronsuns/lark-server/internal/updatecheck"
 	"github.com/aaronsuns/lark-server/internal/usageping"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
@@ -206,6 +207,13 @@ func run(log *slog.Logger) error {
 	}
 	pingDone := make(chan struct{})
 	go func() { defer close(pingDone); srv.UsagePing.Run(ctx) }()
+	// The daily "newer release?" request to GitHub, shown to admins only; LARK_UPDATE_CHECK=off stops it.
+	srv.UpdateCheck = &updatecheck.Service{Version: buildinfo.Version, Log: log, Off: !cfg.UpdateCheck}
+	if cfg.UpdateCheck {
+		log.Info("update check is on: about once a day the server asks api.github.com for the latest Melarka release (nothing about this install is sent); turn it off with LARK_UPDATE_CHECK=off")
+	}
+	updateDone := make(chan struct{})
+	go func() { defer close(updateDone); srv.UpdateCheck.Run(ctx) }()
 	// YouTube's tags for songs downloaded before they were kept (for tagging), at low priority.
 	metaDone := make(chan struct{})
 	go func() { defer close(metaDone); downloads.RunMetaBackfill(ctx, srv.SearchGate()) }()
@@ -285,6 +293,7 @@ func run(log *slog.Logger) error {
 	<-downloadsDone
 	<-metaDone
 	<-pingDone
+	<-updateDone
 	<-artistFixDone
 	<-lastfmDone
 	<-recsDone

@@ -372,6 +372,12 @@ Melarka is a tool for listening to your own music collection at home.
 Melarka has no tracking. The server only reaches out for what you use: YouTube (search, downloads,
 channels), lyrics providers, and Last.fm if you configure it. The apps talk only to your server.
 
+**The update check (on by default).** About once a day the server also contacts `api.github.com` to ask for
+Melarka's latest release, so an admin is told in Admin → System when a newer version exists. It is a plain
+public request with a generic `Melarka` User-Agent: no install id, no version, no account, nothing about your
+library. GitHub sees your server's IP address like for any download. Only admins see the answer. Set
+`LARK_UPDATE_CHECK=off` in `.env` and nothing is ever sent.
+
 **One exception, the anonymous install count (on by default).** About once a week (and once more a day after the first start, when your library has been scanned) the server sends this to
 `melarka.zexa.se`, so the project can count how many homes run Melarka and which versions and platforms to
 support:
@@ -390,7 +396,7 @@ apps send nothing; it is one count per server. The website does not store IP add
 for 35 days after its last ping, and anyone can see the totals at
 [melarka.zexa.se/api/ping/stats](https://melarka.zexa.se/api/ping/stats).
 
-To turn it off: untick **Admin → System → Send the weekly anonymous count** (this deletes the id), or set
+To turn it off (this is separate from the update check above): untick **Admin → System → Send the weekly anonymous count** (this deletes the id), or set
 `LARK_USAGE_PING=off` in `.env` before the first start, so nothing is ever sent. Existing installs that
 upgrade to 0.2.22 have it switched on as well; the server's log says so at every start while it is on.
 

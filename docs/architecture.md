@@ -48,6 +48,7 @@ Each package under `internal/` has one job:
 | `artwork` | covers from files, folders and online sources, with a resized cache |
 | `metareview` | the review list behind the names agent skill |
 | `trash` | moves deleted tracks to `.lark-trash/` and purges them after 30 days |
+| `updatecheck` | the daily "is a newer release out" check (on by default; LARK_UPDATE_CHECK=off stops it): a plain GET of GitHub's latest-release API with a generic User-Agent, nothing about the install sent; the answer is cached in memory and shown to admins only (`GET /admin/update-check`, banner in Admin → System) |
 | `usageping` | the anonymous install count (on by default; Admin → System or LARK_USAGE_PING=off turns it off): a random id, the version, OS/arch, Docker or not, and user/song ranges to melarka.zexa.se weekly (and once a day after the first start); see docs/superpowers/specs/usage-ping-design.md |
 | `ytdlp` | the only place that runs yt-dlp: search, playlists, downloads, self-update |
 | `download` | the YouTube download queue |

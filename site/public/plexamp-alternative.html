@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="/guide.css">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"A Plexamp alternative that is fully open source","description":"Plexamp is a polished player for Plex. Compare it with Melarka, an open-source music server with its own iPhone and Android apps and no third-party account.","inLanguage":"en","mainEntityOfPage":"https://melarka.zexa.se/plexamp-alternative","author":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"publisher":{"@type":"Organization","name":"Zexa","url":"https://zexa.se/"},"image":"https://melarka.zexa.se/img/cover_en.jpg","dateModified":"2026-11-16"}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Melarka","item":"https://melarka.zexa.se/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://melarka.zexa.se/#guides"},{"@type":"ListItem","position":3,"name":"Plexamp alternative","item":"https://melarka.zexa.se/plexamp-alternative"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is Melarka free?","acceptedAnswer":{"@type":"Answer","text":"Yes, free and open source. There is no paid tier."}},{"@type":"Question","name":"Do I need an account with a company to use Melarka?","acceptedAnswer":{"@type":"Answer","text":"No. You create the accounts on your own server. The only thing it sends out is an optional anonymous weekly install count."}},{"@type":"Question","name":"Can Melarka use my Plex music folder?","acceptedAnswer":{"@type":"Answer","text":"Yes, it can read the same files. Playlists and ratings stored in Plex do not carry over."}},{"@type":"Question","name":"Is there a desktop app?","acceptedAnswer":{"@type":"Answer","text":"Melarka is used from a browser on a computer; the native apps are for iPhone and Android."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is Melarka free?","acceptedAnswer":{"@type":"Answer","text":"Yes, free and open source. There is no paid tier."}},{"@type":"Question","name":"Do I need an account with a company to use Melarka?","acceptedAnswer":{"@type":"Answer","text":"No. You create the accounts on your own server. The only things it sends out are an optional anonymous weekly install count and a daily request to GitHub for the latest release number, which carries nothing about your install."}},{"@type":"Question","name":"Can Melarka use my Plex music folder?","acceptedAnswer":{"@type":"Answer","text":"Yes, it can read the same files. Playlists and ratings stored in Plex do not carry over."}},{"@type":"Question","name":"Is there a desktop app?","acceptedAnswer":{"@type":"Answer","text":"Melarka is used from a browser on a computer; the native apps are for iPhone and Android."}}]}</script>
 </head>
 <body>
 <div class="bar"><div class="in">
@@ -39,7 +39,7 @@
 <h2>Where Melarka fits</h2>
 <ul>
 <li><strong>Open source (AGPL-3.0).</strong> You can read, build and change all of it: server, web app, iPhone app and Android app. Plex's server is proprietary.</li>
-<li><strong>No account with a third party.</strong> You create the accounts on your own server. Melarka contacts only what you use (YouTube, lyrics services, Last.fm if configured) and sends an anonymous weekly install count to this website, which you can switch off in Admin, System.</li>
+<li><strong>No account with a third party.</strong> You create the accounts on your own server. Melarka contacts only what you use (YouTube, lyrics services, Last.fm if configured) sends an anonymous weekly install count to this website (switch it off in Admin, System), and asks GitHub once a day whether a newer Melarka exists (LARK_UPDATE_CHECK=off stops that).</li>
 <li><strong>Free.</strong> Some Plexamp features are tied to a paid Plex Pass or Plexamp Pass (check Plex's current terms). Melarka has no paid tier.</li>
 <li><strong>Family accounts for music.</strong> Favorites, playlists, history, radio and language are per person.</li>
 <li><strong>YouTube downloads</strong> built in, and synced lyrics with a way to fix timing.</li>
@@ -62,7 +62,7 @@
 <h3>Is Melarka free?</h3>
 <p>Yes, free and open source. There is no paid tier.</p>
 <h3>Do I need an account with a company to use Melarka?</h3>
-<p>No. You create the accounts on your own server. The only thing it sends out is an optional anonymous weekly install count.</p>
+<p>No. You create the accounts on your own server. The only things it sends out are an optional anonymous weekly install count and a daily request to GitHub for the latest release number, which carries nothing about your install.</p>
 <h3>Can Melarka use my Plex music folder?</h3>
 <p>Yes, it can read the same files. Playlists and ratings stored in Plex do not carry over.</p>
 <h3>Is there a desktop app?</h3>
