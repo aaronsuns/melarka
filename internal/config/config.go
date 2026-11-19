@@ -192,6 +192,10 @@ type Config struct {
 	// default true, so the admin switch decides. LARK_USAGE_PING=off turns it
 	// off for good: nothing is sent and the switch cannot turn it on.
 	UsagePing bool `yaml:"-"`
+
+	// UpdateCheck is the daily "is a newer release out" request to GitHub
+	// (internal/updatecheck); default true. LARK_UPDATE_CHECK=off stops it.
+	UpdateCheck bool `yaml:"-"`
 }
 
 func (c Config) DBPath() string   { return filepath.Join(c.DataDir, "lark.db") }
@@ -231,6 +235,7 @@ func Load() (Config, error) {
 	}
 	c.OfflineCache = true
 	c.UsagePing = true
+	c.UpdateCheck = true
 	path := env("LARK_CONFIG", filepath.Join(c.DataDir, "config.yaml"))
 	b, err := os.ReadFile(path)
 	switch {
@@ -267,6 +272,13 @@ func Load() (Config, error) {
 		c.UsagePing = false
 	default:
 		return c, fmt.Errorf("LARK_USAGE_PING %q: must be on or off", v)
+	}
+	switch v := strings.ToLower(os.Getenv("LARK_UPDATE_CHECK")); v {
+	case "", "on", "true", "1":
+	case "off", "false", "0":
+		c.UpdateCheck = false
+	default:
+		return c, fmt.Errorf("LARK_UPDATE_CHECK %q: must be on or off", v)
 	}
 	if !refreshAtRe.MatchString(c.Recommendations.RefreshAt) {
 		return c, fmt.Errorf("recommendations.refresh_at %q: want HH:MM (00:00–23:59)", c.Recommendations.RefreshAt)

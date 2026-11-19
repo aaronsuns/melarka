@@ -1,0 +1,1 @@
+The app is now shrunk with R8 (smaller download). Server: update notice for admins, install count fix.

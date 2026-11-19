@@ -77,6 +77,7 @@ func (s *Server) adminRoutes(adm chi.Router) {
 	adm.Put("/admin/tagging/batch", s.taggingBatch)
 	adm.Get("/admin/ytdlp", s.ytdlpInfo)
 	adm.Post("/admin/ytdlp/update", s.ytdlpUpdate)
+	adm.Get("/admin/update-check", s.updateCheckGet)
 	adm.Get("/admin/usage-ping", s.usagePingGet)
 	adm.Put("/admin/usage-ping", s.usagePingPut)
 }

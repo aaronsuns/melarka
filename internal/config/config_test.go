@@ -319,3 +319,22 @@ func TestUsagePingSwitch(t *testing.T) {
 		t.Error("bad value accepted")
 	}
 }
+
+func TestUpdateCheckSwitch(t *testing.T) {
+	t.Setenv("LARK_DATA_DIR", t.TempDir())
+	t.Setenv("LARK_CONFIG", filepath.Join(t.TempDir(), "none.yaml"))
+	t.Setenv("LARK_UPDATE_CHECK", "")
+	if c, err := Load(); err != nil || !c.UpdateCheck {
+		t.Fatalf("default on: %v %v", c.UpdateCheck, err)
+	}
+	for v, want := range map[string]bool{"off": false, "OFF": false, "false": false, "0": false, "on": true, "1": true} {
+		t.Setenv("LARK_UPDATE_CHECK", v)
+		if c, err := Load(); err != nil || c.UpdateCheck != want {
+			t.Errorf("%s: %v %v", v, c.UpdateCheck, err)
+		}
+	}
+	t.Setenv("LARK_UPDATE_CHECK", "maybe")
+	if _, err := Load(); err == nil {
+		t.Error("bad value accepted")
+	}
+}

@@ -515,3 +515,38 @@ test("更新 stays disabled past the timeout message until the real request actu
     vi.useRealTimers();
   }
 });
+
+const newerRoutes = (newer: boolean) => ({
+  "GET /api/v1/admin/ytdlp": () => ({ body: { version: "2026.01.01", path: "/data/yt-dlp" } }),
+  "GET /api/v1/admin/update-check": () => ({
+    body: newer
+      ? { enabled: true, current: "0.2.23", latest: "0.3.0", url: "https://github.com/aaronsuns/melarka/releases/tag/v0.3.0", newer: true, checked_at: 1 }
+      : { enabled: false, current: "0.2.23", latest: "", url: "https://github.com/aaronsuns/melarka/releases", newer: false, checked_at: 0 },
+  }),
+});
+
+test("tells the admin a newer Melarka exists and remembers the dismissal per version", async () => {
+  localStorage.removeItem("lark.updateDismissed");
+  renderWithApp(<SystemPage />, { role: "admin", path: "/admin/system", routes: newerRoutes(true) });
+  expect(await screen.findByText(/Melarka 0\.3\.0 已发布（当前 0\.2\.23）/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "更新说明" })).toHaveAttribute("href", "https://github.com/aaronsuns/melarka/releases/tag/v0.3.0");
+  expect(screen.getByText(/docker compose pull/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "忽略" }));
+  expect(screen.queryByText(/已发布/)).not.toBeInTheDocument();
+  expect(localStorage.getItem("lark.updateDismissed")).toBe("0.3.0");
+});
+
+test("a dismissed version stays hidden on the next visit", async () => {
+  localStorage.setItem("lark.updateDismissed", "0.3.0");
+  renderWithApp(<SystemPage />, { role: "admin", path: "/admin/system", routes: newerRoutes(true) });
+  expect(await screen.findByText("当前版本：2026.01.01")).toBeInTheDocument();
+  expect(screen.queryByText(/已发布/)).not.toBeInTheDocument();
+  localStorage.removeItem("lark.updateDismissed");
+});
+
+test("no update banner when nothing is newer or the check is off", async () => {
+  localStorage.removeItem("lark.updateDismissed");
+  renderWithApp(<SystemPage />, { role: "admin", path: "/admin/system", routes: newerRoutes(false) });
+  expect(await screen.findByText("当前版本：2026.01.01")).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "更新说明" })).not.toBeInTheDocument();
+});

@@ -379,6 +379,8 @@ button.now-art { padding: 0; width: 100%; }
 .episode-video { width: 100%; max-height: 50vh; background: #000; border-radius: var(--radius); }
 .episode-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .notice-strip { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: var(--radius); background: var(--surface); }
+.update-banner { margin-bottom: 12px; align-items: flex-start; }
+.update-banner p { margin: 0 0 4px; }
 .pre-line { white-space: pre-line; margin: 0; }
 .secondary.primary { background: var(--text); color: #000; border-color: var(--text); }
 .secondary.danger { border-color: var(--danger); } /* .danger (existing) sets the colour */

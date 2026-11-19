@@ -1,0 +1,1 @@
+Appen är nu krympt med R8 (mindre nedladdning). Servern: uppdateringsnotis för admin, rättad installationsräkning.
