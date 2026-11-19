@@ -10,6 +10,7 @@ import { PreviewButton } from "./PreviewButton";
 import { RowErrorLine, useRowErrors } from "./rowError";
 import { VideoDownload } from "./VideoDownload";
 import { YouTubePlaylistRow } from "./YouTubePlaylistRow";
+import type { VideoSource } from "../videoLink";
 
 /** The first page's size and the step 显示更多 grows it by (the server caps it at 50). */
 export const SEARCH_PAGE = 10;
@@ -22,7 +23,7 @@ export const SEARCH_PAGE = 10;
  * whatever the current query already found. 显示更多 asks for a larger page
  * (YouTube search has no offset) and appends only the videos not shown yet.
  */
-export function YouTubeResults({ query, auto }: { query: string; auto: boolean }) {
+export function YouTubeResults({ query, auto, source }: { query: string; auto: boolean; source?: VideoSource }) {
   const t = useT();
   const [videos, setVideos] = useState<YTVideo[] | null>(null);
   const [playlists, setPlaylists] = useState<YTPlaylist[]>([]);
@@ -57,7 +58,7 @@ export function YouTubeResults({ query, auto }: { query: string; auto: boolean }
     setLoading(true);
     setError("");
     api
-      .youtubeSearch(q)
+      .youtubeSearch(q, undefined, source)
       .then((res) => {
         if (seq.current !== mySeq) return; // a newer query has since started
         setVideos(res.videos);
@@ -73,7 +74,7 @@ export function YouTubeResults({ query, auto }: { query: string; auto: boolean }
         if (seq.current !== mySeq) return;
         setLoading(false);
       });
-  }, []);
+  }, [source]);
 
   const loadMore = useCallback(() => {
     const mySeq = seq.current; // a new query invalidates this page too
@@ -81,7 +82,7 @@ export function YouTubeResults({ query, auto }: { query: string; auto: boolean }
     setMoreLoading(true);
     setMoreError("");
     api
-      .youtubeSearch(query, n)
+      .youtubeSearch(query, n, source)
       .then((res) => {
         if (seq.current !== mySeq) return;
         const have = videos ?? [];
@@ -100,7 +101,7 @@ export function YouTubeResults({ query, auto }: { query: string; auto: boolean }
         if (seq.current !== mySeq) return;
         setMoreLoading(false);
       });
-  }, [query, pageN, videos]);
+  }, [query, pageN, videos, source]);
 
   useEffect(() => {
     // Invalidate any in-flight fetch for the query this replaces, and reset

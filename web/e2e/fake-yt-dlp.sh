@@ -164,6 +164,15 @@ if [[ "${LARK_DEMO:-}" == 1 ]]; then
   exec python3 "$LARK_DEMO_PY" yt "$@"
 fi
 
+# Bilibili search (Client.SearchSource): a full lookup, one JSON line per
+# video, --no-playlist and the bilisearch<n>:<query> pseudo-URL last.
+if [[ "${args[$((n - 1))]}" == bilisearch* ]]; then
+  has "--skip-download" || fail
+  has "--no-playlist" || fail
+  echo '{"id": "BV1fakefake01", "title": "哔哩测试歌曲", "uploader": "假UP主", "duration": 5, "thumbnail": "", "view_count": 10}'
+  exit 0
+fi
+
 # Channel episode details (VideoInfo): --skip-download -O "%(.{…})j" <watch url>.
 if has "--skip-download"; then
   id="${args[$((n - 1))]#*v=}"

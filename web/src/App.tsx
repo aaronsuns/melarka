@@ -28,6 +28,7 @@ import SettingsPage from "./pages/SettingsPage";
 import DownloadsPage from "./pages/DownloadsPage";
 import MyDownloadsPage from "./pages/MyDownloadsPage";
 import RecommendationsPage from "./pages/RecommendationsPage";
+import { useYouTubeOn } from "./videoSources";
 import ChangePassword from "./pages/ChangePassword";
 import AdminLayout from "./pages/admin/AdminLayout";
 import UsersPage from "./pages/admin/UsersPage";
@@ -52,7 +53,8 @@ function NotFound() {
 
 function Shell() {
   const t = useT();
-  const channelsOn = useChannelsEnabled();
+  const youtubeOn = useYouTubeOn();
+  const channelsOn = useChannelsEnabled() && youtubeOn; // 频道 and 视频 are built on YouTube
   const unplayed = useUnplayed(channelsOn);
   return (
     <div className="shell">

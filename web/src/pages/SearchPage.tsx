@@ -7,7 +7,9 @@ import { TrackList } from "../components/TrackList";
 import { YouTubeResults } from "../components/YouTubeResults";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
-import { parseVideoLink } from "../videoLink";
+import { parseVideoLink, type VideoSource } from "../videoLink";
+import { SourceSwitch, sourceLabelKey } from "../components/SourceSwitch";
+import { preferredSource, useVideoSources } from "../videoSources";
 
 // query is the exact string the local search below resolved for — not
 // necessarily the latest keystroke.
@@ -32,6 +34,9 @@ export default function SearchPage() {
   const [error, setError] = useState("");
   const [yt, setYt] = useState<YT>({ query: "", forced: false });
   const ytTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const sources = useVideoSources();
+  const [picked, setPicked] = useState<VideoSource | null>(null);
+  const source = picked && sources.includes(picked) ? picked : preferredSource(sources);
 
   useEffect(() => {
     const query = q.trim();
@@ -119,7 +124,7 @@ export default function SearchPage() {
           </div>
         </section>
       )}
-      {link ? <LinkCard link={link} /> : <div onClickCapture={(e) => { if ((e.target as Element).closest("a, button")) remember(q); }}>
+      {link ? (sources.includes(link.source) ? <LinkCard link={link} /> : <p className="muted">{t("search.sourceOff", { source: t(sourceLabelKey(link.source)) })}</p>) : <div onClickCapture={(e) => { if ((e.target as Element).closest("a, button")) remember(q); }}>
       {error && <p className="error">{error}</p>}
       {empty && <p className="muted">{t("search.noResults", { query: q.trim() })}</p>}
       {res && res.artists.length > 0 && (<><h2 className="section-title">{t("search.artistsHeading")}</h2><ArtistChips artists={res.artists} /></>)}
@@ -135,10 +140,15 @@ export default function SearchPage() {
         </>
       )}
       {yt.query.length >= MIN_YOUTUBE_QUERY && (yt.forced || res?.query === yt.query) && (
-        <>
-          <h2 className="section-title">{t("search.youtubeHeading")}</h2>
-          <YouTubeResults key={yt.query} query={yt.query} auto={yt.forced || (res?.query === yt.query && !!empty)} />
-        </>
+        source ? (
+          <>
+            <h2 className="section-title">{t(source === "bilibili" ? "search.bilibiliHeading" : "search.youtubeHeading")}</h2>
+            <SourceSwitch sources={sources} value={source} onChange={setPicked} />
+            <YouTubeResults key={source + ":" + yt.query} source={source} query={yt.query} auto={yt.forced || (res?.query === yt.query && !!empty)} />
+          </>
+        ) : (
+          <p className="muted">{t("search.noSources")}</p>
+        )
       )}
       </div>}
     </>

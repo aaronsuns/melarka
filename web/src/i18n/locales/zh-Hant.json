@@ -543,5 +543,20 @@
   "video.streamBroken": "影片中斷了",
   "video.hdQueued": "高畫質 排隊中",
   "video.hdQueueTimeout": "高畫質排隊太久了，請稍後再試",
-  "error.hd_unavailable": "這個影片沒有 720p 版本"
+  "error.hd_unavailable": "這個影片沒有 720p 版本",
+  "search.sourceLabel": "影片來源",
+  "search.sourceYouTube": "YouTube",
+  "search.sourceBilibili": "嗶哩嗶哩",
+  "search.bilibiliHeading": "嗶哩嗶哩",
+  "search.sourceOff": "此伺服器已關閉 {source}",
+  "search.noSources": "此伺服器沒有開啟影片來源，無法搜尋或下載影片",
+  "admin.videoSources.title": "影片來源",
+  "admin.videoSources.help": "Melarka 在哪裡搜尋和下載影片。中國大陸無法存取 YouTube，在那裡的伺服器請使用嗶哩嗶哩。",
+  "admin.videoSources.fromEnv": "在這裡修改之前，由 LARK_VIDEO_SOURCES 決定。",
+  "admin.videoSources.fromAdmin": "已在這裡儲存，LARK_VIDEO_SOURCES 不再生效。",
+  "error.source_disabled": "此伺服器已關閉這個影片來源",
+  "error.bilibili_search_failed": "嗶哩嗶哩搜尋失敗，請重試",
+  "error.bilibili_throttled": "嗶哩嗶哩暫時繁忙，請一分鐘後再試",
+  "error.bilibili_unavailable": "此伺服器無法存取這個嗶哩嗶哩影片",
+  "job.error.source_disabled": "這個影片來源已關閉，管理員重新開啟後可重試"
 }
