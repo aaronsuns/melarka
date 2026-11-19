@@ -7,6 +7,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+### Added
+
+- **Bilibili as a video source.** YouTube is blocked in mainland China; a server there can now search,
+  download and preview from Bilibili (哔哩哔哩) without a proxy. Set `LARK_VIDEO_SOURCES=bilibili`
+  (or `youtube,bilibili` for both, `none` for neither), or tick the sources in Admin → System, which then
+  wins over the variable. With both on, a YouTube | 哔哩哔哩 switch sits above the search results. Pasted
+  `bilibili.com/video/BV…` links, favourites and collections work; `b23.tv` short links do not. A source
+  that is off is never contacted, and the API answers `source_disabled`. Channels, video and For you are
+  built on YouTube and are hidden while YouTube is off; songs already downloaded keep playing. New installs
+  and upgrades keep YouTube only until an admin changes it.
+
 ## [0.2.24] - 2026-11-19
 
 ### Added

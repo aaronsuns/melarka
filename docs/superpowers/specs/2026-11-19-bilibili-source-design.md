@@ -1,6 +1,6 @@
 # Bilibili as a second video source
 
-Status: draft, awaiting approval (2026-11-19).
+Status: implemented (2026-11-19); plan in `docs/superpowers/plans/2026-11-19-bilibili-source.md`.
 
 ## Intent
 
@@ -85,19 +85,24 @@ setups must work.
   thumbnails, adopt and the watch page. `SourceOf(id)` returns the source from the shape.
 - `WatchURL(id)` returns `https://www.bilibili.com/video/<id>` for a Bilibili id.
 - `VideoIDFromURL` also reads `bilibili.com/video/BV…` (query string such as `?p=` ignored; part 1
-  only) and `m.bilibili.com`. `b23.tv` short links are accepted only if `yt-dlp` resolves them
-  (to be verified in the plan; otherwise left out and the UI says to paste the full link).
-- `ValidURL` allow-list adds `bilibili.com`, `www.bilibili.com`, `m.bilibili.com` (plus `b23.tv`
-  per above).
-- `Video` carries its `Thumbnail`. For YouTube it stays derived; for Bilibili the search/detail
-  result's cover URL is stored (the downloads and previews tables already hold a thumbnail) and
-  `ThumbnailURL(id)` falls back to a stored value. The thumbnail proxy's host allow-list adds
-  `hdslb.com` image hosts, and only for Bilibili ids.
-- Bilibili search runs `bilisearch<n>:<query>` with the same flat-playlist handling as YouTube.
-  Results keep Bilibili's own order (the view-count blend `Popular` is YouTube-specific and is
-  skipped unless the flat results carry views). No playlist search for Bilibili.
+  only) and `m.bilibili.com`. `b23.tv` short links are left out in v1: Melarka never follows a
+  redirect to a host it has not checked, so the UI does not treat them as links.
+- `ValidURL` allow-list adds `bilibili.com`, `www.bilibili.com`, `m.bilibili.com` and
+  `space.bilibili.com` (favourites, collections, series and uploader pages).
+- `Video` carries its `Thumbnail`. For YouTube it stays derived; for Bilibili the search or list
+  result's cover is kept (normalised to https and only when on `hdslb.com`, `BilibiliCover`) and
+  `ThumbnailURL(id)` returns "". The web app shows result covers straight from that URL (its
+  `isSafeThumbnailUrl` allow-list adds `*.hdslb.com`, no referrer). The server's thumbnail proxy
+  stays YouTube-only: it serves only the 视频 tab, which stays YouTube-only.
+- Bilibili search runs `bilisearch<n>:<query>` as a **full** lookup (not flat: yt-dlp's flat
+  Bilibili entries carry no titles, and search entries carry numeric ids), printing one JSON line
+  per video with `--no-playlist` (part 1 of a multi-part video), at most 20 results (one page
+  fetch each). Results keep Bilibili's own order. No playlist search for Bilibili. Bilibili's HTTP
+  412 is `ErrBilibiliThrottled` (API `503 bilibili_throttled`, never cached).
 - Playlist import (`ResolveList`) accepts Bilibili favourites, collection, series and uploader-video
-  links via the extractors `yt-dlp` already has.
+  links the same way (full lookup, plus a `playlist:` line for the list's own id and title). They
+  come in through the pasted-link download path (`POST /downloads {url}`); the YouTube list
+  expand-in-place endpoints (`/youtube/playlist*`) stay YouTube-only.
 
 ### Which sources are on
 
