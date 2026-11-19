@@ -36,6 +36,7 @@ import (
 	"github.com/aaronsuns/lark-server/internal/trash"
 	"github.com/aaronsuns/lark-server/internal/updatecheck"
 	"github.com/aaronsuns/lark-server/internal/usageping"
+	"github.com/aaronsuns/lark-server/internal/videosrc"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
 
@@ -208,6 +209,15 @@ func run(log *slog.Logger) error {
 	pingDone := make(chan struct{})
 	go func() { defer close(pingDone); srv.UsagePing.Run(ctx) }()
 	// The daily "newer release?" request to GitHub, shown to admins only; LARK_UPDATE_CHECK=off stops it.
+	// Which video sources are on: LARK_VIDEO_SOURCES, until an admin chooses in Admin → System.
+	videoDefault := make([]ytdlp.Source, len(cfg.VideoSources))
+	for i, v := range cfg.VideoSources {
+		videoDefault[i] = ytdlp.Source(v)
+	}
+	srv.VideoSources = &videosrc.Service{DB: d, Default: videoDefault}
+	if on, _, err := srv.VideoSources.List(ctx); err == nil {
+		log.Info("video sources", "on", on)
+	}
 	srv.UpdateCheck = &updatecheck.Service{Version: buildinfo.Version, Log: log, Off: !cfg.UpdateCheck}
 	if cfg.UpdateCheck {
 		log.Info("update check is on: about once a day the server asks api.github.com for the latest Melarka release (nothing about this install is sent); turn it off with LARK_UPDATE_CHECK=off")

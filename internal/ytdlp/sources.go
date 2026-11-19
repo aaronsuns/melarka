@@ -100,3 +100,19 @@ func IsBilibiliListURL(rawURL string) bool {
 	}
 	return strings.HasPrefix(p, "/medialist/") || strings.HasPrefix(p, "/list/")
 }
+
+// BilibiliCover returns raw as an https URL when it is an image on Bilibili's
+// CDN (hdslb.com or a subdomain), else "". yt-dlp often reports covers as
+// http://; a cover posted back by a client is only kept when it is one.
+func BilibiliCover(raw string) string {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Port() != "" || u.User != nil {
+		return ""
+	}
+	h := strings.ToLower(u.Hostname())
+	if h != "hdslb.com" && !strings.HasSuffix(h, ".hdslb.com") {
+		return ""
+	}
+	u.Scheme = "https"
+	return u.String()
+}

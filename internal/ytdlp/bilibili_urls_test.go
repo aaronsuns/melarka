@@ -149,3 +149,19 @@ func TestIsBilibiliListURL(t *testing.T) {
 		}
 	}
 }
+
+func TestBilibiliCover(t *testing.T) {
+	cases := map[string]string{
+		"http://i0.hdslb.com/bfs/archive/a.jpg":  "https://i0.hdslb.com/bfs/archive/a.jpg",
+		"https://i2.hdslb.com/bfs/archive/b.png": "https://i2.hdslb.com/bfs/archive/b.png",
+		"https://hdslb.com.evil.test/a.jpg":      "",
+		"https://i0.hdslb.com:81/a.jpg":          "",
+		"javascript:alert(1)":                    "",
+		"":                                       "",
+	}
+	for in, want := range cases {
+		if got := BilibiliCover(in); got != want {
+			t.Errorf("BilibiliCover(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

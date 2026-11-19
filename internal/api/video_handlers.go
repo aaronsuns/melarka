@@ -48,6 +48,9 @@ func forBrowser(vs []ytdlp.Video, skip string) []ytdlp.Video {
 }
 
 func (s *Server) videoSearch(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	clean, err := ytdlp.CleanQuery(r.URL.Query().Get("q"))
 	if err != nil {
 		writeCoded(w, 400, "bad_query", "bad query")
@@ -80,6 +83,9 @@ func (s *Server) videoSearch(w http.ResponseWriter, r *http.Request) {
 // videoRelated is the video's YouTube Mix: the interactive search path,
 // shared with 为你推荐 through the Mix cache.
 func (s *Server) videoRelated(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	id := chi.URLParam(r, "id")
 	if !ytdlp.IsVideoID(id) {
 		writeCoded(w, 400, "bad_video_id", "bad video id")

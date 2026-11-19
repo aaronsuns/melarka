@@ -107,9 +107,17 @@ func (c *searchCache) set(key string, result ytdlp.SearchResult, now time.Time) 
 }
 
 func (s *Server) youtubeSearch(w http.ResponseWriter, r *http.Request) {
+	src, ok := s.searchSource(w, r)
+	if !ok {
+		return
+	}
 	clean, err := ytdlp.CleanQuery(r.URL.Query().Get("q"))
 	if err != nil {
 		writeError(w, 400, "bad query")
+		return
+	}
+	if src == ytdlp.SourceBilibili {
+		s.bilibiliSearch(w, r, clean)
 		return
 	}
 	n, ok := pageSize(r, searchPage, ytdlp.MaxSearchResults)
@@ -169,6 +177,9 @@ func (s *Server) youtubeSearch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) youtubePlaylist(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	id := r.URL.Query().Get("list")
 	if id == "" || ytdlp.ListIDFromURL(ytdlp.PlaylistURL(id)) != id || ytdlp.IsMixID(id) {
 		writeCoded(w, 400, "bad_request", "bad playlist id")
@@ -194,6 +205,9 @@ func (s *Server) youtubePlaylist(w http.ResponseWriter, r *http.Request) {
 // duration) for a search result expanded in place; n grows by entriesPage
 // up to entriesCap. Same cache and limiter as the other lookups.
 func (s *Server) youtubePlaylistEntries(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	id := r.URL.Query().Get("list")
 	if id == "" || ytdlp.ListIDFromURL(ytdlp.PlaylistURL(id)) != id || ytdlp.IsMixID(id) {
 		writeCoded(w, 400, "bad_request", "bad playlist id")
@@ -314,6 +328,9 @@ func (s *Server) createDownload(w http.ResponseWriter, r *http.Request) {
 			writeCoded(w, 400, "video_id_mismatch", "video id does not match the link")
 			return
 		}
+		if src, _ := ytdlp.SourceOf(id); !s.requireSource(w, r, src) {
+			return
+		}
 		// Queued under the canonical watch URL whatever shape was posted
 		// (a /shorts/ or /live/ link, say), like Search and Resolve do.
 		channelID := ""
@@ -332,6 +349,9 @@ func (s *Server) createDownload(w http.ResponseWriter, r *http.Request) {
 		}
 		jobs = []download.Job{j}
 	} else {
+		if src, ok := ytdlp.SourceOfURL(in.URL); ok && !s.requireSource(w, r, src) {
+			return
+		}
 		res, err := s.Downloads.EnqueueURL(r.Context(), u.ID, in.URL)
 		if err != nil {
 			s.downloadFail(w, err)

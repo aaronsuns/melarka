@@ -28,7 +28,13 @@ type Enqueued struct {
 // the list= it carries is the one yt-dlp resolved (so a channel never
 // counts), and not a mix.
 func isWholeList(u string, l ytdlp.List) bool {
-	return l.ID != "" && ytdlp.VideoIDFromURL(u) == "" && ytdlp.ListIDFromURL(u) == l.ID && !ytdlp.IsMixID(l.ID)
+	if l.ID == "" || ytdlp.VideoIDFromURL(u) != "" {
+		return false
+	}
+	if ytdlp.IsBilibiliListURL(u) { // favourites, a collection, series or uploader: yt-dlp's own list id
+		return true
+	}
+	return ytdlp.ListIDFromURL(u) == l.ID && !ytdlp.IsMixID(l.ID)
 }
 
 // recordList records userID's download of list l, in one transaction: the

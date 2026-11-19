@@ -9,6 +9,7 @@ import (
 
 	"github.com/aaronsuns/lark-server/internal/auth"
 	"github.com/aaronsuns/lark-server/internal/preview"
+	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
 
 // previewRoutes: previews, for any signed-in user (they sit in
@@ -74,6 +75,9 @@ func (s *Server) createPreview(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := decodeJSON(r, &in); err != nil {
 		writeError(w, 400, err.Error())
+		return
+	}
+	if src, ok := ytdlp.SourceOf(in.VideoID); ok && !s.requireSource(w, r, src) {
 		return
 	}
 	p, err := s.Previews.Start(r.Context(), auth.UserFrom(r.Context()).ID,

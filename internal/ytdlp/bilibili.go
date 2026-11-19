@@ -142,7 +142,7 @@ func parseBiliLines(out []byte) (List, []Video) {
 			continue
 		}
 		videos = append(videos, Video{ID: id, Title: e.Title, Channel: e.Uploader, URL: WatchURL(id),
-			Thumbnail: e.Thumbnail, DurationS: int(e.Duration), Views: e.Views})
+			Thumbnail: BilibiliCover(e.Thumbnail), DurationS: int(e.Duration), Views: e.Views})
 	}
 	return l, videos
 }

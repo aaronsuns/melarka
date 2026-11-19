@@ -20,7 +20,7 @@ import (
 // returned with adopted=false; the caller deletes its own copy. When the
 // moved file cannot be ingested it is moved back to src.
 func (s *Service) Adopt(ctx context.Context, userID int64, v ytdlp.Video, src string) (Job, bool, error) {
-	if !ytdlp.IsVideoID(v.ID) {
+	if !ytdlp.IsAnyVideoID(v.ID) {
 		return Job{}, false, ytdlp.ErrBadURL
 	}
 	lib, err := s.target(ctx)

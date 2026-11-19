@@ -413,7 +413,7 @@ func kindOf(media string) ytdlp.MediaKind {
 // the sweeper forgets that, an hour later). A user may have at most
 // MaxPerUser live previews they started.
 func (s *Service) Start(ctx context.Context, userID int64, req Request) (Preview, error) {
-	if !ytdlp.IsVideoID(req.VideoID) {
+	if !ytdlp.IsAnyVideoID(req.VideoID) {
 		return Preview{}, ErrBadVideo
 	}
 	if req.Media != "audio" && req.Media != "video" && req.Media != MediaHD {
@@ -694,7 +694,7 @@ func removeFiles(destNoExt string) {
 
 // removeLocked deletes a preview's row and files (s.mu held).
 func (s *Service) removeLocked(ctx context.Context, id int64, videoID, media string) error {
-	if !ytdlp.IsVideoID(videoID) {
+	if !ytdlp.IsAnyVideoID(videoID) {
 		return fmt.Errorf("preview: bad video id %q in row %d", videoID, id)
 	}
 	removeFiles(filepath.Join(s.Root, videoID+"."+media))
