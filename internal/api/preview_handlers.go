@@ -122,8 +122,12 @@ func (s *Server) streamPreview(w http.ResponseWriter, r *http.Request) {
 func (s *Server) streamPreviewByVideo(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	dur, _ := strconv.Atoi(q.Get("duration_s"))
+	video := chi.URLParam(r, "video")
+	if src, ok := ytdlp.SourceOf(video); ok && !s.requireSource(w, r, src) {
+		return
+	}
 	p, err := s.Previews.Start(r.Context(), auth.UserFrom(r.Context()).ID, preview.Request{
-		VideoID: chi.URLParam(r, "video"), Media: "audio", Title: q.Get("title"), Channel: q.Get("channel"), DurationS: dur})
+		VideoID: video, Media: "audio", Title: q.Get("title"), Channel: q.Get("channel"), DurationS: dur})
 	if err != nil {
 		s.previewFail(w, err)
 		return

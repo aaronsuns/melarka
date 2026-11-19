@@ -236,3 +236,13 @@ func TestChannelLinkRejectsBilibili(t *testing.T) {
 		t.Fatal("a YouTube video link is a channel link")
 	}
 }
+
+func TestPreviewByVideoGated(t *testing.T) {
+	s, ts := newTestServer(t)
+	withPreviews(t, s, "")
+	tok := loginAs(t, s, "alice", "member")
+	r, b := do(t, ts, tok, "GET", "/api/v1/previews/by-video/BV1aaaaaaaa1/stream", nil)
+	if r.StatusCode != 409 || !strings.Contains(string(b), "source_disabled") {
+		t.Fatalf("Bilibili off: %d %s", r.StatusCode, b)
+	}
+}
