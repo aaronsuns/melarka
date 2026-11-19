@@ -32,6 +32,7 @@ func TestAdminRoutesForbiddenForMembers(t *testing.T) {
 		{"POST", "/api/v1/admin/scan"}, {"GET", "/api/v1/admin/scan/status"}, {"GET", "/api/v1/admin/tagging/pending"}, {"PUT", "/api/v1/admin/tagging/batch"},
 		{"GET", "/api/v1/admin/ytdlp"}, {"POST", "/api/v1/admin/ytdlp/update"},
 		{"GET", "/api/v1/admin/update-check"}, {"GET", "/api/v1/admin/usage-ping"}, {"PUT", "/api/v1/admin/usage-ping"},
+		{"GET", "/api/v1/admin/video-sources"}, {"PUT", "/api/v1/admin/video-sources"},
 		{"GET", "/api/v1/admin/lyrics/missing"}, {"GET", "/api/v1/admin/lyrics/missing/count"},
 		{"GET", "/api/v1/admin/metadata/review"}, {"GET", "/api/v1/admin/metadata/review/count"},
 		{"PUT", fmt.Sprintf("/api/v1/admin/metadata/review/%d", id)}, {"GET", fmt.Sprintf("/api/v1/admin/metadata/review/%d", id)},

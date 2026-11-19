@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aaronsuns/lark-server/internal/videosrc"
 	"gopkg.in/yaml.v3"
 )
 
@@ -196,6 +197,11 @@ type Config struct {
 	// UpdateCheck is the daily "is a newer release out" request to GitHub
 	// (internal/updatecheck); default true. LARK_UPDATE_CHECK=off stops it.
 	UpdateCheck bool `yaml:"-"`
+
+	// VideoSources is the default set of video sources (internal/videosrc),
+	// from LARK_VIDEO_SOURCES: "youtube" (default), "bilibili", both
+	// comma-separated, or "none". An admin's choice in Admin → System wins.
+	VideoSources []string `yaml:"-"`
 }
 
 func (c Config) DBPath() string   { return filepath.Join(c.DataDir, "lark.db") }
@@ -280,6 +286,14 @@ func Load() (Config, error) {
 	default:
 		return c, fmt.Errorf("LARK_UPDATE_CHECK %q: must be on or off", v)
 	}
+	c.VideoSources = []string{"youtube"}
+	if v := os.Getenv("LARK_VIDEO_SOURCES"); v != "" {
+		srcs, err := parseVideoSources(v)
+		if err != nil {
+			return c, fmt.Errorf("LARK_VIDEO_SOURCES %q: %w", v, err)
+		}
+		c.VideoSources = srcs
+	}
 	if !refreshAtRe.MatchString(c.Recommendations.RefreshAt) {
 		return c, fmt.Errorf("recommendations.refresh_at %q: want HH:MM (00:00–23:59)", c.Recommendations.RefreshAt)
 	}
@@ -303,4 +317,17 @@ func env(k, def string) string {
 		return v
 	}
 	return def
+}
+
+// parseVideoSources reads LARK_VIDEO_SOURCES with videosrc's rules.
+func parseVideoSources(v string) ([]string, error) {
+	srcs, err := videosrc.Parse(v)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, len(srcs))
+	for i, s := range srcs {
+		out[i] = string(s)
+	}
+	return out, nil
 }

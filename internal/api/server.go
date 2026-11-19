@@ -29,6 +29,7 @@ import (
 	"github.com/aaronsuns/lark-server/internal/trash"
 	"github.com/aaronsuns/lark-server/internal/updatecheck"
 	"github.com/aaronsuns/lark-server/internal/usageping"
+	"github.com/aaronsuns/lark-server/internal/videosrc"
 	"github.com/aaronsuns/lark-server/internal/webui"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
@@ -85,7 +86,9 @@ type Server struct {
 	UsagePing *usageping.Service
 	// UpdateCheck is the daily newer-release check shown to admins (Admin → System).
 	UpdateCheck *updatecheck.Service
-	Log         *slog.Logger
+	// VideoSources says which video sources (YouTube, Bilibili) are on.
+	VideoSources *videosrc.Service
+	Log          *slog.Logger
 }
 
 func (s *Server) Handler() http.Handler {

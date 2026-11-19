@@ -43,7 +43,7 @@ func TestEveryConfigKeyAndEnvVarIsDocumented(t *testing.T) {
 			t.Errorf("deploy/config.example.yaml lacks %s", k)
 		}
 	}
-	for _, env := range []string{"LARK_DATA_DIR", "LARK_LISTEN", "LARK_CONFIG", "LARK_ADMIN_USER", "LARK_ADMIN_PASSWORD", "LARK_LANGUAGE", "LARK_LASTFM_API_KEY", "LARK_OFFLINE_CACHE", "LARK_WEB_DIR", "LARK_YOUTUBE_FEED_URL", "LARK_YOUTUBE_THUMB_URL"} {
+	for _, env := range []string{"LARK_DATA_DIR", "LARK_LISTEN", "LARK_CONFIG", "LARK_ADMIN_USER", "LARK_ADMIN_PASSWORD", "LARK_LANGUAGE", "LARK_LASTFM_API_KEY", "LARK_OFFLINE_CACHE", "LARK_WEB_DIR", "LARK_YOUTUBE_FEED_URL", "LARK_YOUTUBE_THUMB_URL", "LARK_VIDEO_SOURCES"} {
 		if !strings.Contains(string(ref), "`"+env+"`") {
 			t.Errorf("docs/configuration.md does not document %s", env)
 		}

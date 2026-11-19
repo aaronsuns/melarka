@@ -80,6 +80,8 @@ func (s *Server) adminRoutes(adm chi.Router) {
 	adm.Get("/admin/update-check", s.updateCheckGet)
 	adm.Get("/admin/usage-ping", s.usagePingGet)
 	adm.Put("/admin/usage-ping", s.usagePingPut)
+	adm.Get("/admin/video-sources", s.videoSourcesGet)
+	adm.Put("/admin/video-sources", s.videoSourcesPut)
 }
 
 func (s *Server) withID(w http.ResponseWriter, r *http.Request) (int64, bool) {
