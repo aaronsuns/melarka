@@ -50,10 +50,10 @@ Keep this plan and both specs current as the code changes (AGENTS.md).
 **Interfaces:**
 - Produces: `android/scripts/remote.sh {sync|test|build|run '<cmd>'}` (rsync `android/` to `~/lark-android-build` on `$LARK_BUILD_HOST`, run `./gradlew` there); version wiring `versionName`/`versionCode` read from `ios/project.yml` MARKETING_VERSION by a small Gradle function `larkVersion()` (release CI overrides with `-PlarkVersion=X.Y.Z`).
 
-- [ ] **Step 1:** On the private Mac, install JDK 17 (`brew install --cask temurin@17`), Android command-line tools (`brew install --cask android-commandlinetools`), then `sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;arm64-v8a"`; create AVD `lark_api35`. Verify: `ssh aaron@192.168.31.71 'java -version && sdkmanager --list_installed | grep android-35'` shows JDK 17 and platform 35.
+- [ ] **Step 1:** On the private Mac, install JDK 21 (`brew install --cask temurin@21`), Android command-line tools (`brew install --cask android-commandlinetools`), then `sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;arm64-v8a"`; create AVD `lark_api35`. Verify: `ssh aaron@192.168.31.71 'java -version && sdkmanager --list_installed | grep android-35'` shows JDK 21 and platform 35.
 - [ ] **Step 2:** Write `SmokeTest.versionCodeFromVersionName` asserting `versionCode("0.2.15") == 215` and `versionCode("1.10.3") == 11003`.
 - [ ] **Step 3:** Create the Gradle project and `larkVersion()`/`versionCode()`; run `LARK_BUILD_HOST=aaron@192.168.31.71 android/scripts/remote.sh test` — PASS; `remote.sh build` produces `app-debug.apk`.
-- [ ] **Step 4:** Add the `android` CI job (ubuntu, JDK 17, `./gradlew testDebugUnitTest lintDebug assembleDebug`); push a branch and see it green.
+- [ ] **Step 4:** Add the `android` CI job (ubuntu, JDK 21, `./gradlew testDebugUnitTest lintDebug assembleDebug`); push a branch and see it green.
 - [ ] **Step 5:** Commit `feat(android): project skeleton, remote build on the private Mac, CI job`.
 
 ### Task 2: Bridge protocol (messages, events, items)

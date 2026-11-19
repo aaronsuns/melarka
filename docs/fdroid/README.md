@@ -108,10 +108,10 @@ Checklist answers:
 - *Reproducible builds*: yes, with our signature (`Binaries:`, `AllowedAPKSigningKeys:`). Verified: the
   unsigned release build is byte-identical from two clean checkouts, and between macOS (Homebrew OpenJDK
   17) and the F-Droid buildserver image (Debian, OpenJDK 17 from bookworm); `apksigcopier compare`
-  accepts it against the published signed APK. The recipe installs JDK 17 (the build uses a Java 17
+  accepts it against the published signed APK. The recipe installs JDK 21 (the build uses a Java 21
   toolchain). There are no timestamps or git-derived values in the APK; AGP's
   `META-INF/version-control-info.textproto` is constant because the Gradle root (`android/`) has no
-  `.git`. Upstream builds with GitHub Actions (Temurin 17) and signs with the release key whose
+  `.git`. Upstream builds with GitHub Actions (Temurin 21) and signs with the release key whose
   certificate SHA-256 is in `android/signing-cert.sha256`.
 - *ABI split*: not needed; the native code is one small AndroidX library (about 10 KB per ABI) in a
   ~11 MB APK.

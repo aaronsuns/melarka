@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Build and test the Android app on a Mac (or Linux box) with a JDK 17 and the Android SDK, reachable over SSH
+# Build and test the Android app on a Mac (or Linux box) with a JDK 21 and the Android SDK, reachable over SSH
 # (set LARK_BUILD_HOST=user@host). Nothing is installed on this machine.
 # Usage: android/scripts/remote.sh sync | test | build | run '<cmd>' | smoke [gradle args]
 # smoke: the emulator smoke test (emulator-smoke.sh) there, with the server's sources synced too.
 # Releases are built by the GitHub release workflow, not here.
 set -euo pipefail
-HOST="${LARK_BUILD_HOST:?set LARK_BUILD_HOST=user@your-mac (a machine with JDK 17 and the Android SDK, reachable over SSH)}"
+HOST="${LARK_BUILD_HOST:?set LARK_BUILD_HOST=user@your-mac (a machine with JDK 21 and the Android SDK, reachable over SSH)}"
 RDIR="lark-android-build"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
@@ -33,7 +33,7 @@ sync_server() {  # what emulator-smoke.sh needs besides android/: the server's G
 remote() {  # runs $1 in zsh on the build host, in the synced android/ tree, with the JDK and SDK selected
   ssh -o BatchMode=yes "$HOST" /bin/zsh -s <<REMOTE
 set -euo pipefail
-export JAVA_HOME=/opt/homebrew/opt/openjdk@17
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21
 export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 export PATH=\$JAVA_HOME/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
 cd ~/$RDIR/android

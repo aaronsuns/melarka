@@ -60,7 +60,7 @@ pages (they come from the server), the same reliable playback.
 
 - **Development host: the owner's private Mac** (`aaron@192.168.31.71`, Apple silicon, 16 GB,
   ~140 GB free), reached over SSH like the iOS builds. It may be asleep; work that needs it waits.
-  Install there: JDK 17, Android command-line tools, platform 35, build tools, an arm64 emulator
+  Install there: JDK 21, Android command-line tools, platform 35, build tools, an arm64 emulator
   system image. Gradle runs there (or in CI); the work Mac only edits the code.
 - **No physical Android device.** Emulator only; Bluetooth/car behaviour is verified by first
   users (the owner's classmates) after release.
@@ -149,11 +149,11 @@ pages (they come from the server), the same reliable playback.
   say in the docs that the two installs can't replace each other. The "NonFreeNet" anti-feature
   (YouTube) is declared; that is acceptable.
   **As built** (checked on 0.2.16): the unsigned release build is byte-identical across clean checkouts and
-  between the private Mac (Homebrew OpenJDK 17) and F-Droid's Debian buildserver, and `apksigcopier compare`
+  between the private Mac (Homebrew OpenJDK 21) and F-Droid's Debian buildserver, and `apksigcopier compare`
   matches the published signed APK, with no Gradle change: AGP writes a constant
   `META-INF/version-control-info.textproto` (`NO_SUPPORTED_VCS_FOUND`, since the Gradle root `android/` has no
   `.git`) and a deterministic baseline profile; zip times are AGP's fixed 1981 date. The recipe
-  (`docs/fdroid/io.github.aaronsuns.melarka.yml`, copied into fdroiddata) installs JDK 17 from bookworm, builds
+  (`docs/fdroid/io.github.aaronsuns.melarka.yml`, copied into fdroiddata) installs JDK 21 from the buildserver image's Debian (before 0.2.24 it installed JDK 17 from bookworm), builds
   `android/app` with `gradle: yes` and no `-PlarkVersion`, so the release gate requires the tag to equal
   `MARKETING_VERSION`. For F-Droid the signing block carries no Google "dependency metadata" (`dependenciesInfo`
   off; outside the signed content, so the unsigned APK is unchanged), the update check reads

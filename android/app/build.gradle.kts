@@ -42,8 +42,25 @@ android {
     buildTypes {
         release {
             signingConfig = releaseSigning
+            // R8: shrink, optimize and obfuscate the release build (F-Droid asks for it). The keep rules for the
+            // libraries that need them are in proguard-rules.pro; the others ship their own consumer rules.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        // Not shipped: the debug build (cleartext to the emulator host, so the smoke test's local server works)
+        // run through the same R8 rules as release. `connectedR8testAndroidTest` runs the instrumented tests
+        // against it, which is how the keep rules are checked on a device (android/scripts/emulator-smoke.sh).
+        create("r8test") {
+            initWith(getByName("debug"))
+            matchingFallbacks += "debug"
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles("proguard-test-rules.pro")
+            testProguardFiles("proguard-test-rules.pro")
         }
     }
+    testBuildType = (project.findProperty("larkTestBuildType") as String?) ?: "debug"
 
     // No "dependency metadata" block in the APK's signing block: it is encrypted for Google Play only, and F-Droid,
     // which ships our signed APK, rejects it. It lives outside the signed content, so the unsigned APK is unchanged.
@@ -58,8 +75,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     testOptions {
@@ -70,11 +87,12 @@ android {
     sourceSets {
         // The version function is shared with the build: one implementation, tested here.
         getByName("test").java.srcDir("../buildSrc/src/main/kotlin")
+        getByName("r8test").res.srcDir("src/debug/res")   // the debug build's network security config
     }
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 dependencies {

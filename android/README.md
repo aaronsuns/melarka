@@ -5,7 +5,7 @@ Design: `docs/superpowers/specs/android-client-design.md`; plan: `docs/superpowe
 
 ## Build and test
 
-Needs JDK 17 and the Android SDK (platform 35, build-tools 35.0.0). Nothing is installed on the
+Needs JDK 21 and the Android SDK (platform 35, build-tools 35.0.0). Nothing is installed on the
 development Mac; builds run on a machine reachable over SSH:
 
 ```sh
@@ -17,13 +17,13 @@ android/scripts/remote.sh smoke   # the emulator smoke test (below)
 ```
 
 The script syncs `android/`, `ios/project.yml` (the version) and `docs/brand` to `~/lark-android-build`,
-and sets `JAVA_HOME` (Homebrew `openjdk@17`) and `ANDROID_HOME`
+and sets `JAVA_HOME` (Homebrew `openjdk@21`) and `ANDROID_HOME`
 (`/opt/homebrew/share/android-commandlinetools`) itself. With a local JDK and SDK, `cd android && ./gradlew
 testDebugUnitTest lintDebug assembleDebug` is the same build.
 
 ## Emulator smoke test
 
-`android/scripts/emulator-smoke.sh` runs the instrumented tests (`app/src/androidTest`) on an emulator against a
+`android/scripts/emulator-smoke.sh` runs the instrumented tests (`app/src/androidTest`) on an emulator against a Pass `r8test` to run them against the debug build under the release R8 rules.
 throwaway server with the made-up demo library (`web/e2e/start-server.sh`, `LARK_DEMO=1`) on `127.0.0.1:4700`,
 which the emulator reaches as `10.0.2.2:4700`. It needs Go, Node, Python 3 and ffmpeg besides the JDK and SDK, boots
 the AVD `lark_api35` headless unless a device is attached, and leaves the server log, logcat and a failure's
