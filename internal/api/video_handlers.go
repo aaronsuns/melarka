@@ -116,6 +116,16 @@ func (s *Server) videoThumbnail(w http.ResponseWriter, r *http.Request) {
 		noThumbnail(w)
 		return
 	}
+	if !s.sourceOn(r.Context(), ytdlp.SourceYouTube) { // YouTube off: only what is cached, never a fetch
+		if p, ok := s.Thumbs.Cached(id); ok {
+			w.Header().Set("Content-Type", "image/jpeg")
+			w.Header().Set("Cache-Control", "private, max-age=86400")
+			http.ServeFile(w, r, p)
+			return
+		}
+		noThumbnail(w)
+		return
+	}
 	path, err := s.Thumbs.Path(r.Context(), id)
 	switch {
 	case errors.Is(err, preview.ErrBadVideo):

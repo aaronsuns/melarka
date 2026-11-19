@@ -238,7 +238,7 @@ func (c *Client) VideoInfo(ctx context.Context, id string) (Info, error) {
 // "try again later" are deliberately not here: they pass.
 var unavailableRe = regexp.MustCompile(`(?i)(private video|video unavailable|has been removed|members-only|join this channel|requires payment|confirm your age|age-restricted|account associated with this video has been terminated)`)
 
-var transientRe = regexp.MustCompile(`(?i)(try again later|not a bot|HTTP Error 429|too many requests)`)
+var transientRe = regexp.MustCompile(`(?i)(try again later|not a bot|HTTP Error 429|HTTP Error 412|too many requests)`) // 412: Bilibili's anti-bot refusal
 
 // networkRe: yt-dlp's signatures of a network or server problem, not a
 // problem with the video.

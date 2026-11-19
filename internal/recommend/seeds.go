@@ -219,12 +219,13 @@ func (s *Service) seedVideo(ctx context.Context, userID int64, sd Seed) (string,
 	var id string
 	err := s.DB.QueryRowContext(ctx, `SELECT video_id FROM downloads WHERE track_id=? AND video_id!='' AND status='done'
 		ORDER BY id DESC LIMIT 1`, sd.TrackID).Scan(&id)
-	if err == nil {
+	if err == nil && ytdlp.IsVideoID(id) {
 		return id, nil
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return "", err
 	}
+	// No download, or one from Bilibili (no Mix): find it on YouTube by name.
 	now := s.now()
 	var cached sql.NullString
 	var at int64

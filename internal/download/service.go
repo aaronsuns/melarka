@@ -19,12 +19,14 @@ import (
 )
 
 const (
-	playlistCap      = 200
-	jobTimeout       = 30 * time.Minute
-	resolveTimeout   = 60 * time.Second
-	resolveParallel  = 2
-	progressInterval = 2 * time.Second
-	idlePoll         = 30 * time.Second // safety net if a Kick is ever missed
+	playlistCap    = 200
+	jobTimeout     = 30 * time.Minute
+	resolveTimeout = 60 * time.Second
+	// bilibiliResolveTimeout: a Bilibili list is a full lookup per entry.
+	bilibiliResolveTimeout = 150 * time.Second
+	resolveParallel        = 2
+	progressInterval       = 2 * time.Second
+	idlePoll               = 30 * time.Second // safety net if a Kick is ever missed
 )
 
 var (
@@ -227,7 +229,11 @@ func (s *Service) resolve(ctx context.Context, u string) (ytdlp.List, error) {
 		return ytdlp.List{}, ctx.Err()
 	}
 	defer func() { <-s.resolveSem }()
-	ctx, cancel := context.WithTimeout(ctx, s.resolveTimeoutOrDefault())
+	timeout := s.resolveTimeoutOrDefault()
+	if src, _ := ytdlp.SourceOfURL(u); src == ytdlp.SourceBilibili && s.resolveTimeout == 0 {
+		timeout = bilibiliResolveTimeout // a full lookup per entry (ytdlp.MaxBilibiliList)
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	return s.YT.ResolveList(ctx, u, playlistCap)
 }

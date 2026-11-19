@@ -174,6 +174,9 @@ func (s *Server) myChannels(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) searchChannels(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	clean, err := ytdlp.CleanQuery(r.URL.Query().Get("q"))
 	if err != nil {
 		writeError(w, 400, "bad query")
@@ -271,6 +274,9 @@ func (s *Server) channelPage(w http.ResponseWriter, r *http.Request) {
 	uid := auth.UserFrom(r.Context()).ID
 	page, err := s.Channels.ChannelPage(r.Context(), uid, id)
 	if errors.Is(err, channels.ErrNotFound) {
+		if !s.requireSource(w, r, ytdlp.SourceYouTube) { // a stored channel is served; looking one up asks YouTube
+			return
+		}
 		ch, lerr := s.channelLookup(r.Context(), ytdlp.ChannelURL(id))
 		if lerr != nil {
 			s.channelLookupFail(w, r, lerr)

@@ -150,3 +150,47 @@ func TestSearchSourceBilibili412(t *testing.T) {
 		t.Errorf("got %v", err)
 	}
 }
+
+// A dead entry in a favourites folder makes yt-dlp exit 1 after printing the
+// good ones: they are kept.
+func TestResolveListBilibiliKeepsPartialOutput(t *testing.T) {
+	fr := &fakeRunner{output: fixture(t, "bilifavlist.jsonl"), outputErr: errors.New("yt-dlp: exit status 1: ERROR: [BiliBili] BV1dead: 啊叻？视频不见了？")}
+	l, err := (&Client{Runner: fr}).ResolveList(context.Background(), "https://space.bilibili.com/123/favlist?fid=456", 50)
+	if err != nil || len(l.Videos) != 2 {
+		t.Fatalf("got %d videos, %v", len(l.Videos), err)
+	}
+}
+
+func TestResolveListBilibiliCapped(t *testing.T) {
+	fr := &fakeRunner{output: fixture(t, "bilifavlist.jsonl")}
+	if _, err := (&Client{Runner: fr}).ResolveList(context.Background(), "https://space.bilibili.com/123/favlist?fid=456", 200); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(fr.gotArgs, fmt.Sprint(MaxBilibiliList)) {
+		t.Fatalf("list not capped at %d: %v", MaxBilibiliList, fr.gotArgs)
+	}
+}
+
+func TestResolveBilibiliPart2UsesCanonicalURL(t *testing.T) {
+	fr := &fakeRunner{output: []byte(`{"id":"BV1aaaaaaaa1","title":"t"}` + "\n")}
+	if _, err := (&Client{Runner: fr}).ResolveList(context.Background(), "https://www.bilibili.com/video/BV1aaaaaaaa1?p=2", 50); err != nil {
+		t.Fatal(err)
+	}
+	if last := fr.gotArgs[len(fr.gotArgs)-1]; last != "https://www.bilibili.com/video/BV1aaaaaaaa1" {
+		t.Fatalf("resolved %q, want the canonical part-1 URL", last)
+	}
+}
+
+func TestClassifyBilibiliUnavailable(t *testing.T) {
+	for _, msg := range []string{"ERROR: [BiliBili] BV1x: 啊叻？视频不见了？", "ERROR: This video is only available in mainland China", "ERROR: Video unavailable"} {
+		if err := ClassifyBilibili(errors.New("yt-dlp: exit status 1: " + msg)); !errors.Is(err, ErrBilibiliUnavailable) {
+			t.Errorf("%q → %v", msg, err)
+		}
+	}
+}
+
+func TestPushBack412(t *testing.T) {
+	if !PushBack(errors.New("yt-dlp: exit status 1: ERROR: HTTP Error 412: Precondition Failed")) {
+		t.Fatal("a raw 412 (e.g. from a preview download) is push-back")
+	}
+}

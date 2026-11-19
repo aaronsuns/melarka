@@ -504,6 +504,12 @@ func (s *Server) downloadFail(w http.ResponseWriter, err error) {
 		writeCoded(w, 400, "youtube_only", "only YouTube links are supported")
 	case errors.Is(err, ytdlp.ErrBadQuery):
 		writeError(w, 400, "bad query")
+	case errors.Is(err, ytdlp.ErrBilibiliThrottled):
+		writeCoded(w, 503, "bilibili_throttled", "Bilibili is busy, try again in a minute")
+	case errors.Is(err, ytdlp.ErrBilibiliUnavailable):
+		writeCoded(w, 404, "bilibili_unavailable", "that Bilibili video can't be reached from this server")
+	case errors.Is(err, context.DeadlineExceeded):
+		writeCoded(w, 504, "lookup_timeout", "looking up the link took too long; try again or paste a shorter list")
 	default:
 		s.fail(w, err)
 	}

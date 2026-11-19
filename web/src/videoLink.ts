@@ -38,8 +38,32 @@ function parseBilibiliLink(raw: string): VideoLink | null {
   return null;
 }
 
-export function parseVideoLink(raw: string): VideoLink | null {
+function parseOne(raw: string): VideoLink | null {
   const yt = parseYouTubeLink(raw);
   if (yt) return { source: "youtube", ...yt, listUrl: null };
   return parseBilibiliLink(raw);
+}
+
+const URL_IN_TEXT = /https?:\/\/[^\s<>"'【】]+/g;
+
+/** A link, or share text with one inside ("【标题】 https://www.bilibili.com/video/BV…"). */
+export function parseVideoLink(raw: string): VideoLink | null {
+  const whole = parseOne(raw);
+  if (whole || !/\s/.test(raw.trim())) return whole;
+  for (const m of raw.match(URL_IN_TEXT) ?? []) {
+    const link = parseOne(m);
+    if (link) return link;
+  }
+  return null;
+}
+
+/** A b23.tv short link (Bilibili's app shares these): the server won't follow it, so ask for the full link. */
+export function isBilibiliShortLink(raw: string): boolean {
+  return (raw.match(URL_IN_TEXT) ?? []).some((m) => {
+    try {
+      return new URL(m).hostname.toLowerCase() === "b23.tv";
+    } catch {
+      return false;
+    }
+  });
 }

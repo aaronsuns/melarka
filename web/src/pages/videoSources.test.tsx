@@ -119,3 +119,15 @@ test("Admin → System saves the video sources", async () => {
   await waitFor(() => expect(put).toHaveBeenCalled());
   expect(await screen.findByText(/已在这里保存/)).toBeInTheDocument();
 });
+
+test("a pasted b23.tv share link asks for the full link instead of searching", async () => {
+  setVideoSources(["bilibili"]);
+  const search = vi.fn(() => ({ body: { videos: [], playlists: [] } }));
+  renderWithApp(<SearchPage />, {
+    routes: { "GET /api/v1/search": () => ({ body: { tracks: [], albums: [], artists: [] } }), "GET /api/v1/youtube/search": search },
+  });
+  await userEvent.type(screen.getByRole("searchbox"), "【晴天】 https://b23.tv/abc123");
+  expect(await screen.findByText(/b23\.tv/)).toBeInTheDocument();
+  await new Promise((r) => setTimeout(r, 1200));
+  expect(search).not.toHaveBeenCalled();
+});

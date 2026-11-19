@@ -558,5 +558,7 @@
   "error.bilibili_search_failed": "嗶哩嗶哩搜尋失敗，請重試",
   "error.bilibili_throttled": "嗶哩嗶哩暫時繁忙，請一分鐘後再試",
   "error.bilibili_unavailable": "此伺服器無法存取這個嗶哩嗶哩影片",
-  "job.error.source_disabled": "這個影片來源已關閉，管理員重新開啟後可重試"
+  "job.error.source_disabled": "這個影片來源已關閉，管理員重新開啟後可重試",
+  "search.b23": "伺服器無法開啟 b23.tv 短連結：請開啟影片，複製 bilibili.com/video/BV… 開頭的完整網址",
+  "error.lookup_timeout": "查詢連結逾時，請重試"
 }

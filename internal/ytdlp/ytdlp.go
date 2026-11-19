@@ -124,7 +124,9 @@ func (r ExecRunner) Output(ctx context.Context, args []string) ([]byte, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
-		return nil, wrapExecErr(err, stderr.String())
+		// What yt-dlp printed before failing is returned too: a list whose
+		// one entry failed still printed the others (resolveBilibili keeps them).
+		return stdout.Bytes(), wrapExecErr(err, stderr.String())
 	}
 	return stdout.Bytes(), nil
 }

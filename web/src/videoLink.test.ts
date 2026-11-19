@@ -1,4 +1,4 @@
-import { bilibiliWatchUrl, parseVideoLink, sourceOfId, watchUrlFor } from "./videoLink";
+import { bilibiliWatchUrl, isBilibiliShortLink, parseVideoLink, sourceOfId, watchUrlFor } from "./videoLink";
 
 const BV = "BV1GJ411x7h7";
 
@@ -34,4 +34,16 @@ test("ids say their source and watch page", () => {
   expect(bilibiliWatchUrl(BV)).toBe(`https://www.bilibili.com/video/${BV}`);
   expect(watchUrlFor(BV)).toBe(`https://www.bilibili.com/video/${BV}`);
   expect(watchUrlFor("IiFm7AWP9n4")).toBe("https://www.youtube.com/watch?v=IiFm7AWP9n4");
+});
+
+test("a b23.tv short link is recognised so the page can ask for the full link", () => {
+  expect(isBilibiliShortLink("https://b23.tv/abc123")).toBe(true);
+  expect(isBilibiliShortLink("【周杰伦 晴天】 https://b23.tv/abc123")).toBe(true);
+  expect(isBilibiliShortLink("晴天")).toBe(false);
+  expect(isBilibiliShortLink("https://b23.tv.evil.test/x")).toBe(false);
+});
+
+test("Bilibili share text with a full link inside is that link", () => {
+  expect(parseVideoLink(`【周杰伦 晴天】 https://www.bilibili.com/video/${BV}/?share_source=copy_web`)?.videoId).toBe(BV);
+  expect(parseVideoLink("晴天 周杰伦")).toBeNull();
 });

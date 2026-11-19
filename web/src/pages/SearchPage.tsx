@@ -7,7 +7,7 @@ import { TrackList } from "../components/TrackList";
 import { YouTubeResults } from "../components/YouTubeResults";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
-import { parseVideoLink, type VideoSource } from "../videoLink";
+import { isBilibiliShortLink, parseVideoLink, type VideoSource } from "../videoLink";
 import { SourceSwitch, sourceLabelKey } from "../components/SourceSwitch";
 import { preferredSource, useVideoSources } from "../videoSources";
 
@@ -24,6 +24,9 @@ type Result = { query: string; tracks: Track[]; albums: Album[]; artists: Artist
 type YT = { query: string; forced: boolean };
 
 const MIN_YOUTUBE_QUERY = 2;
+
+/** A pasted link (or a b23.tv short link) is never searched. */
+const isPasted = (q: string) => !!parseVideoLink(q) || isBilibiliShortLink(q);
 const LOCAL_DEBOUNCE_MS = 250;
 const YT_SETTLE_MS = 900;
 
@@ -40,7 +43,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     const query = q.trim();
-    if (!query || parseVideoLink(query)) {
+    if (!query || isPasted(query)) {
       setRes(null);
       return;
     }
@@ -58,7 +61,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     const query = q.trim();
-    if (parseVideoLink(query)) return; // a pasted link is offered for download, not searched
+    if (isPasted(query)) return; // a pasted link is offered for download, not searched
     ytTimer.current = setTimeout(() => {
       setYt((prev) => (prev.query === query ? prev : { query, forced: false }));
     }, YT_SETTLE_MS);
@@ -75,7 +78,7 @@ export default function SearchPage() {
   // on the lower-cased text (Unicode-aware), newest spelling kept, last 20.
   function remember(raw: string) {
     const query = raw.replace(/\s+/g, " ").trim();
-    if (!query || parseVideoLink(query)) return;
+    if (!query || isPasted(query)) return;
     setHistory((h) => [query, ...h.filter((x) => x.toLowerCase() !== query.toLowerCase())].slice(0, 20));
     void api.recordSearch(query).catch(() => {});
   }
@@ -93,10 +96,11 @@ export default function SearchPage() {
   }
 
   const link = parseVideoLink(q.trim());
+  const shortLink = !link && isBilibiliShortLink(q);
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     // Enter that confirms an IME composition (pinyin → 汉字) is not a search.
-    if (e.key !== "Enter" || e.nativeEvent.isComposing || link) return;
+    if (e.key !== "Enter" || e.nativeEvent.isComposing || link || shortLink) return;
     remember(q);
     clearTimeout(ytTimer.current);
     setYt({ query: q.trim(), forced: true });
@@ -124,7 +128,7 @@ export default function SearchPage() {
           </div>
         </section>
       )}
-      {link ? (sources.includes(link.source) ? <LinkCard link={link} /> : <p className="muted">{t("search.sourceOff", { source: t(sourceLabelKey(link.source)) })}</p>) : <div onClickCapture={(e) => { if ((e.target as Element).closest("a, button")) remember(q); }}>
+      {shortLink ? <p className="muted">{t("search.b23")}</p> : link ? (sources.includes(link.source) ? <LinkCard link={link} /> : <p className="muted">{t("search.sourceOff", { source: t(sourceLabelKey(link.source)) })}</p>) : <div onClickCapture={(e) => { if ((e.target as Element).closest("a, button")) remember(q); }}>
       {error && <p className="error">{error}</p>}
       {empty && <p className="muted">{t("search.noResults", { query: q.trim() })}</p>}
       {res && res.artists.length > 0 && (<><h2 className="section-title">{t("search.artistsHeading")}</h2><ArtistChips artists={res.artists} /></>)}

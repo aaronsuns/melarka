@@ -27,3 +27,16 @@ func TestRecommendStepIdlesWhenYouTubeOff(t *testing.T) {
 		t.Fatalf("%s %v", w, err)
 	}
 }
+
+// A track downloaded from Bilibili seeds its Mix from a YouTube search, not
+// from its BV id (which has no Mix).
+func TestSeedVideoSkipsBilibiliDownload(t *testing.T) {
+	e := newEnv(t)
+	u := e.user("alice")
+	tr := e.track("晴天", "周杰伦", 269)
+	e.download(u, "BV1aaaaaaaa1", "done", tr)
+	id, err := e.svc.seedVideo(context.Background(), u, Seed{TrackID: tr, Title: "晴天", Artist: "周杰伦"})
+	if err != nil || id == "BV1aaaaaaaa1" {
+		t.Fatalf("seed %q, %v: a Bilibili id must not seed a Mix", id, err)
+	}
+}

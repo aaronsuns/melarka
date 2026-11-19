@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/aaronsuns/lark-server/internal/preview"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
 
@@ -244,5 +248,74 @@ func TestPreviewByVideoGated(t *testing.T) {
 	r, b := do(t, ts, tok, "GET", "/api/v1/previews/by-video/BV1aaaaaaaa1/stream", nil)
 	if r.StatusCode != 409 || !strings.Contains(string(b), "source_disabled") {
 		t.Fatalf("Bilibili off: %d %s", r.StatusCode, b)
+	}
+}
+
+func TestPastedBilibiliLinkErrorsAreCoded(t *testing.T) {
+	s, ts := newTestServer(t)
+	withDownloadTarget(t, s)
+	setSources(t, s, ytdlp.SourceBilibili)
+	fr := s.YT.Runner.(*fakeYTRunner)
+	tok := loginAs(t, s, "alice", "member")
+	cases := map[string]struct {
+		code   int
+		marker string
+	}{
+		"ERROR: HTTP Error 412: Precondition Failed": {503, "bilibili_throttled"},
+		"ERROR: [BiliBili] BV1x: 啊叻？视频不见了？":          {404, "bilibili_unavailable"},
+	}
+	for stderr, want := range cases {
+		fr.err = errors.New("yt-dlp: exit status 1: " + stderr)
+		r, b := do(t, ts, tok, "POST", "/api/v1/downloads", map[string]string{"url": "https://www.bilibili.com/video/BV1aaaaaaaa1"})
+		if r.StatusCode != want.code || !strings.Contains(string(b), want.marker) {
+			t.Errorf("%s: %d %s", stderr, r.StatusCode, b)
+		}
+	}
+}
+
+func TestChannelSearchAndLookupGatedWhenYouTubeOff(t *testing.T) {
+	s, ts := newTestServer(t)
+	withChannels(t, s)
+	setSources(t, s, ytdlp.SourceBilibili)
+	fr := s.YT.Runner.(*fakeYTRunner)
+	tok := loginAs(t, s, "alice", "member")
+	before := fr.callCount()
+	for _, p := range []string{"/api/v1/channels/search?q=x", "/api/v1/channels/UCaaaaaaaaaaaaaaaaaaaaaa"} {
+		if r, b := do(t, ts, tok, "GET", p, nil); r.StatusCode != 409 || !strings.Contains(string(b), "source_disabled") {
+			t.Errorf("%s: %d %s", p, r.StatusCode, b)
+		}
+	}
+	if fr.callCount() != before {
+		t.Fatal("yt-dlp ran while YouTube is off")
+	}
+}
+
+type countingDoer struct{ n int }
+
+func (c *countingDoer) Do(*http.Request) (*http.Response, error) {
+	c.n++
+	return nil, errors.New("no network in tests")
+}
+
+// With YouTube off, the 视频 thumbnail proxy serves only what it has cached.
+func TestVideoThumbnailNoFetchWhenYouTubeOff(t *testing.T) {
+	s, ts := newTestServer(t)
+	withChannels(t, s)
+	doer := &countingDoer{}
+	dir := t.TempDir()
+	s.Thumbs = &preview.Thumbs{Dir: dir, HTTP: doer}
+	setSources(t, s, ytdlp.SourceBilibili)
+	tok := loginAs(t, s, "alice", "member")
+	if r, _ := do(t, ts, tok, "GET", "/api/v1/videos/dQw4w9WgXcQ/thumbnail", nil); r.StatusCode != 404 {
+		t.Fatalf("uncached: %d", r.StatusCode)
+	}
+	if doer.n != 0 {
+		t.Fatal("fetched from YouTube while it is off")
+	}
+	if err := os.WriteFile(filepath.Join(dir, "dQw4w9WgXcQ.jpg"), []byte("\xff\xd8\xff"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if r, _ := do(t, ts, tok, "GET", "/api/v1/videos/dQw4w9WgXcQ/thumbnail", nil); r.StatusCode != 200 {
+		t.Fatalf("cached: %d", r.StatusCode)
 	}
 }

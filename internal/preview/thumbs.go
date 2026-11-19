@@ -403,3 +403,16 @@ func (t *Thumbs) busySlots() int {
 	t.init()
 	return len(t.slots)
 }
+
+// Cached returns videoID's thumbnail file when one is on disk, whatever its
+// age, without fetching (used while YouTube is turned off).
+func (t *Thumbs) Cached(videoID string) (string, bool) {
+	if !ytdlp.IsVideoID(videoID) {
+		return "", false
+	}
+	path := filepath.Join(t.Dir, videoID+".jpg")
+	if fi, err := os.Stat(path); err == nil && fi.Mode().IsRegular() {
+		return path, true
+	}
+	return "", false
+}

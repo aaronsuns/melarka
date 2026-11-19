@@ -21,15 +21,32 @@ const MaxBilibiliResults = 20
 // It passes after a while (PushBack is true for it).
 var ErrBilibiliThrottled = errors.New("ytdlp: bilibili is throttling (HTTP 412)")
 
-var bili412Re = regexp.MustCompile(`HTTP Error 412`)
+// ErrBilibiliUnavailable: the video is gone, private, paid or region-locked
+// (some Bilibili videos only play from mainland China). Retrying won't help.
+var ErrBilibiliUnavailable = errors.New("ytdlp: bilibili video unavailable")
+
+// MaxBilibiliList bounds a Bilibili list import: each entry is a full lookup
+// (one page fetch), so 50 entries fit the resolve timeout.
+const MaxBilibiliList = 50
+
+var (
+	bili412Re         = regexp.MustCompile(`HTTP Error 412`)
+	biliUnavailableRe = regexp.MustCompile(`(?i)(视频不见了|稿件不可见|已失效|不存在|only available in mainland china|not available in your (country|region)|geo.?restrict|video unavailable|has been removed|private video)`)
+)
 
 // ClassifyBilibili maps a yt-dlp failure against Bilibili to
-// ErrBilibiliThrottled when it is a 412; anything else is returned as is.
+// ErrBilibiliThrottled (a 412) or ErrBilibiliUnavailable; anything else is
+// returned as is.
 func ClassifyBilibili(err error) error {
-	if err == nil || !bili412Re.MatchString(err.Error()) {
-		return err
+	switch {
+	case err == nil:
+		return nil
+	case bili412Re.MatchString(err.Error()):
+		return fmt.Errorf("%w: %s", ErrBilibiliThrottled, LastLine(err.Error()))
+	case biliUnavailableRe.MatchString(err.Error()):
+		return fmt.Errorf("%w: %s", ErrBilibiliUnavailable, LastLine(err.Error()))
 	}
-	return fmt.Errorf("%w: %s", ErrBilibiliThrottled, LastLine(err.Error()))
+	return err
 }
 
 // biliTemplate prints one Bilibili video as one JSON line.
@@ -58,10 +75,10 @@ func (c *Client) SearchSource(ctx context.Context, src Source, q string, n int) 
 	}
 	n = max(1, min(n, MaxBilibiliResults))
 	out, err := c.Runner.Output(ctx, append(c.biliArgs(), "bilisearch"+strconv.Itoa(n)+":"+clean))
-	if err != nil {
+	_, videos = parseBiliLines(out)
+	if err != nil && len(videos) == 0 { // one failed result must not lose the others
 		return nil, false, ClassifyBilibili(err)
 	}
-	_, videos = parseBiliLines(out)
 	return videos, len(videos) >= n && n < MaxBilibiliResults, nil
 }
 
@@ -71,8 +88,11 @@ var biliPlayListRe = regexp.MustCompile(`^https://(www\.)?bilibili\.com/(list|me
 
 // resolveBilibili is ResolveList for an allow-listed Bilibili URL u.
 func (c *Client) resolveBilibili(ctx context.Context, u string, max int) (List, error) {
+	max = min(max, MaxBilibiliList)
 	args := c.biliArgs()
-	if VideoIDFromURL(u) == "" {
+	if id := VideoIDFromURL(u); id != "" {
+		u = WatchURL(id) // ?p=2 would describe part 2, but part 1 is what downloads
+	} else {
 		args = append(args, "--print", biliListTemplate)
 		if biliPlayListRe.MatchString(u) {
 			args = withoutFlag(args, "--no-playlist")
@@ -80,10 +100,10 @@ func (c *Client) resolveBilibili(ctx context.Context, u string, max int) (List, 
 	}
 	args = append(args, "--playlist-end", strconv.Itoa(max), u)
 	out, err := c.Runner.Output(ctx, args)
-	if err != nil {
+	l, videos := parseBiliLines(out)
+	if err != nil && len(videos) == 0 { // a dead entry in a folder keeps the rest
 		return List{}, ClassifyBilibili(err)
 	}
-	l, videos := parseBiliLines(out)
 	if max >= 0 && len(videos) > max {
 		videos = videos[:max]
 	}

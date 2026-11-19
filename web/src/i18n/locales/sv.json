@@ -566,5 +566,7 @@
   "error.bilibili_search_failed": "Bilibili-sökningen misslyckades, försök igen",
   "error.bilibili_throttled": "Bilibili är upptaget, försök igen om en minut",
   "error.bilibili_unavailable": "Den Bilibili-videon går inte att nå från den här servern",
-  "job.error.source_disabled": "Den här videokällan stängdes av; försök igen när en admin slår på den"
+  "job.error.source_disabled": "Den här videokällan stängdes av; försök igen när en admin slår på den",
+  "search.b23": "Servern kan inte öppna b23.tv-kortlänkar: öppna videon och kopiera hela adressen som börjar med bilibili.com/video/BV…",
+  "error.lookup_timeout": "Det tog för lång tid att slå upp länken, försök igen"
 }
