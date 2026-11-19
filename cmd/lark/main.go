@@ -215,6 +215,7 @@ func run(log *slog.Logger) error {
 		videoDefault[i] = ytdlp.Source(v)
 	}
 	srv.VideoSources = &videosrc.Service{DB: d, Default: videoDefault}
+	downloads.Sources = srv.VideoSources
 	if on, _, err := srv.VideoSources.List(ctx); err == nil {
 		log.Info("video sources", "on", on)
 	}
@@ -229,7 +230,7 @@ func run(log *slog.Logger) error {
 	go func() { defer close(metaDone); downloads.RunMetaBackfill(ctx, srv.SearchGate()) }()
 	recsDone := make(chan struct{})
 	if cfg.Recommendations.Enabled {
-		recs := &recommend.Service{DB: d, Library: libStore, Gate: srv.SearchGate(), Log: log, RefreshAt: cfg.Recommendations.RefreshAt,
+		recs := &recommend.Service{DB: d, Library: libStore, Gate: srv.SearchGate(), Sources: srv.VideoSources, Log: log, RefreshAt: cfg.Recommendations.RefreshAt,
 			// Its own niced yt-dlp (same binary), so background work never competes with playback.
 			YT: &ytdlp.Client{Runner: ytdlp.ExecRunner{Bin: ytBin, Nice: true}, CacheDir: ytClient.CacheDir}}
 		if lastfmClient != nil {
@@ -243,7 +244,7 @@ func run(log *slog.Logger) error {
 	}
 	channelsDone := make(chan struct{})
 	if cfg.Channels.Enabled {
-		ch := &channels.Service{DB: d, Feeds: &channels.FeedClient{BaseURL: cfg.YouTubeFeedURL}, Gate: srv.SearchGate(),
+		ch := &channels.Service{DB: d, Feeds: &channels.FeedClient{BaseURL: cfg.YouTubeFeedURL}, Gate: srv.SearchGate(), Sources: srv.VideoSources,
 			// Its own niced yt-dlp (same binary), like recommendations: episodes never compete with playback.
 			YT:   &ytdlp.Client{Runner: ytdlp.ExecRunner{Bin: ytBin, Nice: true}, CacheDir: ytClient.CacheDir},
 			Root: cfg.ChannelsRoot(), PollInterval: cfg.Channels.PollInterval, KeepDays: cfg.Channels.KeepDays,

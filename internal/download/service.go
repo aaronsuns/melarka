@@ -50,6 +50,9 @@ type Service struct {
 	// a directory's free disk (nil = fileutil.FreeBytes; tests fake it).
 	MinFree   int64
 	FreeBytes func(dir string) (int64, error)
+	// Sources says which video sources are on (nil: YouTube only). A job
+	// whose source is off fails with lark:source_disabled, without yt-dlp.
+	Sources ytdlp.SourceGate
 
 	initOnce sync.Once
 	kick     chan struct{}
@@ -401,6 +404,10 @@ func (s *Service) process(runCtx, jctx context.Context, j Job) {
 	}
 	if err := s.room(lib); err != nil {
 		final, msg = StatusFailed, "lark:no_space"
+		return
+	}
+	if src, _ := ytdlp.SourceOf(j.VideoID); !ytdlp.SourceOn(runCtx, s.Sources, src) {
+		final, msg = StatusFailed, "lark:source_disabled"
 		return
 	}
 	destNoExt, title, artist := destFor(lib, j)

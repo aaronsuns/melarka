@@ -67,6 +67,9 @@ type claimed struct {
 
 // workStep downloads at most one file; 0 means "look again at once".
 func (s *Service) workStep(ctx context.Context) time.Duration {
+	if !s.youtubeOn(ctx) {
+		return sourceOffWait
+	}
 	if d := s.coolingFor(); d > 0 {
 		return d
 	}

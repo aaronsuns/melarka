@@ -50,6 +50,9 @@ func (s *Service) RunPoller(ctx context.Context) {
 // pollStep polls the most overdue channel someone follows un-paused and says
 // how long to wait before the next step.
 func (s *Service) pollStep(ctx context.Context) time.Duration {
+	if !s.youtubeOn(ctx) {
+		return sourceOffWait
+	}
 	now := s.now().Unix()
 	var id string
 	var next int64

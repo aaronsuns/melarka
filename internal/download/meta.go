@@ -58,6 +58,9 @@ func (s *Service) storeMeta(ctx context.Context, videoID string, m ytdlp.Meta, r
 // next start.
 func (s *Service) BackfillMeta(ctx context.Context, gate Gate, every time.Duration, limit int) (int, error) {
 	stored := 0
+	if !ytdlp.SourceOn(ctx, s.Sources, ytdlp.SourceYouTube) { // VideoMeta asks YouTube
+		return 0, nil
+	}
 	for range limit {
 		id, ok, err := s.nextMissingMeta(ctx)
 		if err != nil || !ok {

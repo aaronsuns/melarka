@@ -84,7 +84,9 @@ type Service struct {
 	Library *library.Store
 	YT      YouTube
 	LastFM  Similar // nil: Last.fm suggestions off
-	Gate    Gate    // nil: yt-dlp runs directly (tests)
+	// Sources says whether YouTube is on (nil: on); off, the worker idles.
+	Sources ytdlp.SourceGate
+	Gate    Gate // nil: yt-dlp runs directly (tests)
 	Log     *slog.Logger
 	Now     func() time.Time
 

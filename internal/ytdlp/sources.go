@@ -1,6 +1,7 @@
 package ytdlp
 
 import (
+	"context"
 	"net/url"
 	"regexp"
 	"strings"
@@ -115,4 +116,18 @@ func BilibiliCover(raw string) string {
 	}
 	u.Scheme = "https"
 	return u.String()
+}
+
+// SourceGate says whether a source is on (internal/videosrc.Service).
+// Background work checks it before contacting a source; nil means YouTube only.
+type SourceGate interface {
+	Enabled(ctx context.Context, src Source) bool
+}
+
+// SourceOn is gate.Enabled, where a nil gate means YouTube only.
+func SourceOn(ctx context.Context, gate SourceGate, src Source) bool {
+	if gate == nil {
+		return src == SourceYouTube
+	}
+	return gate.Enabled(ctx, src)
 }
