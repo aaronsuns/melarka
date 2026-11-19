@@ -1,7 +1,8 @@
 # R8 rules for the release build (isMinifyEnabled in build.gradle.kts). Most libraries ship consumer rules inside
 # their AARs (OkHttp, Media3, WorkManager, Compose, kotlinx.coroutines); these are the ones we add on top.
-# Not built or run on a device yet when written: check the release APK on a phone or the emulator after changing
-# a dependency (android/README.md).
+# Checked on 2026-11-19: the instrumented tests (sign-in, playback, favorites, offline, shortcuts) pass on an
+# Android 15 emulator against the r8test build type (this file + app/proguard-test-rules.pro). Run them again
+# after changing a dependency: android/scripts/emulator-smoke.sh r8test.
 
 # Readable crash stack traces.
 -keepattributes SourceFile,LineNumberTable
