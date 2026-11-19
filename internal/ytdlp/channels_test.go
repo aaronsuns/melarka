@@ -135,7 +135,7 @@ func TestVideoInfo(t *testing.T) {
 	}
 	wantArgs := []string{"--js-runtimes", "node", "--no-warnings", "--no-playlist", "--skip-download",
 		"--ignore-no-formats-error", "-O",
-		"%(.{id,title,channel,channel_id,duration,live_status,availability,media_type,timestamp,description})j",
+		"%(.{id,title,channel,channel_id,duration,live_status,availability,media_type,timestamp,description,thumbnail})j",
 		"https://www.youtube.com/watch?v=rvOZh8idOrU"}
 	if !reflect.DeepEqual(fr.gotArgs, wantArgs) {
 		t.Fatalf("args %q", fr.gotArgs)

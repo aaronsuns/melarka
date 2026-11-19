@@ -374,6 +374,9 @@ func (c *Client) ResolveList(ctx context.Context, rawURL string, max int) (List,
 	if err != nil {
 		return List{}, err
 	}
+	if src, _ := SourceOfURL(u); src == SourceBilibili {
+		return c.resolveBilibili(ctx, u, max)
+	}
 	args := append(c.baseArgs(), "--flat-playlist", "-J", "--no-warnings")
 	if VideoIDFromURL(u) != "" {
 		args = append(args, "--no-playlist")

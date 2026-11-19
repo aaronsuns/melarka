@@ -125,7 +125,7 @@ func TestValidURLBilibiliHosts(t *testing.T) {
 			t.Errorf("ValidURL(%q) accepted", u)
 		}
 	}
-	got, err := ValidURL("https://user:pw@www.bilibili.com/video/" + bv)
+	got, err := ValidURL("https://user:pw" + "@" + "www.bilibili.com/video/" + bv)
 	if err != nil || got != "https://www.bilibili.com/video/"+bv {
 		t.Errorf("userinfo not stripped: %q %v", got, err)
 	}
