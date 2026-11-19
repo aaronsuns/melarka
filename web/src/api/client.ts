@@ -1,4 +1,6 @@
+import type { VideoSource } from "../videoLink";
 import type {
+  VideoSourcesSetting,
   Album,
   Artist,
   ChannelHit,
@@ -125,7 +127,7 @@ export interface LinkedAccount {
 export const api = {
   // offline_cache false is the server's kill switch for the web offline cache;
   // channels false: Channels is switched off on the server.
-  info: () => req<{ name: string; version?: string; language: string; languages: string[]; offline_cache?: boolean; channels?: boolean }>("GET", "/info", undefined, { noAuthRedirect: true }),
+  info: () => req<{ name: string; version?: string; language: string; languages: string[]; offline_cache?: boolean; channels?: boolean; video_sources?: VideoSource[] }>("GET", "/info", undefined, { noAuthRedirect: true }),
   login: async (username: string, password: string) =>
     (await req<{ user: User }>("POST", "/auth/login", { username, password, device_name: deviceName() }, { noAuthRedirect: true })).user,
   logout: () => req<void>("POST", "/auth/logout"),
@@ -248,7 +250,7 @@ export const api = {
   clearVideoHistory: () => req<void>("DELETE", "/me/video-history"),
   videoRecommendations: () => req<VideoRecs>("GET", "/me/video-recommendations"),
 
-  youtubeSearch: (q: string, n?: number) => req<YTSearchResult>("GET", `/youtube/search${qs({ q, n })}`),
+  youtubeSearch: (q: string, n?: number, source?: VideoSource) => req<YTSearchResult>("GET", `/youtube/search${qs({ q, n, source })}`),
   // Library songs that look like this video's song (another upload of it), before a download.
   youtubeInLibrary: (v: YTVideo) =>
     req<{ tracks: Track[] }>("GET", `/youtube/in-library${qs({ title: v.title, channel: v.channel, video_id: v.id })}`).then((r) => r.tracks),
@@ -276,6 +278,8 @@ export const api = {
   restoreTrash: (trackId: number) => req<void>("POST", `/trash/${trackId}/restore`),
   emptyTrash: async () => (await req<{ purged: number }>("DELETE", "/trash")).purged,
 
+  adminVideoSources: () => req<VideoSourcesSetting>("GET", "/admin/video-sources"),
+  setAdminVideoSources: (sources: VideoSource[]) => req<VideoSourcesSetting>("PUT", "/admin/video-sources", { sources }),
   ytdlpInfo: () => req<{ version: string; path: string }>("GET", "/admin/ytdlp"),
   ytdlpUpdate: () => req<{ version: string; path: string }>("POST", "/admin/ytdlp/update"),
   updateCheck: () =>

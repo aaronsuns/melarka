@@ -207,3 +207,25 @@ test("startPreview asks for hd", async () => {
   expect((await api.startPreview({ video_id: "dQw4w9WgXcQ", media: "hd" })).progress).toBe(12.5);
   expect(JSON.parse(f.mock.calls[0][1]!.body as string)).toEqual({ video_id: "dQw4w9WgXcQ", media: "hd" });
 });
+
+test("youtubeSearch sends the source when given", async () => {
+  mockFetch({
+    "GET /api/v1/youtube/search": (_i, url) => {
+      expect(url).toBe("/api/v1/youtube/search?q=x&source=bilibili");
+      return { body: { videos: [], playlists: [] } };
+    },
+  });
+  await api.youtubeSearch("x", undefined, "bilibili");
+});
+
+test("admin video sources get and put", async () => {
+  mockFetch({
+    "GET /api/v1/admin/video-sources": () => ({ body: { sources: ["youtube"], set_by: "env" } }),
+    "PUT /api/v1/admin/video-sources": (init) => {
+      expect(JSON.parse(init.body as string)).toEqual({ sources: ["bilibili"] });
+      return { body: { sources: ["bilibili"], set_by: "admin" } };
+    },
+  });
+  expect(await api.adminVideoSources()).toEqual({ sources: ["youtube"], set_by: "env" });
+  expect((await api.setAdminVideoSources(["bilibili"])).set_by).toBe("admin");
+});

@@ -5,7 +5,7 @@ import { useDownloads } from "../downloads/DownloadsProvider";
 import { DownloadStatus } from "./DownloadStatus";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
-import { watchUrl, type YouTubeLink } from "../youtubeLink";
+import { watchUrlFor, type VideoLink } from "../videoLink";
 import { ListDownloadButton } from "./ListDownloadButton";
 
 type SongState = "idle" | "posting" | "queued" | "elsewhere" | "error";
@@ -23,7 +23,7 @@ function DownloadSong({ videoId, label }: { videoId: string; label: string }) {
     if (state !== "idle" && state !== "error") return;
     setState("posting");
     try {
-      const job = (await api.createDownload({ url: watchUrl(videoId) }))[0];
+      const job = (await api.createDownload({ url: watchUrlFor(videoId) }))[0];
       if (job && (job.user_id === user?.id || job.status === "done")) {
         dl.track([job]);
         setJobId(job.id);
@@ -50,8 +50,8 @@ function DownloadSong({ videoId, label }: { videoId: string; label: string }) {
   );
 }
 
-/** What to offer for a pasted YouTube link, instead of searching for it. */
-export function LinkCard({ link }: { link: YouTubeLink }) {
+/** What to offer for a pasted YouTube or Bilibili link, instead of searching for it. */
+export function LinkCard({ link }: { link: VideoLink }) {
   const t = useT();
   const wholeList = link.listId !== null && !link.isMix;
   return (
@@ -67,6 +67,8 @@ export function LinkCard({ link }: { link: YouTubeLink }) {
           <DownloadSong videoId={link.videoId} label={t("link.downloadSong")} />
         ) : link.listId ? (
           <ListDownloadButton listId={link.listId} />
+        ) : link.listUrl ? (
+          <ListDownloadButton url={link.listUrl} />
         ) : null}
       </div>
     </div>

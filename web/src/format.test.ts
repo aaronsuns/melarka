@@ -1,4 +1,4 @@
-import { duration, qualityLabel, coverStyle, initials, formatSize, popularity } from "./format";
+import { duration, qualityLabel, coverStyle, initials, formatSize, popularity, isSafeThumbnailUrl } from "./format";
 import { setLocale } from "./i18n/i18n";
 import type { Track } from "./api/types";
 
@@ -45,4 +45,10 @@ test("popularity: compact counts in the UI language, nothing when unknown", () =
   expect(popularity(354_205, 4_000)).toBe("354.2K views · 4K likes");
   expect(popularity(1, 1)).toBe("1 view · 1 like");
   setLocale("zh-Hans");
+});
+
+test("Bilibili covers on hdslb.com are safe thumbnails", () => {
+  expect(isSafeThumbnailUrl("https://i0.hdslb.com/bfs/archive/a.jpg")).toBe(true);
+  expect(isSafeThumbnailUrl("http://i0.hdslb.com/bfs/archive/a.jpg")).toBe(false);
+  expect(isSafeThumbnailUrl("https://hdslb.com.evil.test/a.jpg")).toBe(false);
 });

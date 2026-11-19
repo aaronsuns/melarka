@@ -7,7 +7,7 @@ import { TrackList } from "../components/TrackList";
 import { YouTubeResults } from "../components/YouTubeResults";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
-import { parseYouTubeLink } from "../youtubeLink";
+import { parseVideoLink } from "../videoLink";
 
 // query is the exact string the local search below resolved for — not
 // necessarily the latest keystroke.
@@ -35,7 +35,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     const query = q.trim();
-    if (!query || parseYouTubeLink(query)) {
+    if (!query || parseVideoLink(query)) {
       setRes(null);
       return;
     }
@@ -53,7 +53,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     const query = q.trim();
-    if (parseYouTubeLink(query)) return; // a pasted link is offered for download, not searched
+    if (parseVideoLink(query)) return; // a pasted link is offered for download, not searched
     ytTimer.current = setTimeout(() => {
       setYt((prev) => (prev.query === query ? prev : { query, forced: false }));
     }, YT_SETTLE_MS);
@@ -70,7 +70,7 @@ export default function SearchPage() {
   // on the lower-cased text (Unicode-aware), newest spelling kept, last 20.
   function remember(raw: string) {
     const query = raw.replace(/\s+/g, " ").trim();
-    if (!query || parseYouTubeLink(query)) return;
+    if (!query || parseVideoLink(query)) return;
     setHistory((h) => [query, ...h.filter((x) => x.toLowerCase() !== query.toLowerCase())].slice(0, 20));
     void api.recordSearch(query).catch(() => {});
   }
@@ -87,7 +87,7 @@ export default function SearchPage() {
     void api.clearSearchHistory().catch(() => {});
   }
 
-  const link = parseYouTubeLink(q.trim());
+  const link = parseVideoLink(q.trim());
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     // Enter that confirms an IME composition (pinyin → 汉字) is not a search.
