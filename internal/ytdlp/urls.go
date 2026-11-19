@@ -14,8 +14,13 @@ var videoIDRe = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 // IsVideoID reports whether id has the shape of a YouTube video id.
 func IsVideoID(id string) bool { return videoIDRe.MatchString(id) }
 
-// WatchURL is the canonical watch page for video id.
-func WatchURL(id string) string { return "https://www.youtube.com/watch?v=" + id }
+// WatchURL is the canonical watch page for video id (Bilibili or YouTube).
+func WatchURL(id string) string {
+	if IsBilibiliID(id) {
+		return "https://www.bilibili.com/video/" + id
+	}
+	return "https://www.youtube.com/watch?v=" + id
+}
 
 // pathIDPrefixes are the youtube.com path shapes that carry a video id as
 // their second segment.
@@ -28,6 +33,9 @@ func VideoIDFromURL(rawURL string) string {
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return ""
+	}
+	if id := bilibiliVideoID(u); id != "" {
+		return id
 	}
 	var id string
 	segs := strings.Split(strings.Trim(u.Path, "/"), "/")
@@ -88,4 +96,11 @@ func SetThumbnailBase(base string) {
 
 // ThumbnailURL is a video's canonical cover: hqdefault exists for every
 // video (maxresdefault doesn't), whatever link or search result it came from.
-func ThumbnailURL(id string) string { return thumbnailBase + "/" + id + "/hqdefault.jpg" }
+// A Bilibili cover cannot be derived from the id: "" (callers keep the cover
+// the search or detail result carried).
+func ThumbnailURL(id string) string {
+	if IsBilibiliID(id) {
+		return ""
+	}
+	return thumbnailBase + "/" + id + "/hqdefault.jpg"
+}

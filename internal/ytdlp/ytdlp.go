@@ -225,6 +225,11 @@ var allowedHosts = map[string]bool{
 	"m.youtube.com":     true,
 	"music.youtube.com": true,
 	"youtu.be":          true,
+	// Bilibili (see bilibiliHosts; b23.tv is deliberately absent).
+	"bilibili.com":       true,
+	"www.bilibili.com":   true,
+	"m.bilibili.com":     true,
+	"space.bilibili.com": true,
 }
 
 // ValidURL accepts an http or https URL on the YouTube host allow-list and
