@@ -79,8 +79,10 @@ setups must work.
 ### Source and ids (`internal/ytdlp`)
 
 - `type Source string` with `youtube` and `bilibili`.
-- `IsVideoID` accepts a YouTube id (11 chars) or a Bilibili id (`^BV[0-9A-Za-z]{10}$`).
-  `SourceOf(id)` returns the source from the shape.
+- `IsVideoID` stays YouTube-only (so channels, episodes, recommendations and discovery keep
+  rejecting Bilibili ids with no edits). A new `IsAnyVideoID` accepts a YouTube id (11 chars) or a
+  Bilibili id (`^BV[0-9A-Za-z]{10}$`) and is used by the shared pipeline: download, preview,
+  thumbnails, adopt and the watch page. `SourceOf(id)` returns the source from the shape.
 - `WatchURL(id)` returns `https://www.bilibili.com/video/<id>` for a Bilibili id.
 - `VideoIDFromURL` also reads `bilibili.com/video/BV…` (query string such as `?p=` ignored; part 1
   only) and `m.bilibili.com`. `b23.tv` short links are accepted only if `yt-dlp` resolves them
