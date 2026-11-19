@@ -33,7 +33,7 @@ data class Item(
     /** The track id, for a music item; null for a `yt:` track and for episodes. */
     val trackId: Long? get() = if (kind == Kind.track) id.toLongOrNull() else null
 
-    /** A YouTube track (id `yt:<video id>`): streamed from its preview, never cached, no lyrics, play events or server queue. */
+    /** A YouTube or Bilibili track (id `yt:<video id>`): streamed from its preview, never cached, no lyrics, play events or server queue. */
     val youtubeVideoId: String?
         get() {
             if (kind != Kind.track || !id.startsWith("yt:")) return null
@@ -46,7 +46,8 @@ data class Item(
         "artist" to JsonPrimitive(artist), "album" to JsonPrimitive(album), "durationMs" to JsonPrimitive(durationMs), "meta" to meta))
 
     companion object {
-        private val VIDEO_ID = Regex("^[A-Za-z0-9_-]{11}$")
+        // A YouTube id (11) or a Bilibili id (BV + 10): both stream from a preview by id.
+        private val VIDEO_ID = Regex("^([A-Za-z0-9_-]{11}|BV[0-9A-Za-z]{10})$")
 
         /** Only `kind` and `id` are required. */
         internal fun from(e: JsonElement): Item {
