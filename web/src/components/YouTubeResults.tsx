@@ -10,6 +10,7 @@ import { PreviewButton } from "./PreviewButton";
 import { RowErrorLine, useRowErrors } from "./rowError";
 import { VideoDownload } from "./VideoDownload";
 import { YouTubePlaylistRow } from "./YouTubePlaylistRow";
+import { sourceLabelKey } from "./SourceSwitch";
 import type { VideoSource } from "../videoLink";
 
 /** The first page's size and the step 显示更多 grows it by (the server caps it at 50). */
@@ -25,6 +26,7 @@ export const SEARCH_PAGE = 10;
  */
 export function YouTubeResults({ query, auto, source }: { query: string; auto: boolean; source?: VideoSource }) {
   const t = useT();
+  const sourceName = t(sourceLabelKey(source ?? "youtube"));
   const [videos, setVideos] = useState<YTVideo[] | null>(null);
   const [playlists, setPlaylists] = useState<YTPlaylist[]>([]);
   const [loading, setLoading] = useState(false);
@@ -121,14 +123,14 @@ export function YouTubeResults({ query, auto, source }: { query: string; auto: b
   if (!auto && videos === null && !loading) {
     return (
       <button className="secondary" onClick={() => runSearch(query)}>
-        {t("yt.searchButton", { query })}
+        {t("yt.searchButton", { query, source: sourceName })}
       </button>
     );
   }
 
   return (
     <>
-      {loading && <p className="muted">{t("yt.searching")}</p>}
+      {loading && <p className="muted">{t("yt.searching", { source: sourceName })}</p>}
       {error && <p className="error">{error}</p>}
       {videos && videos.length === 0 && !loading && <p className="muted">{t("yt.noResults")}</p>}
       {videos && videos.length > 0 && (
@@ -176,7 +178,7 @@ export function YouTubeResults({ query, auto, source }: { query: string; auto: b
         <div className="yt-more-wrap">
           {moreError && <p className="error small">{moreError}</p>}
           <button className="secondary compact yt-more" disabled={moreLoading} onClick={loadMore}>
-            {moreLoading ? t("yt.searching") : t("yt.showMore")}
+            {moreLoading ? t("yt.searching", { source: sourceName }) : t("yt.showMore")}
           </button>
         </div>
       )}

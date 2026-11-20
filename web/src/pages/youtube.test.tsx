@@ -92,7 +92,7 @@ test("non-empty local search shows a button that searches YouTube on tap", async
   });
   await userEvent.type(screen.getByRole("searchbox"), "本地歌");
   expect(await screen.findByText("本地歌")).toBeInTheDocument();
-  const btn = await screen.findByRole("button", { name: /在 YouTube 上搜索/ }, { timeout: 3000 }); // after the 900 ms settle
+  const btn = await screen.findByRole("button", { name: /在YouTube上搜索/ }, { timeout: 3000 }); // after the 900 ms settle
   expect(screen.queryByText("视频v2")).toBeNull();
   await userEvent.click(btn);
   expect(await screen.findByText("视频v2")).toBeInTheDocument();
@@ -197,7 +197,7 @@ test("a slow search for an old query does not overwrite the new query's results"
     </MemoryRouter>,
   );
 
-  expect(await screen.findByText("正在搜索 YouTube…")).toBeInTheDocument();
+  expect(await screen.findByText("正在搜索YouTube…")).toBeInTheDocument();
   await userEvent.click(screen.getByText("switch"));
   expect(await screen.findByText("视频newv")).toBeInTheDocument();
 

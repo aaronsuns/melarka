@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // MaxBilibiliResults bounds a Bilibili search. Unlike YouTube's, it is a full
@@ -74,13 +76,52 @@ func (c *Client) SearchSource(ctx context.Context, src Source, q string, n int) 
 		return nil, false, err
 	}
 	n = max(1, min(n, MaxBilibiliResults))
-	out, err := c.Runner.Output(ctx, append(c.biliArgs(), "bilisearch"+strconv.Itoa(n)+":"+clean))
-	_, videos = parseBiliLines(out)
-	if err != nil && len(videos) == 0 { // one failed result must not lose the others
-		return nil, false, ClassifyBilibili(err)
+	target := "bilisearch" + strconv.Itoa(n) + ":" + clean
+	for attempt := 1; ; attempt++ {
+		out, runErr := c.runBiliSearch(ctx, target)
+		_, videos = parseBiliLines(out)
+		if runErr == nil || len(videos) > 0 { // one failed result must not lose the others
+			return videos, len(videos) >= n && n < MaxBilibiliResults, nil
+		}
+		err = ClassifyBilibili(runErr)
+		if errors.Is(err, ErrBilibiliThrottled) && c.Bili != nil {
+			c.Bili.Forget() // refused with this visitor id: the next try gets a new one
+		}
+		if !errors.Is(err, ErrBilibiliThrottled) || attempt == biliSearchAttempts {
+			return nil, false, err
+		}
+		select {
+		case <-ctx.Done():
+			return nil, false, err
+		case <-time.After(BilibiliRetryDelay):
+		}
 	}
-	return videos, len(videos) >= n && n < MaxBilibiliResults, nil
 }
+
+// runBiliSearch runs one Bilibili search, with the visitor id's cookie file
+// when c.Bili can give one (without, yt-dlp makes up its own).
+func (c *Client) runBiliSearch(ctx context.Context, target string) ([]byte, error) {
+	args := c.biliArgs()
+	if c.Bili != nil {
+		if path, cleanup, err := c.Bili.CookieFile(ctx); err == nil {
+			defer cleanup()
+			args = append(args, "--cookies", path)
+		} else {
+			slog.Warn("bilibili visitor id unavailable", "err", err)
+		}
+	}
+	return c.Runner.Output(ctx, append(args, target))
+}
+
+// Bilibili's anti-bot check refuses a share of searches at random (HTTP 412):
+// about half with yt-dlp's made-up visitor id, about a quarter with a real one
+// (measured from a server in Europe), and the next try often passes. A
+// refused search is asked again, at most biliSearchAttempts times in all,
+// BilibiliRetryDelay apart. Only the search is retried: it is what a person
+// waits on, and a refusal costs about 3 s of the 30 s search budget.
+const biliSearchAttempts = 3
+
+var BilibiliRetryDelay = time.Second
 
 // biliPlayListRe: the play-list pages (/list/<id>?bvid=…) whose extractor
 // returns just the playing video under --no-playlist.

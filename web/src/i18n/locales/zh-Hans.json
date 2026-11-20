@@ -117,7 +117,7 @@
   "track.addToPlaylist": "添加到歌单", "track.editInfo": "编辑信息",
   "track.confirmDelete": "确认删除（30天内可恢复）", "track.delete": "删除歌曲",
 
-  "yt.searchButton": "在 YouTube 上搜索「{query}」", "yt.searching": "正在搜索 YouTube…",
+  "yt.searchButton": "在{source}上搜索「{query}」", "yt.searching": "正在搜索{source}…",
   "yt.noResults": "没有找到相关视频", "yt.download": "下载", "yt.queued": "已加入下载",
   "yt.queuedElsewhere": "已在下载队列", "yt.alreadyInLibrary": "已在音乐库",
   "yt.searchFailed": "YouTube 搜索失败：{reason}", "yt.searchFailedGeneric": "搜索失败",

@@ -117,7 +117,7 @@
   "track.addToPlaylist": "Add to playlist", "track.editInfo": "Edit info",
   "track.confirmDelete": "Confirm delete (recoverable for 30 days)", "track.delete": "Delete song",
 
-  "yt.searchButton": "Search YouTube for \"{query}\"", "yt.searching": "Searching YouTube…",
+  "yt.searchButton": "Search {source} for \"{query}\"", "yt.searching": "Searching {source}…",
   "yt.noResults": "No videos found", "yt.download": "Download", "yt.queued": "Added to downloads",
   "yt.queuedElsewhere": "Already in the download queue", "yt.alreadyInLibrary": "Already in the library",
   "yt.searchFailed": "YouTube search failed: {reason}", "yt.searchFailedGeneric": "Search failed",

@@ -8,6 +8,7 @@ import { mockFetch } from "../test/setup";
 import { renderWithApp } from "../test/render";
 import { setVideoSources } from "../videoSources";
 import SearchPage from "./SearchPage";
+import { YouTubeResults } from "../components/YouTubeResults";
 import SystemPage from "./admin/SystemPage";
 
 afterEach(() => {
@@ -130,4 +131,19 @@ test("a pasted b23.tv share link asks for the full link instead of searching", a
   expect(await screen.findByText(/b23\.tv/)).toBeInTheDocument();
   await new Promise((r) => setTimeout(r, 1200));
   expect(search).not.toHaveBeenCalled();
+});
+
+test("the Bilibili search names Bilibili, not YouTube, in its button and while searching", async () => {
+  setVideoSources(["bilibili"]);
+  let answer: (v: unknown) => void = () => {};
+  renderWithApp(<YouTubeResults query="七龙珠" auto={false} source="bilibili" />, {
+    routes: { "GET /api/v1/youtube/search": () => new Promise<{ body: unknown }>((r) => (answer = r as (v: unknown) => void)) },
+  });
+  const button = await screen.findByRole("button", { name: /七龙珠/ });
+  expect(button).toHaveTextContent("哔哩哔哩");
+  expect(button).not.toHaveTextContent("YouTube");
+  await userEvent.click(button);
+  expect(await screen.findByText(/正在搜索哔哩哔哩/)).toBeInTheDocument();
+  expect(screen.queryByText(/YouTube/)).toBeNull();
+  answer({ body: { videos: [], playlists: [] } });
 });

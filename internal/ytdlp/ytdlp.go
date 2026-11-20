@@ -179,6 +179,8 @@ type Client struct {
 	// there). Unset, yt-dlp uses $XDG_CACHE_HOME, which the image points at
 	// the data volume; this field makes non-Docker runs behave the same.
 	CacheDir string
+	// Bili, when set, gives Bilibili searches a real visitor id (bilivisitor.go).
+	Bili *BiliVisitor
 }
 
 // baseArgs leads every search/resolve/download argv. YouTube's signature
