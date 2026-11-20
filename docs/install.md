@@ -132,7 +132,8 @@ and run `docker compose up -d` (or, as admin, tick Bilibili in Admin → System)
 pasted links (`bilibili.com/video/BV…`, favourites and collections; not `b23.tv` short links) and
 previews then use Bilibili. A server abroad can offer both: `LARK_VIDEO_SOURCES=youtube,bilibili`
 shows a YouTube | 哔哩哔哩 switch above the results. Channels, video and "For you" are built on
-YouTube and stay hidden while YouTube is off.
+YouTube and stay hidden while YouTube is off. Bilibili's anti-bot check often refuses searches from
+a server abroad ("Bilibili is busy, try again"); pasted links and downloads are not affected.
 
 To use the YouTube features, only the **server** needs a way out; the phones never contact YouTube
 (thumbnails and videos come through your server). If you already run a proxy on your network
@@ -154,7 +155,8 @@ the proxy too. Pulling `ghcr.io/aaronsuns/melarka` can also be slow without it.
 歌单、收藏、离线缓存和手机 App 都能正常使用。**不用翻墙就能搜索和下载：** 在 `.env` 里加一行
 `LARK_VIDEO_SOURCES=bilibili`，再运行 `docker compose up -d`（或用管理员账号在“管理 → 系统”里勾选哔哩哔哩），
 搜索、下载、粘贴链接（`bilibili.com/video/BV…`、收藏夹和合集；不支持 `b23.tv` 短链接）和试听就都走 B 站。
-海外的服务器可以两个都开（`youtube,bilibili`），搜索结果上方会出现 YouTube | 哔哩哔哩 切换。频道、视频和
+海外的服务器可以两个都开（`youtube,bilibili`），搜索结果上方会出现 YouTube | 哔哩哔哩 切换（B 站的风控常会拒绝来自海外服务器的搜索，
+提示“稍后再试”即可；粘贴链接和下载不受影响）。频道、视频和
 “为你推荐”基于 YouTube，YouTube 关闭时会隐藏；要用它们，服务器需要代理：如果局域网里已有代理（如 Clash，
 端口通常是 7890），把上面三行写进 `.env`（地址换成代理机器的局域网 IP，不要写 127.0.0.1），再运行
 `docker compose up -d`。

@@ -26,6 +26,9 @@ cd web && npm run build && npm run e2e # end-to-end, against the freshly built w
 make dev                               # run it locally on 127.0.0.1:4600 (admin / admin)
 ```
 
+The e2e server listens on 127.0.0.1:4700 and its fixture server on 4701. When another checkout's run
+holds them, set `LARK_E2E_PORT` and `LARK_E2E_FEED_PORT` (for example 4710 and 4711).
+
 `make dev` serves the built web app from disk; for hot reload, also run `cd web && npm run dev`
 (port 5173). No test touches the network: test fixtures are trimmed recordings of the public
 APIs, with any keys replaced by fake ones.
