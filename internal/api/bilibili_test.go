@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -322,5 +323,23 @@ func TestVideoThumbnailNoFetchWhenYouTubeOff(t *testing.T) {
 	}
 	if r, _ := do(t, ts, tok, "GET", "/api/v1/videos/dQw4w9WgXcQ/thumbnail", nil); r.StatusCode != 200 {
 		t.Fatalf("cached: %d", r.StatusCode)
+	}
+}
+
+// A Bilibili search looks every result up in full (about 2.5 s each), so its
+// first page is BilibiliPage results, not YouTube's 10.
+func TestSearchBilibiliFirstPageIsSmall(t *testing.T) {
+	s, ts := newTestServer(t)
+	setSources(t, s, ytdlp.SourceBilibili)
+	fr := biliRunner(s)
+	tok := loginAs(t, s, "alice", "member")
+	if r, b := do(t, ts, tok, "GET", "/api/v1/youtube/search?q=x&source=bilibili", nil); r.StatusCode != 200 {
+		t.Fatalf("%d %s", r.StatusCode, b)
+	}
+	fr.mu.Lock()
+	last := fr.calls[len(fr.calls)-1]
+	fr.mu.Unlock()
+	if want := "bilisearch" + strconv.Itoa(ytdlp.BilibiliPage) + ":x"; last[len(last)-1] != want || ytdlp.BilibiliPage != 5 {
+		t.Fatalf("ran %v, want %s", last, want)
 	}
 }

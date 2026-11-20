@@ -99,7 +99,7 @@ func (s *Server) searchSource(w http.ResponseWriter, r *http.Request) (ytdlp.Sou
 // starts with a space, which a trimmed query never does) and one limiter
 // token (one yt-dlp process).
 func (s *Server) bilibiliSearch(w http.ResponseWriter, r *http.Request, clean string) {
-	n, ok := pageSize(r, searchPage, ytdlp.MaxBilibiliResults)
+	n, ok := pageSize(r, ytdlp.BilibiliPage, ytdlp.MaxBilibiliResults)
 	if !ok {
 		writeCoded(w, 400, "bad_request", "bad page size")
 		return

@@ -19,6 +19,11 @@ import (
 // each result costs one page fetch: kept small.
 const MaxBilibiliResults = 20
 
+// BilibiliPage is a Bilibili search's first page and "show more" step. Each
+// result is looked up in full, about 2.5 s apiece from a server abroad, so 10
+// results ran into the 30 s search limit; 5 take about 12 s.
+const BilibiliPage = 5
+
 // ErrBilibiliThrottled: Bilibili answered HTTP 412, its anti-bot refusal.
 // It passes after a while (PushBack is true for it).
 var ErrBilibiliThrottled = errors.New("ytdlp: bilibili is throttling (HTTP 412)")
