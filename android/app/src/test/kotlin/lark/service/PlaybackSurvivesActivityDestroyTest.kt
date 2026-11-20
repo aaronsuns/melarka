@@ -48,7 +48,10 @@ class PlaybackSurvivesActivityDestroyTest {
         activity.pause().stop().destroy()
         rig.settle()
         assertTrue(engine.playing)
-        assertTrue(rig.player.isPlaying)
+        assertTrue(rig.player.playWhenReady)                     // not paused, not stopped
+        // The fake clock can run ahead of the file loader while the Activity goes (slow on CI): a brief BUFFERING, when
+        // isPlaying is false. Sounding again is the claim; a paused or stopped player never gets there (times out).
+        rig.waitUntil { rig.player.isPlaying }
         assertFalse(shadowOf(service.get()).isStoppedBySelf)
         assertFalse(shadowOf(service.get()).isForegroundStopped)
         val session = service.get().session!!
@@ -81,7 +84,8 @@ class PlaybackSurvivesActivityDestroyTest {
         rig.settle()
         assertFalse(shadowOf(service.get()).isStoppedBySelf)
         assertTrue(engine.playing)
-        assertTrue(rig.player.isPlaying)
+        assertTrue(rig.player.playWhenReady)
+        rig.waitUntil { rig.player.isPlaying }                   // past a brief BUFFERING (see above)
         service.destroy()
     }
 
