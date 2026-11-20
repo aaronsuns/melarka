@@ -12,6 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 - **Bilibili search fails less often.** Bilibili's anti-bot check refuses many searches at random (HTTP 412),
   most often from servers outside China. A refused search is now asked again, up to three times, before the app
   says "Bilibili is busy".
+- **A Bilibili search no longer says "Searching YouTube…".** The search button and the searching line name the
+  source being searched.
 
 ## [0.2.25] - 2026-11-20
 

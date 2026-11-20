@@ -9,7 +9,9 @@ import { setLocale, setServerDefault, setUserLanguage } from "../i18n/i18n";
 // it the way it found it, which afterEach below enforces regardless.
 setLocale("zh-Hans");
 
-type Handler = (init: RequestInit, url: string) => { status?: number; body?: unknown; headers?: Record<string, string> };
+type Reply = { status?: number; body?: unknown; headers?: Record<string, string> };
+// A handler may answer later (a Promise), to hold a request open in a test.
+type Handler = (init: RequestInit, url: string) => Reply | Promise<Reply>;
 
 // mockFetch keys are "METHOD /path" with the query string stripped; the
 // handler gets the RequestInit and the full URL.
@@ -20,7 +22,7 @@ export function mockFetch(routes: Record<string, Handler>) {
     const key = `${(init.method ?? "GET").toUpperCase()} ${path}`;
     const h = routes[key];
     if (!h) return new Response(JSON.stringify({ error: `no mock for ${key}` }), { status: 599 });
-    const { status = 200, body, headers } = h(init, url);
+    const { status = 200, body, headers } = await h(init, url);
     return new Response(body === undefined ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
   });
   vi.stubGlobal("fetch", fn);

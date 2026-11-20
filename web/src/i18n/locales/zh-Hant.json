@@ -117,7 +117,7 @@
   "track.addToPlaylist": "加入歌單", "track.editInfo": "編輯資訊",
   "track.confirmDelete": "確認刪除（30 天內可復原）", "track.delete": "刪除歌曲",
 
-  "yt.searchButton": "在 YouTube 上搜尋「{query}」", "yt.searching": "正在搜尋 YouTube…",
+  "yt.searchButton": "在{source}上搜尋「{query}」", "yt.searching": "正在搜尋{source}…",
   "yt.noResults": "沒有找到相關影片", "yt.download": "下載", "yt.queued": "已加入下載",
   "yt.queuedElsewhere": "已在下載佇列", "yt.alreadyInLibrary": "已在音樂庫",
   "yt.searchFailed": "YouTube 搜尋失敗：{reason}", "yt.searchFailedGeneric": "搜尋失敗",

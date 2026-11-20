@@ -117,7 +117,7 @@
   "track.addToPlaylist": "Lägg till i spellista", "track.editInfo": "Redigera information",
   "track.confirmDelete": "Bekräfta radering (går att återställa i 30 dagar)", "track.delete": "Radera låt",
 
-  "yt.searchButton": "Sök på YouTube efter \"{query}\"", "yt.searching": "Söker på YouTube…",
+  "yt.searchButton": "Sök på {source} efter \"{query}\"", "yt.searching": "Söker på {source}…",
   "yt.noResults": "Inga videor hittades", "yt.download": "Ladda ner", "yt.queued": "Tillagd i nedladdningar",
   "yt.queuedElsewhere": "Redan i nedladdningskön", "yt.alreadyInLibrary": "Redan i biblioteket",
   "yt.searchFailed": "YouTube-sökningen misslyckades: {reason}", "yt.searchFailedGeneric": "Sökningen misslyckades",
