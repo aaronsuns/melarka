@@ -1,0 +1,1 @@
+Bilibili som videokälla: en server i Kina kan söka och ladda ner från Bilibili utan proxy; admin väljer YouTube, Bilibili eller båda.
