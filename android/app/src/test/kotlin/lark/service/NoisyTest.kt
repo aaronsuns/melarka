@@ -77,7 +77,8 @@ class NoisyTest {
         broadcast(context, Intent(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED))
         rig.settle()
         assertTrue(engine.playing)
-        assertTrue(rig.player.isPlaying)
+        assertTrue(rig.player.playWhenReady)
+        rig.waitUntil { rig.player.isPlaying }   // past a brief BUFFERING: the fake clock can outrun the file loader
     }
 }
 

@@ -82,6 +82,19 @@ for _ in $(seq 1 180); do
 done
 curl -fsS -o /dev/null "http://127.0.0.1:$PORT/api/v1/info" || { tail -50 "$LOGS/server.log" >&2; exit 1; }
 
+# The server as the emulator sees it: a fresh emulator's network sometimes isn't up yet (or at all), and every test
+# then fails with "Failed to connect to /10.0.2.2:4700". Wait for it, turn Wi-Fi off and on once halfway, and fail
+# here with one clear line instead.
+echo "== waiting for the emulator to reach the server"
+reach() { "$ADB" shell "printf 'GET /api/v1/info HTTP/1.0\r\n\r\n' | nc -w 3 10.0.2.2 $PORT" 2>/dev/null | head -1 | grep -q ' 200'; }
+reached=0
+for i in $(seq 1 60); do
+  reach && { reached=1; break; }
+  if [[ "$i" == 30 ]]; then "$ADB" shell svc wifi disable || true; sleep 2; "$ADB" shell svc wifi enable || true; fi
+  sleep 2
+done
+[[ "$reached" == 1 ]] || { echo "the emulator can't reach 10.0.2.2:$PORT (its network didn't come up)" >&2; "$ADB" shell ip addr >&2 || true; exit 1; }
+
 echo "== instrumented tests"
 cd "$ROOT/android"
 status=0
