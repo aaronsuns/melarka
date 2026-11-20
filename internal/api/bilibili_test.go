@@ -343,3 +343,16 @@ func TestSearchBilibiliFirstPageIsSmall(t *testing.T) {
 		t.Fatalf("ran %v, want %s", last, want)
 	}
 }
+
+// Abroad, a search can list only videos locked to mainland China: none can be
+// looked up. That says so, not "search failed".
+func TestSearchBilibiliAllUnavailable(t *testing.T) {
+	s, ts := newTestServer(t)
+	setSources(t, s, ytdlp.SourceBilibili)
+	s.YT.Runner.(*fakeYTRunner).err = errors.New("yt-dlp: exit status 1: ERROR: [BiliBili] 776371743: This video may be deleted or geo-restricted. You might want to try a VPN or a proxy server (with --proxy)")
+	tok := loginAs(t, s, "alice", "member")
+	r, b := do(t, ts, tok, "GET", "/api/v1/youtube/search?q=x&source=bilibili", nil)
+	if r.StatusCode != 404 || !strings.Contains(string(b), `"code":"bilibili_search_unavailable"`) {
+		t.Fatalf("%d %s", r.StatusCode, b)
+	}
+}

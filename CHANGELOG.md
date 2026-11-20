@@ -17,6 +17,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
   2.5 s apiece from a server abroad, so 10 results took up to 30 s and were cut off at the search time limit.
 - **A deleted or region-locked video no longer breaks a Bilibili search or favourites import.** yt-dlp stopped at
   the first such entry; it is now skipped and the rest are shown.
+  When none of a search's videos can be reached (from abroad, many are mainland-China only), the app says so
+  instead of "search failed".
 - **A Bilibili search no longer says "Searching YouTube…".** The search button and the searching line name the
   source being searched.
 

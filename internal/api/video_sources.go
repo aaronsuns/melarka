@@ -119,8 +119,10 @@ func (s *Server) bilibiliSearch(w http.ResponseWriter, r *http.Request, clean st
 	writeJSON(w, 200, res)
 }
 
-// bilibiliFail maps a failed Bilibili lookup: 503 bilibili_throttled for
-// Bilibili's anti-bot 412 (try again in a minute), else 502.
+// bilibiliFail maps a failed Bilibili search: 503 bilibili_throttled for
+// Bilibili's anti-bot 412 (try again in a minute), 404
+// bilibili_search_unavailable when no result could be looked up (region-locked
+// to mainland China, or deleted), else 502.
 func (s *Server) bilibiliFail(w http.ResponseWriter, r *http.Request, label string, err error) {
 	switch {
 	case r.Context().Err() != nil:
@@ -128,6 +130,10 @@ func (s *Server) bilibiliFail(w http.ResponseWriter, r *http.Request, label stri
 	case errors.Is(err, ytdlp.ErrBilibiliThrottled):
 		s.Log.Warn("bilibili search throttled", "query", label)
 		writeCoded(w, 503, "bilibili_throttled", "Bilibili is busy, try again in a minute")
+	case errors.Is(err, ytdlp.ErrBilibiliUnavailable):
+		// Every result was refused: abroad, many videos are mainland-China only.
+		s.Log.Warn("bilibili search: no result reachable", "query", label)
+		writeCoded(w, 404, "bilibili_search_unavailable", "none of these Bilibili videos can be reached from this server")
 	default:
 		s.Log.Error("bilibili search", "query", label, "err", err)
 		writeCoded(w, 502, "bilibili_search_failed", "Bilibili search failed: "+ytdlp.LastLine(err.Error()))

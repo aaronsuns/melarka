@@ -566,6 +566,7 @@
   "error.bilibili_search_failed": "Bilibili search failed, try again",
   "error.bilibili_throttled": "Bilibili is busy, try again in a minute",
   "error.bilibili_unavailable": "That Bilibili video can't be reached from this server",
+  "error.bilibili_search_unavailable": "None of these Bilibili videos can be reached from this server; many are only available in mainland China",
   "job.error.source_disabled": "This video source was turned off; retry once an admin turns it on",
   "search.b23": "The server can't open b23.tv short links: open the video and copy its full bilibili.com/video/BV… address",
   "error.lookup_timeout": "Looking up the link took too long; try again"
