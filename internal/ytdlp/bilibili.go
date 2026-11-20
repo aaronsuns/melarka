@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // MaxBilibiliResults bounds a Bilibili search. Unlike YouTube's, it is a full
@@ -74,13 +75,33 @@ func (c *Client) SearchSource(ctx context.Context, src Source, q string, n int) 
 		return nil, false, err
 	}
 	n = max(1, min(n, MaxBilibiliResults))
-	out, err := c.Runner.Output(ctx, append(c.biliArgs(), "bilisearch"+strconv.Itoa(n)+":"+clean))
-	_, videos = parseBiliLines(out)
-	if err != nil && len(videos) == 0 { // one failed result must not lose the others
-		return nil, false, ClassifyBilibili(err)
+	args := append(c.biliArgs(), "bilisearch"+strconv.Itoa(n)+":"+clean)
+	for attempt := 1; ; attempt++ {
+		out, runErr := c.Runner.Output(ctx, args)
+		_, videos = parseBiliLines(out)
+		if runErr == nil || len(videos) > 0 { // one failed result must not lose the others
+			return videos, len(videos) >= n && n < MaxBilibiliResults, nil
+		}
+		err = ClassifyBilibili(runErr)
+		if !errors.Is(err, ErrBilibiliThrottled) || attempt == biliSearchAttempts {
+			return nil, false, err
+		}
+		select {
+		case <-ctx.Done():
+			return nil, false, err
+		case <-time.After(BilibiliRetryDelay):
+		}
 	}
-	return videos, len(videos) >= n && n < MaxBilibiliResults, nil
 }
+
+// Bilibili's anti-bot check refuses a share of searches at random (HTTP 412;
+// measured at 3 to 6 in 8 from a server in Europe), and the next try often
+// passes. A refused search is asked again, at most biliSearchAttempts times
+// in all, BilibiliRetryDelay apart. Only the search is retried: it is what a person
+// waits on, and a refusal costs about a second.
+const biliSearchAttempts = 3
+
+var BilibiliRetryDelay = time.Second
 
 // biliPlayListRe: the play-list pages (/list/<id>?bvid=…) whose extractor
 // returns just the playing video under --no-playlist.

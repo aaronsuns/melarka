@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func fixture(t *testing.T, name string) []byte {
@@ -145,9 +146,42 @@ func TestClassifyBilibili412(t *testing.T) {
 }
 
 func TestSearchSourceBilibili412(t *testing.T) {
-	cl := &Client{Runner: &fakeRunner{outputErr: errors.New("yt-dlp: exit status 1: ERROR: HTTP Error 412: Precondition Failed")}}
+	defer func(d time.Duration) { BilibiliRetryDelay = d }(BilibiliRetryDelay)
+	BilibiliRetryDelay = 0
+	fr := &fakeRunner{outputErr: errors.New("yt-dlp: exit status 1: ERROR: HTTP Error 412: Precondition Failed")}
+	cl := &Client{Runner: fr}
 	if _, _, err := cl.SearchSource(context.Background(), SourceBilibili, "x", 10); !errors.Is(err, ErrBilibiliThrottled) {
 		t.Errorf("got %v", err)
+	}
+	if len(fr.calls) != biliSearchAttempts {
+		t.Errorf("tried %d times, want %d", len(fr.calls), biliSearchAttempts)
+	}
+}
+
+// Bilibili's anti-bot check refuses a share of searches at random: a refused
+// search is asked again, and the second answer is the result.
+func TestSearchSourceBilibiliRetries412(t *testing.T) {
+	defer func(d time.Duration) { BilibiliRetryDelay = d }(BilibiliRetryDelay)
+	BilibiliRetryDelay = 0
+	good := fixture(t, "bilisearch.jsonl")
+	fr := &fakeRunner{}
+	fr.outFor = func([]string) ([]byte, error) {
+		if len(fr.calls) == 1 {
+			return nil, errors.New("yt-dlp: exit status 1: ERROR: HTTP Error 412: Precondition Failed")
+		}
+		return good, nil
+	}
+	videos, _, err := (&Client{Runner: fr}).SearchSource(context.Background(), SourceBilibili, "七龙珠", 10)
+	if err != nil || len(videos) == 0 || len(fr.calls) != 2 {
+		t.Fatalf("got %d videos, %v after %d calls", len(videos), err, len(fr.calls))
+	}
+}
+
+// Other errors are not retried.
+func TestSearchSourceBilibiliNoRetryOnOtherErrors(t *testing.T) {
+	fr := &fakeRunner{outputErr: errors.New("yt-dlp: exit status 1: ERROR: something else")}
+	if _, _, err := (&Client{Runner: fr}).SearchSource(context.Background(), SourceBilibili, "x", 10); err == nil || len(fr.calls) != 1 {
+		t.Fatalf("err %v after %d calls", err, len(fr.calls))
 	}
 }
 

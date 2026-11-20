@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aaronsuns/lark-server/internal/preview"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
@@ -119,15 +120,19 @@ func TestSearchBilibili412NotCachedAndRetryCode(t *testing.T) {
 	setSources(t, s, ytdlp.SourceBilibili)
 	fr := s.YT.Runner.(*fakeYTRunner)
 	fr.err = errors.New("yt-dlp: exit status 1: ERROR: HTTP Error 412: Precondition Failed")
+	defer func(d time.Duration) { ytdlp.BilibiliRetryDelay = d }(ytdlp.BilibiliRetryDelay)
+	ytdlp.BilibiliRetryDelay = 0
 	tok := loginAs(t, s, "alice", "member")
+	calls := []int{}
 	for i := range 2 {
 		r, b := do(t, ts, tok, "GET", "/api/v1/youtube/search?q=x&source=bilibili", nil)
 		if r.StatusCode != 503 || !strings.Contains(string(b), `"code":"bilibili_throttled"`) {
 			t.Fatalf("try %d: %d %s", i, r.StatusCode, b)
 		}
+		calls = append(calls, fr.callCount())
 	}
-	if n := fr.callCount(); n != 2 {
-		t.Fatalf("a throttled search must not be cached: %d calls", n)
+	if calls[0] == 0 || calls[1] != 2*calls[0] {
+		t.Fatalf("a throttled search must not be cached: calls after each request %v", calls)
 	}
 	fr.err = errors.New("yt-dlp: exit status 1: ERROR: something broke")
 	if r, b := do(t, ts, tok, "GET", "/api/v1/youtube/search?q=y&source=bilibili", nil); r.StatusCode != 502 || !strings.Contains(string(b), `"code":"bilibili_search_failed"`) {
