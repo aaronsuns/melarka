@@ -376,7 +376,8 @@ Melarka is a tool for listening to your own music collection at home.
 ## Privacy
 
 Melarka has no tracking. The server only reaches out for what you use: YouTube (search, downloads,
-channels), lyrics providers, and Last.fm if you configure it. The apps talk only to your server.
+channels), Bilibili if an admin turns it on (for its searches the server also asks Bilibili for a visitor id,
+as a browser does on its first visit), lyrics providers, and Last.fm if you configure it. The apps talk only to your server.
 
 **The update check (on by default).** About once a day the server also contacts `api.github.com` to ask for
 Melarka's latest release, so an admin is told in Admin → System when a newer version exists. It is a plain

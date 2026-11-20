@@ -142,7 +142,7 @@ func run(log *slog.Logger) error {
 		}
 		return cfg.YtDlpPath
 	}
-	ytClient := &ytdlp.Client{Runner: ytdlp.ExecRunner{Bin: ytBin}, CacheDir: filepath.Join(cfg.CacheDir(), "yt-dlp")}
+	ytClient := &ytdlp.Client{Runner: ytdlp.ExecRunner{Bin: ytBin}, CacheDir: filepath.Join(cfg.CacheDir(), "yt-dlp"), Bili: &ytdlp.BiliVisitor{}}
 	downloads := &download.Service{DB: d, YT: ytClient, Library: libStore, Scans: scans, Log: log, Workers: 2,
 		MinFree: int64(cfg.Downloads.MinFreeGB) << 30}
 	downloadsDone := make(chan struct{})

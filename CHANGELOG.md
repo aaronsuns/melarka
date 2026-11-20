@@ -9,9 +9,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ### Fixed
 
-- **Bilibili search fails less often.** Bilibili's anti-bot check refuses many searches at random (HTTP 412),
-  most often from servers outside China. A refused search is now asked again, up to three times, before the app
-  says "Bilibili is busy".
+- **Bilibili search fails far less often.** Bilibili's anti-bot check refused about half of the searches from a
+  server abroad (HTTP 412), because yt-dlp made up a visitor id for each one. The server now asks Bilibili for a
+  real visitor id, as a browser does on its first visit, reuses it, and swaps it for a new one when a search is
+  refused; a refused search is asked again, up to three times, before the app says "Bilibili is busy".
 - **A Bilibili search no longer says "Searching YouTube…".** The search button and the searching line name the
   source being searched.
 
