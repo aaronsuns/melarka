@@ -558,6 +558,7 @@
   "error.bilibili_search_failed": "哔哩哔哩搜索失败，请重试",
   "error.bilibili_throttled": "哔哩哔哩暂时繁忙，请一分钟后再试",
   "error.bilibili_unavailable": "此服务器无法访问这个哔哩哔哩视频",
+  "error.bilibili_search_unavailable": "这台服务器无法访问这些哔哩哔哩视频，很多视频仅限中国大陆观看",
   "job.error.source_disabled": "这个视频来源已关闭，管理员重新开启后可重试",
   "search.b23": "服务器无法打开 b23.tv 短链接：请打开视频，复制 bilibili.com/video/BV… 开头的完整网址",
   "error.lookup_timeout": "查询链接超时，请重试"

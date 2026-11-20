@@ -15,6 +15,8 @@ import type { VideoSource } from "../videoLink";
 
 /** The first page's size and the step 显示更多 grows it by (the server caps it at 50). */
 export const SEARCH_PAGE = 10;
+// Bilibili looks each result up in full (seconds apiece): smaller pages (ytdlp.BilibiliPage).
+export const BILIBILI_PAGE = 5;
 
 /**
  * YouTube search results inside SearchPage. In `auto` mode it searches as
@@ -27,13 +29,14 @@ export const SEARCH_PAGE = 10;
 export function YouTubeResults({ query, auto, source }: { query: string; auto: boolean; source?: VideoSource }) {
   const t = useT();
   const sourceName = t(sourceLabelKey(source ?? "youtube"));
+  const page = source === "bilibili" ? BILIBILI_PAGE : SEARCH_PAGE;
   const [videos, setVideos] = useState<YTVideo[] | null>(null);
   const [playlists, setPlaylists] = useState<YTPlaylist[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   // 显示更多: whether a larger page may find more, the page size shown, and that page's own state.
   const [more, setMore] = useState(false);
-  const [pageN, setPageN] = useState(SEARCH_PAGE);
+  const [pageN, setPageN] = useState(page);
   const [moreLoading, setMoreLoading] = useState(false);
   const [moreError, setMoreError] = useState("");
   const seq = useRef(0);
@@ -66,7 +69,7 @@ export function YouTubeResults({ query, auto, source }: { query: string; auto: b
         setVideos(res.videos);
         setPlaylists(res.playlists ?? []);
         setMore(!!res.more);
-        setPageN(SEARCH_PAGE);
+        setPageN(page);
       })
       .catch((e) => {
         if (seq.current !== mySeq) return;
@@ -76,11 +79,11 @@ export function YouTubeResults({ query, auto, source }: { query: string; auto: b
         if (seq.current !== mySeq) return;
         setLoading(false);
       });
-  }, [source]);
+  }, [source, page]);
 
   const loadMore = useCallback(() => {
     const mySeq = seq.current; // a new query invalidates this page too
-    const n = pageN + SEARCH_PAGE;
+    const n = pageN + page;
     setMoreLoading(true);
     setMoreError("");
     api
@@ -103,7 +106,7 @@ export function YouTubeResults({ query, auto, source }: { query: string; auto: b
         if (seq.current !== mySeq) return;
         setMoreLoading(false);
       });
-  }, [query, pageN, videos, source]);
+  }, [query, pageN, videos, source, page]);
 
   useEffect(() => {
     // Invalidate any in-flight fetch for the query this replaces, and reset
@@ -114,11 +117,11 @@ export function YouTubeResults({ query, auto, source }: { query: string; auto: b
     setError("");
     setLoading(false);
     setMore(false);
-    setPageN(SEARCH_PAGE);
+    setPageN(page);
     setMoreLoading(false);
     setMoreError("");
     if (auto && query) runSearch(query);
-  }, [query, auto, runSearch]);
+  }, [query, auto, runSearch, page]);
 
   if (!auto && videos === null && !loading) {
     return (

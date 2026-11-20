@@ -33,7 +33,7 @@ func TestSearchSourceBilibiliArgv(t *testing.T) {
 	if slices.Contains(fr.gotArgs, "--flat-playlist") || strings.Contains(argv, "ytsearch") {
 		t.Errorf("Bilibili search must be a full, non-YouTube lookup: %v", fr.gotArgs)
 	}
-	for _, f := range []string{"--no-playlist", "--skip-download", "--ignore-no-formats-error"} {
+	for _, f := range []string{"--no-playlist", "--skip-download", "--ignore-no-formats-error", "--ignore-errors"} {
 		if !slices.Contains(fr.gotArgs, f) {
 			t.Errorf("missing %s in %v", f, fr.gotArgs)
 		}
@@ -226,5 +226,17 @@ func TestClassifyBilibiliUnavailable(t *testing.T) {
 func TestPushBack412(t *testing.T) {
 	if !PushBack(errors.New("yt-dlp: exit status 1: ERROR: HTTP Error 412: Precondition Failed")) {
 		t.Fatal("a raw 412 (e.g. from a preview download) is push-back")
+	}
+}
+
+// A deleted or region-locked video in a favourites folder must not stop the
+// rest: without --ignore-errors yt-dlp quits at the first bad entry.
+func TestResolveListBilibiliIgnoresBadEntries(t *testing.T) {
+	fr := &fakeRunner{output: fixture(t, "bilifavlist.jsonl")}
+	if _, err := (&Client{Runner: fr}).ResolveList(context.Background(), "https://space.bilibili.com/123/favlist?fid=456", 50); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(fr.gotArgs, "--ignore-errors") {
+		t.Fatalf("no --ignore-errors in %v", fr.gotArgs)
 	}
 }

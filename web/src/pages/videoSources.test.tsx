@@ -147,3 +147,22 @@ test("the Bilibili search names Bilibili, not YouTube, in its button and while s
   expect(screen.queryByText(/YouTube/)).toBeNull();
   answer({ body: { videos: [], playlists: [] } });
 });
+
+test("Bilibili results come 5 at a time: 显示更多 asks for 10", async () => {
+  setVideoSources(["bilibili"]);
+  const ns: (string | null)[] = [];
+  const five = Array.from({ length: 5 }, (_, i) => ({ ...bili, id: `BV1aaaaaaa${i}a`, title: `歌${i}` }));
+  renderWithApp(<YouTubeResults query="七龙珠" auto source="bilibili" />, {
+    routes: {
+      "GET /api/v1/youtube/search": (_i: RequestInit, url: string) => {
+        const n = new URL(url, "http://x").searchParams.get("n");
+        ns.push(n);
+        return { body: { videos: n === "10" ? [...five, { ...bili, id: "BV1bbbbbbb5b", title: "歌5" }] : five, playlists: [], more: true } };
+      },
+    },
+  });
+  expect(await screen.findByText("歌4")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "显示更多" }));
+  expect(await screen.findByText("歌5")).toBeInTheDocument();
+  expect(ns).toEqual([null, "10"]);
+});
