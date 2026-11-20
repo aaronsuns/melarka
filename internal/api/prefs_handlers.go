@@ -27,6 +27,9 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 		"offline_cache": !s.OfflineCacheOff,
 		// false (channels.enabled off): the web app hides 频道.
 		"channels": s.Channels != nil,
+		// The video sources that are on: the web app shows search, downloads
+		// and previews only for these (empty: none).
+		"video_sources": s.enabledSources(r.Context()),
 	})
 }
 

@@ -7,6 +7,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.25] - 2026-11-20
+
+### Added
+
+- **Bilibili as a video source.** YouTube is blocked in mainland China; a server there can now search,
+  download and preview from Bilibili (哔哩哔哩) without a proxy. Set `LARK_VIDEO_SOURCES=bilibili`
+  (or `youtube,bilibili` for both, `none` for neither), or tick the sources in Admin → System, which then
+  wins over the variable. With both on, a YouTube | 哔哩哔哩 switch sits above the search results. Pasted
+  `bilibili.com/video/BV…` links, favourites and collections work; `b23.tv` short links do not. A source
+  that is off is never contacted, and the API answers `source_disabled`. Channels, video and For you are
+  built on YouTube and are hidden while YouTube is off; songs already downloaded keep playing. New installs
+  and upgrades keep YouTube only until an admin changes it. From a server abroad, Bilibili's anti-bot check
+  often refuses searches (the app says to try again); pasted links and downloads are not affected.
+
 ## [0.2.24] - 2026-11-19
 
 ### Added
@@ -456,7 +470,9 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.23...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.25...HEAD
+[0.2.25]: https://github.com/aaronsuns/melarka/compare/v0.2.24...v0.2.25
+[0.2.24]: https://github.com/aaronsuns/melarka/compare/v0.2.23...v0.2.24
 [0.2.23]: https://github.com/aaronsuns/melarka/compare/v0.2.22...v0.2.23
 [0.2.22]: https://github.com/aaronsuns/melarka/compare/v0.2.21...v0.2.22
 [0.2.21]: https://github.com/aaronsuns/melarka/compare/v0.2.20...v0.2.21

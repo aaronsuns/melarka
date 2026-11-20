@@ -543,5 +543,22 @@
   "video.streamBroken": "视频中断了",
   "video.hdQueued": "高清 排队中",
   "video.hdQueueTimeout": "高清排队太久了，请稍后再试",
-  "error.hd_unavailable": "这个视频没有 720p 版本"
+  "error.hd_unavailable": "这个视频没有 720p 版本",
+  "search.sourceLabel": "视频来源",
+  "search.sourceYouTube": "YouTube",
+  "search.sourceBilibili": "哔哩哔哩",
+  "search.bilibiliHeading": "哔哩哔哩",
+  "search.sourceOff": "此服务器已关闭 {source}",
+  "search.noSources": "此服务器没有开启视频来源，无法搜索或下载视频",
+  "admin.videoSources.title": "视频来源",
+  "admin.videoSources.help": "Melarka 在哪里搜索和下载视频。中国大陆无法访问 YouTube，在那里的服务器请使用哔哩哔哩。",
+  "admin.videoSources.fromEnv": "在这里修改之前，由 LARK_VIDEO_SOURCES 决定。",
+  "admin.videoSources.fromAdmin": "已在这里保存，LARK_VIDEO_SOURCES 不再生效。",
+  "error.source_disabled": "此服务器已关闭这个视频来源",
+  "error.bilibili_search_failed": "哔哩哔哩搜索失败，请重试",
+  "error.bilibili_throttled": "哔哩哔哩暂时繁忙，请一分钟后再试",
+  "error.bilibili_unavailable": "此服务器无法访问这个哔哩哔哩视频",
+  "job.error.source_disabled": "这个视频来源已关闭，管理员重新开启后可重试",
+  "search.b23": "服务器无法打开 b23.tv 短链接：请打开视频，复制 bilibili.com/video/BV… 开头的完整网址",
+  "error.lookup_timeout": "查询链接超时，请重试"
 }

@@ -124,7 +124,9 @@ func (r ExecRunner) Output(ctx context.Context, args []string) ([]byte, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
-		return nil, wrapExecErr(err, stderr.String())
+		// What yt-dlp printed before failing is returned too: a list whose
+		// one entry failed still printed the others (resolveBilibili keeps them).
+		return stdout.Bytes(), wrapExecErr(err, stderr.String())
 	}
 	return stdout.Bytes(), nil
 }
@@ -225,6 +227,11 @@ var allowedHosts = map[string]bool{
 	"m.youtube.com":     true,
 	"music.youtube.com": true,
 	"youtu.be":          true,
+	// Bilibili (see bilibiliHosts; b23.tv is deliberately absent).
+	"bilibili.com":       true,
+	"www.bilibili.com":   true,
+	"m.bilibili.com":     true,
+	"space.bilibili.com": true,
 }
 
 // ValidURL accepts an http or https URL on the YouTube host allow-list and
@@ -368,6 +375,9 @@ func (c *Client) ResolveList(ctx context.Context, rawURL string, max int) (List,
 	u, err := ValidURL(rawURL)
 	if err != nil {
 		return List{}, err
+	}
+	if src, _ := SourceOfURL(u); src == SourceBilibili {
+		return c.resolveBilibili(ctx, u, max)
 	}
 	args := append(c.baseArgs(), "--flat-playlist", "-J", "--no-warnings")
 	if VideoIDFromURL(u) != "" {

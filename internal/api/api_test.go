@@ -31,6 +31,7 @@ import (
 	"github.com/aaronsuns/lark-server/internal/trash"
 	"github.com/aaronsuns/lark-server/internal/updatecheck"
 	"github.com/aaronsuns/lark-server/internal/usageping"
+	"github.com/aaronsuns/lark-server/internal/videosrc"
 	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
 
@@ -129,6 +130,7 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server) {
 	s.YtDlpPath = "yt-dlp"
 	s.UsagePing = &usageping.Service{DB: d, URL: "http://127.0.0.1:0/never", Version: "test"}
 	s.UpdateCheck = &updatecheck.Service{URL: "http://127.0.0.1:0/never", Version: "test"}
+	s.VideoSources = &videosrc.Service{DB: d, Default: []ytdlp.Source{ytdlp.SourceYouTube}}
 	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(ts.Close)
 	return s, ts

@@ -1,4 +1,4 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useDownloads } from "../downloads/DownloadsProvider";
 import { renderWithApp } from "../test/render";
@@ -237,7 +237,7 @@ test("jobs not started in this session never toast", async () => {
 test("the link card's single song shows live status and plays when done", async () => {
   const list = sequence([job()], [job({ status: "done", track_id: 7 })]);
   const { audio } = renderWithApp(
-    <LinkCard link={{ videoId: "v1", listId: null, isMix: false }} />,
+    <LinkCard link={{ source: "youtube", videoId: "v1", listId: null, listUrl: null, isMix: false }} />,
     { routes: ytRoutes(list) },
   );
   await userEvent.click(screen.getByRole("button", { name: /下载/ }));
@@ -246,4 +246,18 @@ test("the link card's single song shows live status and plays when done", async 
   const actions = within(document.querySelector(".link-actions") as HTMLElement);
   await userEvent.click(await actions.findByRole("button", { name: /播放/ }));
   await vi.waitFor(() => expect(audio.src).toContain("/tracks/7/stream"));
+});
+
+test("a pasted Bilibili list link queues the whole list in one tap", async () => {
+  let posted: unknown = null;
+  renderWithApp(<LinkCard link={{ source: "bilibili", videoId: null, listId: null, listUrl: "https://space.bilibili.com/123/favlist?fid=456", isMix: false }} />, {
+    routes: {
+      "POST /api/v1/downloads": (init: RequestInit) => {
+        posted = JSON.parse(init.body as string);
+        return { status: 201, body: { jobs: [], playlist: { id: 1, name: "我的收藏" } } };
+      },
+    },
+  });
+  await userEvent.click(screen.getByRole("button"));
+  await waitFor(() => expect(posted).toEqual({ url: "https://space.bilibili.com/123/favlist?fid=456" }));
 });

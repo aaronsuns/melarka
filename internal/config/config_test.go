@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -336,5 +337,24 @@ func TestUpdateCheckSwitch(t *testing.T) {
 	t.Setenv("LARK_UPDATE_CHECK", "maybe")
 	if _, err := Load(); err == nil {
 		t.Error("bad value accepted")
+	}
+}
+
+func TestVideoSourcesEnv(t *testing.T) {
+	t.Setenv("LARK_DATA_DIR", t.TempDir())
+	t.Setenv("LARK_CONFIG", filepath.Join(t.TempDir(), "none.yaml"))
+	t.Setenv("LARK_VIDEO_SOURCES", "")
+	if c, err := Load(); err != nil || !reflect.DeepEqual(c.VideoSources, []string{"youtube"}) {
+		t.Fatalf("default: %v %v", c.VideoSources, err)
+	}
+	for v, want := range map[string][]string{"bilibili": {"bilibili"}, "Bilibili, YouTube": {"bilibili", "youtube"}, "none": {}} {
+		t.Setenv("LARK_VIDEO_SOURCES", v)
+		if c, err := Load(); err != nil || !reflect.DeepEqual(c.VideoSources, want) {
+			t.Errorf("%q: %v %v", v, c.VideoSources, err)
+		}
+	}
+	t.Setenv("LARK_VIDEO_SOURCES", "vimeo")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "LARK_VIDEO_SOURCES") {
+		t.Errorf("bad value: %v", err)
 	}
 }

@@ -114,6 +114,9 @@ func (s *Service) RunDiscovery(ctx context.Context) {
 
 // refreshStep runs at most one user's refresh and says how long to wait.
 func (s *Service) refreshStep(ctx context.Context) time.Duration {
+	if !s.youtubeOn(ctx) {
+		return sourceOffWait
+	}
 	now := s.now()
 	at := s.RefreshAt
 	if at == "" {

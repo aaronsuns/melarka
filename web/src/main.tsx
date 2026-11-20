@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router";
 import App from "./App";
 import { api } from "./api/client";
 import { setChannelsEnabled } from "./channels/channelsSwitch";
+import { setVideoSources } from "./videoSources";
 import { setServerDefault } from "./i18n/i18n";
 import { applyOfflineSwitch, offlineOnFrom } from "./offline/register";
 import "./styles.css";
@@ -21,6 +22,7 @@ api
     setServerDefault(i.language);
     void applyOfflineSwitch(offlineOnFrom(i));
     setChannelsEnabled(i.channels !== false);
+    setVideoSources(i.video_sources ?? ["youtube"]);
   })
   .catch(() => {});
 

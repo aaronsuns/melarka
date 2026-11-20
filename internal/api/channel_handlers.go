@@ -146,6 +146,10 @@ func channelLink(w http.ResponseWriter, raw string) (string, bool) {
 		writeCoded(w, 400, "youtube_only", "only YouTube links are supported")
 		return "", false
 	}
+	if src, _ := ytdlp.SourceOfURL(u); src != ytdlp.SourceYouTube {
+		writeCoded(w, 400, "youtube_only", "only YouTube links are supported")
+		return "", false
+	}
 	if ytdlp.ChannelPageURL(u) == "" && ytdlp.VideoIDFromURL(u) == "" {
 		writeCoded(w, 400, "not_a_channel_link", "that link names neither a channel nor a video")
 		return "", false
@@ -170,6 +174,9 @@ func (s *Server) myChannels(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) searchChannels(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	clean, err := ytdlp.CleanQuery(r.URL.Query().Get("q"))
 	if err != nil {
 		writeError(w, 400, "bad query")
@@ -189,6 +196,9 @@ func (s *Server) searchChannels(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) resolveChannel(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	var in struct {
 		URL string `json:"url"`
 	}
@@ -209,6 +219,9 @@ func (s *Server) resolveChannel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) followChannel(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	var in struct {
 		ID  string `json:"id"`
 		URL string `json:"url"`
@@ -261,6 +274,9 @@ func (s *Server) channelPage(w http.ResponseWriter, r *http.Request) {
 	uid := auth.UserFrom(r.Context()).ID
 	page, err := s.Channels.ChannelPage(r.Context(), uid, id)
 	if errors.Is(err, channels.ErrNotFound) {
+		if !s.requireSource(w, r, ytdlp.SourceYouTube) { // a stored channel is served; looking one up asks YouTube
+			return
+		}
 		ch, lerr := s.channelLookup(r.Context(), ytdlp.ChannelURL(id))
 		if lerr != nil {
 			s.channelLookupFail(w, r, lerr)

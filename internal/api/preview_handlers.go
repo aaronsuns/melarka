@@ -9,6 +9,7 @@ import (
 
 	"github.com/aaronsuns/lark-server/internal/auth"
 	"github.com/aaronsuns/lark-server/internal/preview"
+	"github.com/aaronsuns/lark-server/internal/ytdlp"
 )
 
 // previewRoutes: previews, for any signed-in user (they sit in
@@ -76,6 +77,9 @@ func (s *Server) createPreview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, err.Error())
 		return
 	}
+	if src, ok := ytdlp.SourceOf(in.VideoID); ok && !s.requireSource(w, r, src) {
+		return
+	}
 	p, err := s.Previews.Start(r.Context(), auth.UserFrom(r.Context()).ID,
 		preview.Request{VideoID: in.VideoID, Media: in.Media, Title: in.Title, Channel: in.Channel, DurationS: in.DurationS})
 	if err != nil {
@@ -118,8 +122,12 @@ func (s *Server) streamPreview(w http.ResponseWriter, r *http.Request) {
 func (s *Server) streamPreviewByVideo(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	dur, _ := strconv.Atoi(q.Get("duration_s"))
+	video := chi.URLParam(r, "video")
+	if src, ok := ytdlp.SourceOf(video); ok && !s.requireSource(w, r, src) {
+		return
+	}
 	p, err := s.Previews.Start(r.Context(), auth.UserFrom(r.Context()).ID, preview.Request{
-		VideoID: chi.URLParam(r, "video"), Media: "audio", Title: q.Get("title"), Channel: q.Get("channel"), DurationS: dur})
+		VideoID: video, Media: "audio", Title: q.Get("title"), Channel: q.Get("channel"), DurationS: dur})
 	if err != nil {
 		s.previewFail(w, err)
 		return

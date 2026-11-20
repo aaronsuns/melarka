@@ -1,3 +1,4 @@
+import type { VideoSource } from "../videoLink";
 import type { Locale } from "../i18n/i18n";
 
 export type Role = "admin" | "member";
@@ -113,6 +114,11 @@ export interface Recommendations {
   refreshed_at: number | null;
   refreshing: boolean;
   enabled: boolean;
+}
+
+export interface VideoSourcesSetting {
+  sources: VideoSource[];
+  set_by: "env" | "admin";
 }
 
 export interface YTVideo {

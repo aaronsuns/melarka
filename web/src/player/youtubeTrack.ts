@@ -1,3 +1,4 @@
+import { watchUrlFor } from "../videoLink";
 import type { Track, YTVideo } from "../api/types";
 import { coverUrl, type CoverSize } from "../components/Cover";
 import { streamUrl } from "../api/client";
@@ -64,4 +65,5 @@ export function libraryIds(ts: Track[]): number[] {
   return ts.filter((t) => !t.youtube_id).map((t) => t.id);
 }
 
-export const WatchURL = (videoId: string) => `https://www.youtube.com/watch?v=${videoId}`;
+/** The video's own page: YouTube, or Bilibili for a BV id. */
+export const WatchURL = (videoId: string) => watchUrlFor(videoId);

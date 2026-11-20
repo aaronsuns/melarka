@@ -19,12 +19,14 @@ type State =
 /**
  * "Download all" for a YouTube list: asks the server for the list's length,
  * confirms, then queues it. The server turns the list into a Lark playlist.
+ * With url (a Bilibili list page) there is no length to ask for: one tap queues it.
  */
-export function ListDownloadButton({ listId, title, label }: { listId: string; title?: string; label?: string }) {
+export function ListDownloadButton({ listId, url, title, label }: { listId?: string; url?: string; title?: string; label?: string }) {
   const t = useT();
   const [state, setState] = useState<State>({ kind: "idle" });
 
   async function lookUp() {
+    if (url || !listId) return post(0, title ?? "");
     setState({ kind: "loading" });
     try {
       const info = await api.youtubePlaylist(listId);
@@ -37,7 +39,7 @@ export function ListDownloadButton({ listId, title, label }: { listId: string; t
   async function post(count: number, name: string) {
     setState({ kind: "posting", count, name });
     try {
-      const res = await api.enqueue({ url: playlistUrl(listId) });
+      const res = await api.enqueue({ url: url ?? playlistUrl(listId ?? "") });
       setState({ kind: "done", count: res.jobs.length, ref: res.playlist ?? null, name: res.playlist?.name ?? name });
     } catch (e) {
       setState({ kind: "error", message: errorMessage(e, "yt.downloadFailed"), again: () => void post(count, name) });

@@ -551,5 +551,22 @@
   "video.streamBroken": "Videon slutade laddas",
   "video.hdQueued": "HD i kö",
   "video.hdQueueTimeout": "HD fick vänta för länge i kön; försök igen senare",
-  "error.hd_unavailable": "den här videon har ingen 720p-version"
+  "error.hd_unavailable": "den här videon har ingen 720p-version",
+  "search.sourceLabel": "Videokälla",
+  "search.sourceYouTube": "YouTube",
+  "search.sourceBilibili": "Bilibili",
+  "search.bilibiliHeading": "Bilibili",
+  "search.sourceOff": "{source} är avstängt på den här servern",
+  "search.noSources": "Ingen videokälla är påslagen på den här servern, så videor kan inte sökas eller laddas ner",
+  "admin.videoSources.title": "Videokällor",
+  "admin.videoSources.help": "Var Melarka söker och laddar ner videor. YouTube är blockerat i Fastlandskina: en server där bör använda Bilibili.",
+  "admin.videoSources.fromEnv": "Bestäms av LARK_VIDEO_SOURCES tills du ändrar det här.",
+  "admin.videoSources.fromAdmin": "Sparat här; LARK_VIDEO_SOURCES gäller inte längre.",
+  "error.source_disabled": "Den videokällan är avstängd på den här servern",
+  "error.bilibili_search_failed": "Bilibili-sökningen misslyckades, försök igen",
+  "error.bilibili_throttled": "Bilibili är upptaget, försök igen om en minut",
+  "error.bilibili_unavailable": "Den Bilibili-videon går inte att nå från den här servern",
+  "job.error.source_disabled": "Den här videokällan stängdes av; försök igen när en admin slår på den",
+  "search.b23": "Servern kan inte öppna b23.tv-kortlänkar: öppna videon och kopiera hela adressen som börjar med bilibili.com/video/BV…",
+  "error.lookup_timeout": "Det tog för lång tid att slå upp länken, försök igen"
 }

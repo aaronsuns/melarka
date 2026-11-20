@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Starts a throwaway Lark on 127.0.0.1:4700 with a tiny generated library.
+# Starts a throwaway Lark on 127.0.0.1:${LARK_E2E_PORT:-4700} with a tiny generated library.
 # The admin password comes from LARK_E2E_PW (set by playwright.config.ts).
 # Lyrics and covers use only the file's own (embedded/sidecar/folder) data: e2e never touches the network.
 # LARK_DEMO=1 (the README screenshots) swaps in the made-up demo library and channels of e2e/demo/demo.py.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 TMP=$(mktemp -d)
+PORT=${LARK_E2E_PORT:-4700}
+export LARK_E2E_FEED_PORT=${LARK_E2E_FEED_PORT:-4701} # fake-yt-dlp.sh links its thumbnails there
 trap 'rm -rf "$TMP"' EXIT
 if [[ "${LARK_DEMO:-}" == 1 ]]; then
   # The README screenshots' made-up library (web/e2e/demo/demo.py), not the tests' one.
@@ -29,7 +31,7 @@ printf 'libraries:\n  - name: main\n    path: %s/music/main\n  - name: youtube\n
   "$TMP" "$TMP" "$ROOT/web/e2e/fake-yt-dlp.sh" > "$TMP/data/config.yaml"
 mkdir -p "$TMP/feeds"
 if [[ "${LARK_DEMO:-}" == 1 ]]; then
-  python3 "$LARK_DEMO_PY" serve 4701 "$TMP/feeds" >/dev/null 2>&1 &
+  python3 "$LARK_DEMO_PY" serve "$LARK_E2E_FEED_PORT" "$TMP/feeds" >/dev/null 2>&1 &
 else
   python3 - "$TMP/feeds/videos.xml" <<'PY'
 import datetime, sys
@@ -56,12 +58,12 @@ PY
   for v in fakeep00001 fakeep00002 fakeep00003 fakeep0000a fakeep0000b; do
     mkdir -p "$TMP/feeds/vi/$v" && cp "$TMP/feeds/vi/fakevideo01/mqdefault.jpg" "$TMP/feeds/vi/$v/hqdefault.jpg"
   done
-  python3 -m http.server 4701 --bind 127.0.0.1 --directory "$TMP/feeds" >/dev/null 2>&1 &
+  python3 -m http.server "$LARK_E2E_FEED_PORT" --bind 127.0.0.1 --directory "$TMP/feeds" >/dev/null 2>&1 &
   # No page links to YouTube: the tests never leave the machine (fixtures.ts fails one that tries).
-  export LARK_YOUTUBE_COVER_URL=http://127.0.0.1:4701/vi
+  export LARK_YOUTUBE_COVER_URL=http://127.0.0.1:$LARK_E2E_FEED_PORT/vi
 fi
 FEED_PID=$!
 trap 'kill $FEED_PID 2>/dev/null; rm -rf "$TMP"' EXIT
 (cd "$ROOT" && go build -o "$TMP/lark" ./cmd/lark)
-LARK_WEB_DIR="$ROOT/web/dist" LARK_YOUTUBE_FEED_URL=http://127.0.0.1:4701/videos.xml LARK_YOUTUBE_THUMB_URL=http://127.0.0.1:4701/vi LARK_DATA_DIR="$TMP/data" LARK_LISTEN=127.0.0.1:4700 LARK_LANGUAGE=zh-Hans \
+LARK_WEB_DIR="$ROOT/web/dist" LARK_YOUTUBE_FEED_URL=http://127.0.0.1:$LARK_E2E_FEED_PORT/videos.xml LARK_YOUTUBE_THUMB_URL=http://127.0.0.1:$LARK_E2E_FEED_PORT/vi LARK_DATA_DIR="$TMP/data" LARK_LISTEN=127.0.0.1:$PORT LARK_LANGUAGE=zh-Hans \
   LARK_ADMIN_USER=admin LARK_ADMIN_PASSWORD="$LARK_E2E_PW" LARK_USAGE_PING=off LARK_UPDATE_CHECK=off "$TMP/lark"

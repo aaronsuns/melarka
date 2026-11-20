@@ -59,6 +59,9 @@ type Service struct {
 	YT    YouTube
 	Feeds Feeds
 	Gate  Gate // nil: yt-dlp runs directly (tests)
+	// Sources says whether YouTube is on (nil: on). Off, the poller, the
+	// discovery refresh and the episode worker idle; what is stored stays.
+	Sources ytdlp.SourceGate
 	// Busy reports music downloads or previews in flight; the episode worker
 	// waits while it says true (episodes are the lowest download priority).
 	// Contract for the adapter: an error from
@@ -135,6 +138,14 @@ func (s *Service) DefaultKeepDays() int {
 		return s.KeepDays
 	}
 	return defaultKeepDays
+}
+
+// sourceOffWait is how often idle background work looks again whether an
+// admin turned YouTube back on.
+const sourceOffWait = 3 * time.Minute
+
+func (s *Service) youtubeOn(ctx context.Context) bool {
+	return ytdlp.SourceOn(ctx, s.Sources, ytdlp.SourceYouTube)
 }
 
 func (s *Service) pollInterval() time.Duration { return orDur(s.PollInterval, defaultPollInterval) }

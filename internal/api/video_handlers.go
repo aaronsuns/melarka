@@ -48,6 +48,9 @@ func forBrowser(vs []ytdlp.Video, skip string) []ytdlp.Video {
 }
 
 func (s *Server) videoSearch(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	clean, err := ytdlp.CleanQuery(r.URL.Query().Get("q"))
 	if err != nil {
 		writeCoded(w, 400, "bad_query", "bad query")
@@ -80,6 +83,9 @@ func (s *Server) videoSearch(w http.ResponseWriter, r *http.Request) {
 // videoRelated is the video's YouTube Mix: the interactive search path,
 // shared with 为你推荐 through the Mix cache.
 func (s *Server) videoRelated(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSource(w, r, ytdlp.SourceYouTube) {
+		return
+	}
 	id := chi.URLParam(r, "id")
 	if !ytdlp.IsVideoID(id) {
 		writeCoded(w, 400, "bad_video_id", "bad video id")
@@ -107,6 +113,16 @@ func (s *Server) videoThumbnail(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if s.Thumbs == nil {
+		noThumbnail(w)
+		return
+	}
+	if !s.sourceOn(r.Context(), ytdlp.SourceYouTube) { // YouTube off: only what is cached, never a fetch
+		if p, ok := s.Thumbs.Cached(id); ok {
+			w.Header().Set("Content-Type", "image/jpeg")
+			w.Header().Set("Cache-Control", "private, max-age=86400")
+			http.ServeFile(w, r, p)
+			return
+		}
 		noThumbnail(w)
 		return
 	}

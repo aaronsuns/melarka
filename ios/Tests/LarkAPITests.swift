@@ -271,6 +271,14 @@ import XCTest
                        "https://lark.test/api/v1/previews/by-video/mjuS9shGYhE/stream?title=%E6%B5%81%E5%B9%B4&channel=%E7%8E%8B%E8%8F%B2&duration_s=263")
         XCTAssertNil(Item(kind: .track, id: "yt:short", title: "", artist: "", album: "", durationMs: 0, meta: .null).youtubeVideoID)
         XCTAssertNil(trackItem(7).youtubeVideoID)
+        // A Bilibili video (BV + 10) streams from its preview the same way.
+        let bili = Item(kind: .track, id: "yt:BV1GJ411x7h7", title: "晴天", artist: "某UP主", album: "Bilibili", durationMs: 269_000, meta: .null)
+        XCTAssertEqual(bili.youtubeVideoID, "BV1GJ411x7h7")
+        XCTAssertEqual(api.streamURL(bili, quality: "high").absoluteString,
+                       "https://lark.test/api/v1/previews/by-video/BV1GJ411x7h7/stream?title=%E6%99%B4%E5%A4%A9&channel=%E6%9F%90UP%E4%B8%BB&duration_s=269")
+        for bad in ["yt:BV1GJ411x7h7x", "yt:BV1GJ411x7-7", "yt:BV1GJ411/../x"] {
+            XCTAssertNil(Item(kind: .track, id: bad, title: "", artist: "", album: "", durationMs: 0, meta: .null).youtubeVideoID)
+        }
         XCTAssertEqual(api.token, "T1")
     }
 

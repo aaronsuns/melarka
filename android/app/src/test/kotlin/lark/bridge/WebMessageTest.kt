@@ -108,6 +108,11 @@ class WebMessageTest {
         assertNull(Item(Item.Kind.track, "yt:dQw4w9WgXcQ!").youtubeVideoId)
         assertNull(Item(Item.Kind.episode, "yt:dQw4w9WgXcQ").youtubeVideoId)
         assertNull(Item(Item.Kind.track, "123").youtubeVideoId)
+        // A Bilibili video (BV + 10) in a playlist played from search streams from its preview the same way.
+        assertEquals("BV1GJ411x7h7", Item(Item.Kind.track, "yt:BV1GJ411x7h7").youtubeVideoId)
+        assertNull(Item(Item.Kind.track, "yt:BV1GJ411x7h7x").youtubeVideoId)
+        assertNull(Item(Item.Kind.track, "yt:BV1GJ411x7-7").youtubeVideoId)
+        assertNull(Item(Item.Kind.track, "yt:BV1GJ411/../x").youtubeVideoId)
         assertNotNull(Item(Item.Kind.track, "7"))
     }
 

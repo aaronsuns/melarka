@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/aaronsuns/lark-server/internal/ytdlp"
 	"time"
 )
 
@@ -70,6 +71,9 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
+// sourceOffWait is how often the worker looks again whether YouTube is on.
+const sourceOffWait = 3 * time.Minute
+
 func orDur(d, def time.Duration) time.Duration {
 	if d <= 0 {
 		return def
@@ -80,6 +84,9 @@ func orDur(d, def time.Duration) time.Duration {
 // step does at most one user's refresh and says how long to wait before
 // the next; a non-nil error means back off (wait is ErrBackoff).
 func (s *Service) step(ctx context.Context) (time.Duration, error) {
+	if !ytdlp.SourceOn(ctx, s.Sources, ytdlp.SourceYouTube) { // built from YouTube Mixes
+		return sourceOffWait, nil
+	}
 	backoff := orDur(s.ErrBackoff, defaultBack)
 	at := s.RefreshAt
 	if at == "" {

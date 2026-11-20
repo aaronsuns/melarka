@@ -101,6 +101,9 @@ In a desktop browser: Home and Albums. Demo data: invented songs and channels, g
   overrides, and an optional AI agent skill cleans up messy YouTube names in batches.
 - **YouTube**: search, download a song or a whole playlist (up to 200 entries), or paste a link.
   A downloaded playlist becomes a Melarka playlist.
+- **Bilibili (哔哩哔哩)**: the same search, download and previews from Bilibili, which works in
+  mainland China without a proxy. An admin picks YouTube, Bilibili or both in Admin → System
+  (or `LARK_VIDEO_SOURCES`).
 - **Previews**: play any YouTube video before you keep it; **Keep** moves it into your music or
   your channels without a second download.
 - **Channels (频道)**: follow YouTube channels without an account. New episodes download by
@@ -122,8 +125,9 @@ In a desktop browser: Home and Albums. Demo data: invented songs and channels, g
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Languages**: English, 简体中文, 繁體中文, svenska. Music metadata is never translated.
 
-**In mainland China** (中国大陆): YouTube is blocked, so the YouTube features need a proxy on the
-server (the phones need none); your own music, lyrics and the apps work without one. See
+**In mainland China** (中国大陆): YouTube is blocked. Turn on Bilibili instead
+(`LARK_VIDEO_SOURCES=bilibili`, or Admin → System) to search and download without a proxy; the
+YouTube-only features (channels, video, For you) still need a proxy on the server. See
 [docs/install.md](docs/install.md#in-mainland-china) (中文说明在同一节).
 
 ## Quick start (step by step)
@@ -205,6 +209,8 @@ The ones you are most likely to change:
 
 - `LARK_LANGUAGE` (or `language`): the default UI language, `en`, `zh-Hans`, `zh-Hant` or `sv`.
 - `LARK_LASTFM_API_KEY`: turns on tags from Last.fm and Last.fm's similar tracks in **For you**.
+- `LARK_VIDEO_SOURCES`: `youtube` (default), `bilibili`, `youtube,bilibili` or `none`; an admin can
+  change it later in Admin → System.
 - `TZ` in `docker-compose.yml`: the local time of the nightly refresh (UTC if unset).
 - `MELARKA_VERSION`, `MELARKA_BIND` and `MELARKA_PORT` in `.env`: the release to run (`latest`
   if unset), the address to listen on (`127.0.0.1`; `0.0.0.0` lets other computers at home

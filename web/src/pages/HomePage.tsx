@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { api } from "../api/client";
 import type { TagCount, Track } from "../api/types";
 import { RecommendationsSection } from "../components/RecommendationsSection";
+import { useYouTubeOn } from "../videoSources";
 import { useShuffleFavorites } from "../components/ShuffleFavorites";
 import { TagChips } from "../components/TagChips";
 import { TrackList } from "../components/TrackList";
@@ -14,6 +15,7 @@ import { HeartIcon, RadioIcon, ShuffleIcon } from "../components/icons";
 
 export default function HomePage() {
   const t = useT();
+  const youtubeOn = useYouTubeOn();
   const player = usePlayer();
   const [pending, setPending] = useState<Track[]>([]);
   const [recent, setRecent] = useState<Track[]>([]);
@@ -86,7 +88,7 @@ export default function HomePage() {
           <button className="primary" onClick={player.toggle}>{player.playing ? t("common.pause") : t("common.play")}</button>
         </section>
       )}
-      <RecommendationsSection />
+      {youtubeOn && <RecommendationsSection />}
       {activeDownloads > 0 && (
         <Link to="/downloads" className="chip">{t("home.downloadingCount", { count: activeDownloads })}</Link>
       )}

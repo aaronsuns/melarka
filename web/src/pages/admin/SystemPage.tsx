@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { errorMessage } from "../../i18n/errors";
 import { t, useT } from "../../i18n/i18n";
+import { VideoSourcesCard } from "./VideoSourcesCard";
 
 const UPDATE_TIMEOUT_MS = 60_000;
 
@@ -75,6 +76,7 @@ export default function SystemPage() {
       </div>
       {updateMsg && <p className="muted">{updateMsg}</p>}
       {updateError && <p className="error">{updateError}</p>}
+      <VideoSourcesCard />
       <UsagePing />
     </>
   );

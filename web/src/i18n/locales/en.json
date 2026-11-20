@@ -551,5 +551,22 @@
   "video.streamBroken": "The video stopped loading",
   "video.hdQueued": "HD queued",
   "video.hdQueueTimeout": "HD waited too long in line; try again later",
-  "error.hd_unavailable": "this video has no 720p version"
+  "error.hd_unavailable": "this video has no 720p version",
+  "search.sourceLabel": "Video source",
+  "search.sourceYouTube": "YouTube",
+  "search.sourceBilibili": "Bilibili",
+  "search.bilibiliHeading": "Bilibili",
+  "search.sourceOff": "{source} is turned off on this server",
+  "search.noSources": "No video source is turned on on this server, so videos can't be searched or downloaded",
+  "admin.videoSources.title": "Video sources",
+  "admin.videoSources.help": "Where Melarka searches for and downloads videos. YouTube is blocked in mainland China: a server there should use Bilibili.",
+  "admin.videoSources.fromEnv": "Set by LARK_VIDEO_SOURCES until you change it here.",
+  "admin.videoSources.fromAdmin": "Saved here; LARK_VIDEO_SOURCES no longer applies.",
+  "error.source_disabled": "That video source is turned off on this server",
+  "error.bilibili_search_failed": "Bilibili search failed, try again",
+  "error.bilibili_throttled": "Bilibili is busy, try again in a minute",
+  "error.bilibili_unavailable": "That Bilibili video can't be reached from this server",
+  "job.error.source_disabled": "This video source was turned off; retry once an admin turns it on",
+  "search.b23": "The server can't open b23.tv short links: open the video and copy its full bilibili.com/video/BV… address",
+  "error.lookup_timeout": "Looking up the link took too long; try again"
 }

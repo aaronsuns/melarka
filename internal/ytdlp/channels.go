@@ -184,16 +184,19 @@ type Info struct {
 	LiveStatus, Availability, MediaType string
 	Timestamp                           int64 // upload time, unix seconds (0 unknown)
 	Description                         string
+	// Thumbnail is the video's cover URL: what a Bilibili video needs (its
+	// cover cannot be derived from the id).
+	Thumbnail string
 }
 
 // infoTemplate prints only the fields Lark needs as one JSON object (the
 // full -J dump of a video is ~80 KB).
-const infoTemplate = "%(.{id,title,channel,channel_id,duration,live_status,availability,media_type,timestamp,description})j"
+const infoTemplate = "%(.{id,title,channel,channel_id,duration,live_status,availability,media_type,timestamp,description,thumbnail})j"
 
 // VideoInfo reads one video's details (duration, live state, availability,
 // channel) without downloading it.
 func (c *Client) VideoInfo(ctx context.Context, id string) (Info, error) {
-	if !IsVideoID(id) {
+	if !IsAnyVideoID(id) {
 		return Info{}, ErrBadURL
 	}
 	args := append(c.baseArgs(), "--no-warnings", "--no-playlist", "--skip-download",
@@ -215,6 +218,7 @@ func (c *Client) VideoInfo(ctx context.Context, id string) (Info, error) {
 		MediaType    string  `json:"media_type"`
 		Timestamp    float64 `json:"timestamp"`
 		Description  string  `json:"description"`
+		Thumbnail    string  `json:"thumbnail"`
 	}
 	if err := json.Unmarshal([]byte(line), &raw); err != nil {
 		return Info{}, fmt.Errorf("ytdlp: parse info: %w", err)
@@ -224,7 +228,8 @@ func (c *Client) VideoInfo(ctx context.Context, id string) (Info, error) {
 	}
 	return Info{ID: raw.ID, Title: raw.Title, Channel: raw.Channel, ChannelID: raw.ChannelID,
 		DurationS: int(raw.Duration), LiveStatus: raw.LiveStatus, Availability: raw.Availability,
-		MediaType: raw.MediaType, Timestamp: int64(raw.Timestamp), Description: raw.Description}, nil
+		MediaType: raw.MediaType, Timestamp: int64(raw.Timestamp), Description: raw.Description,
+		Thumbnail: raw.Thumbnail}, nil
 }
 
 // unavailableRe: failures retrying can never fix — the video is private,
@@ -233,7 +238,7 @@ func (c *Client) VideoInfo(ctx context.Context, id string) (Info, error) {
 // "try again later" are deliberately not here: they pass.
 var unavailableRe = regexp.MustCompile(`(?i)(private video|video unavailable|has been removed|members-only|join this channel|requires payment|confirm your age|age-restricted|account associated with this video has been terminated)`)
 
-var transientRe = regexp.MustCompile(`(?i)(try again later|not a bot|HTTP Error 429|too many requests)`)
+var transientRe = regexp.MustCompile(`(?i)(try again later|not a bot|HTTP Error 429|HTTP Error 412|too many requests)`) // 412: Bilibili's anti-bot refusal
 
 // networkRe: yt-dlp's signatures of a network or server problem, not a
 // problem with the video.
@@ -247,7 +252,7 @@ func PushBack(err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrBilibiliThrottled) {
 		return true
 	}
 	msg := err.Error()

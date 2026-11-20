@@ -10,7 +10,7 @@ import { login, loginWith } from "./playback";
 // and channels of e2e/demo/demo.py: invented names, generated tones, generated
 // gradient covers. Nothing here touches the network.
 
-const FEEDS = "http://127.0.0.1:4701"; // demo.py serve: channel feeds and thumbnails
+const FEEDS = `http://127.0.0.1:${process.env.LARK_E2E_FEED_PORT ?? "4701"}`; // demo.py serve: channel feeds and thumbnails
 
 const FAVORITES = ["清晨的正弦波", "Morning in A", "回家路上", "Middle C Blues", "Cruise Control", "Etude for Middle C",
   "雨天的和弦", "Neon Test Card", "Feedback Loop", "Low Pass Lullaby", "小镇的黄昏", "Harmonic Afternoon"];
@@ -197,7 +197,7 @@ test("design review screenshots", async ({ browser }, info) => {
 /** A context that never leaves the machine: YouTube thumbnails come from demo.py, anything else external is refused. */
 async function newContext(browser: Browser, opts: Parameters<Browser["newContext"]>[0]): Promise<BrowserContext> {
   // serviceWorkers: "block", or the app's service worker fetches images past these routes.
-  const ctx = await browser.newContext({ ...opts, baseURL: "http://127.0.0.1:4700", serviceWorkers: "block" });
+  const ctx = await browser.newContext({ ...opts, baseURL: `http://127.0.0.1:${process.env.LARK_E2E_PORT ?? "4700"}`, serviceWorkers: "block" });
   await ctx.route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, (r) => r.abort());
   await ctx.route(/^https:\/\/i\.ytimg\.com\/vi\/[^/]+\//, async (r) => {
     const id = /\/vi\/([^/]+)\//.exec(r.request().url())![1];

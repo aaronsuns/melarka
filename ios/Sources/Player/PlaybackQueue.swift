@@ -27,6 +27,7 @@ extension Item {
     var youtubeVideoID: String? {
         guard kind == .track, id.hasPrefix("yt:") else { return nil }
         let v = String(id.dropFirst(3))
-        return v.range(of: "^[A-Za-z0-9_-]{11}$", options: .regularExpression) != nil ? v : nil
+        // A YouTube id (11) or a Bilibili id (BV + 10): both stream from a preview by id.
+        return v.range(of: "^([A-Za-z0-9_-]{11}|BV[0-9A-Za-z]{10})$", options: .regularExpression) != nil ? v : nil
     }
 }

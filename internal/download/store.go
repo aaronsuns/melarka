@@ -100,7 +100,11 @@ func (s *Service) visible(ctx context.Context, userID int64, isAdmin bool, id in
 // the insert are one statement, so two concurrent enqueues of the same video
 // can't both insert.
 func (s *Service) insertOrExisting(ctx context.Context, userID int64, v ytdlp.Video) (Job, error) {
-	v.Thumbnail = ytdlp.ThumbnailURL(v.ID)
+	if ytdlp.IsBilibiliID(v.ID) {
+		v.Thumbnail = ytdlp.BilibiliCover(v.Thumbnail) // not derivable: keep a safe one from the result
+	} else {
+		v.Thumbnail = ytdlp.ThumbnailURL(v.ID)
+	}
 	for range 3 {
 		now := s.now().Unix()
 		r, err := s.DB.ExecContext(ctx, `INSERT INTO downloads(user_id,url,video_id,title,channel,duration_s,thumbnail,status,created_at,updated_at)

@@ -1,4 +1,4 @@
-import { isYouTube, libraryIds, trackCoverUrl, trackStreamUrl, youtubeTrack } from "./youtubeTrack";
+import { isYouTube, libraryIds, trackCoverUrl, trackStreamUrl, WatchURL, youtubeTrack } from "./youtubeTrack";
 import type { Track, YTVideo } from "../api/types";
 
 const v = (id: string): YTVideo => ({ id, title: "流年", channel: "王菲", url: "", thumbnail: "", duration_s: 263 });
@@ -16,4 +16,9 @@ test("a YouTube track: stable negative id, its own stream and cover, left out of
   expect(trackStreamUrl(lib, "high")).toBe("/api/v1/tracks/7/stream?quality=high");
   expect(trackCoverUrl(lib, 1000)).toBe("/api/v1/tracks/7/cover?size=1000");
   expect(libraryIds([a, lib])).toEqual([7]);
+});
+
+test("WatchURL follows the id's source (a Bilibili track's Download posts its own page)", () => {
+  expect(WatchURL("BV1GJ411x7h7")).toBe("https://www.bilibili.com/video/BV1GJ411x7h7");
+  expect(WatchURL("IiFm7AWP9n4")).toBe("https://www.youtube.com/watch?v=IiFm7AWP9n4");
 });

@@ -41,11 +41,11 @@ export function initials(s: string): string {
   return first ? first.toUpperCase() : "♪";
 }
 
-// YouTube/Google thumbnail CDNs. Anything else (a video or job could in
+// YouTube/Google and Bilibili thumbnail CDNs. Anything else (a video or job could in
 // principle carry an arbitrary string) falls back to the Cover placeholder
 // instead of being handed to <img src> as-is.
 const THUMBNAIL_HOSTS = new Set(["i.ytimg.com"]);
-const THUMBNAIL_SUFFIXES = [".ggpht.com", ".googleusercontent.com"];
+const THUMBNAIL_SUFFIXES = [".ggpht.com", ".googleusercontent.com", ".hdslb.com"]; // hdslb: Bilibili covers
 
 export function formatDateTime(epochSec: number): string {
   return new Date(epochSec * 1000).toLocaleString(getLocale());

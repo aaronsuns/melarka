@@ -15,7 +15,7 @@ internal name `lark` throughout (see [AGENTS.md](../AGENTS.md#naming)).
                      └──────────────┬──────────────────────┘
                           ┌─────────▼─────────┐
                           │  lark server (Go) │── ffmpeg / ffprobe
-                          │  SQLite lark.db   │── yt-dlp ── YouTube
+                          │  SQLite lark.db   │── yt-dlp ── YouTube, Bilibili
                           └─────────┬─────────┘── lyrics, covers, Last.fm
                                     │
                      music libraries · channels · previews
@@ -50,8 +50,9 @@ Each package under `internal/` has one job:
 | `trash` | moves deleted tracks to `.lark-trash/` and purges them after 30 days |
 | `updatecheck` | the daily "is a newer release out" check (on by default; LARK_UPDATE_CHECK=off stops it): a plain GET of GitHub's latest-release API with a generic User-Agent, nothing about the install sent; the answer is cached in memory and shown to admins only (`GET /admin/update-check`, banner in Admin → System) |
 | `usageping` | the anonymous install count (on by default; Admin → System or LARK_USAGE_PING=off turns it off): a random id, the version, OS/arch, Docker or not, and user/song ranges to melarka.zexa.se weekly (and once a day after the first start); see docs/superpowers/specs/usage-ping-design.md |
-| `ytdlp` | the only place that runs yt-dlp: search, playlists, downloads, self-update |
-| `download` | the YouTube download queue |
+| `ytdlp` | the only place that runs yt-dlp: search, playlists, downloads, self-update; the video sources (YouTube, Bilibili), told apart by the id's shape (11 characters vs `BV` + 10) |
+| `videosrc` | which video sources are on: `LARK_VIDEO_SOURCES`, until an admin chooses in Admin → System; handlers and background work check it before contacting a source (see [the design](superpowers/specs/2026-11-19-bilibili-source-design.md)) |
+| `download` | the download queue (YouTube and Bilibili) |
 | `recommend` | the nightly "For you" lists |
 | `channels` | following channels: feeds, episode downloads, expiry, suggestions |
 | `preview` | temporary previews, video search, related videos and the thumbnail proxy |

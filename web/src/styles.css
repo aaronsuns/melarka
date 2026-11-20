@@ -645,3 +645,10 @@ input.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2
 .lyrics-maker-time { font-variant-numeric: tabular-nums; font-size: var(--fs-foot); }
 .lyrics-maker-tap { min-height: 64px; font-size: var(--fs-headline); }
 .lyrics-note { display: grid; justify-items: center; gap: 12px; }
+
+/* YouTube | 哔哩哔哩 above the video results (both sources on). */
+.source-switch { display: flex; gap: 8px; margin: 0 0 8px; }
+.source-switch label { cursor: pointer; }
+.source-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.source-switch label.active { outline: 2px solid var(--accent); color: var(--accent); }
+.source-switch label:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
