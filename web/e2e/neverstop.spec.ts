@@ -31,13 +31,17 @@ test("hidden, with the next track unreachable, playback continues with a cached 
       .poll(() => page.evaluate(async (k) => !!(await (await caches.open("lark-offline-v1")).match(k)), streamKey(fav)), { timeout: 30_000 })
       .toBe(true);
     // Every cached favorite's title: whichever one the player falls back to.
-    const cachedTitles = await page.evaluate(async () => {
-      const c = await caches.open("lark-offline-v1");
-      const favs = (await (await fetch("/api/v1/tracks?favorite=1&limit=500", { credentials: "same-origin" })).json()).items as { id: number; title: string }[];
-      const out: string[] = [];
-      for (const f of favs) if (await c.match(`/api/v1/tracks/${f.id}/stream?quality=high`)) out.push(f.title);
-      return out;
-    });
+    // Read again at the fallback: caching goes on in the background after
+    // 甜蜜蜜, and other specs' favorites (on the shared server) may be added.
+    const cachedFavoriteTitles = () =>
+      page.evaluate(async () => {
+        const c = await caches.open("lark-offline-v1");
+        const favs = (await (await fetch("/api/v1/tracks?favorite=1&limit=500", { credentials: "same-origin" })).json()).items as { id: number; title: string }[];
+        const out: string[] = [];
+        for (const f of favs) if (await c.match(`/api/v1/tracks/${f.id}/stream?quality=high`)) out.push(f.title);
+        return out;
+      });
+    const cachedTitles = await cachedFavoriteTitles();
     expect(cachedTitles).toContain("甜蜜蜜");
     expect(cachedTitles).not.toContain("Faded");
 
@@ -75,7 +79,8 @@ test("hidden, with the next track unreachable, playback continues with a cached 
 
     await expect.poll(() => page.locator(".mini-info .ellipsis").first().textContent(), { timeout: 25_000 }).not.toBe("月亮代表我的心");
     const now = await page.locator(".mini-info .ellipsis").first().textContent();
-    expect(cachedTitles).toContain(now);
+    expect(now).not.toBe("Faded");
+    expect(await cachedFavoriteTitles()).toContain(now);
     await expect.poll(() => miniProgressPct(page), { timeout: 20_000, intervals: [300] }).toBeGreaterThan(0);
     // The unreachable track was never asked for by the player (its
     // lookahead download, marked lark_sw=bypass, may have been).

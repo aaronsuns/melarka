@@ -143,7 +143,8 @@ class AudioFocusTest {
         focus(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK)
         rig.settle()
         assertTrue(engine.playing)
-        assertTrue(player.isPlaying)
+        assertTrue(player.playWhenReady)
+        rig.waitUntil { player.isPlaying }       // past a brief BUFFERING: the fake clock can outrun the file loader
     }
 
     /** The same prompt over an episode: speech pauses (nothing is missed) and goes on after it. */
