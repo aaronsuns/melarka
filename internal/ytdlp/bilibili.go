@@ -65,8 +65,11 @@ const biliListTemplate = "playlist:LARKLIST %(.{id,title,uploader,playlist_count
 // biliArgs are the flags of every full Bilibili lookup: no download, and
 // --no-playlist so a multi-part video gives part 1 only. The search, space
 // and favourites extractors ignore --no-playlist (their entries still come).
+// --ignore-errors: a deleted or region-locked entry is skipped instead of
+// ending the whole search or list (yt-dlp still exits 1; the entries it did
+// print are kept).
 func (c *Client) biliArgs() []string {
-	return append(c.baseArgs(), "--no-warnings", "--skip-download", "--ignore-no-formats-error", "--no-playlist", "-O", biliTemplate)
+	return append(c.baseArgs(), "--no-warnings", "--skip-download", "--ignore-no-formats-error", "--ignore-errors", "--no-playlist", "-O", biliTemplate)
 }
 
 // SearchSource searches src for q. YouTube is SearchMore; Bilibili runs

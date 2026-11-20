@@ -15,6 +15,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
   refused; a refused search is asked again, up to three times, before the app says "Bilibili is busy".
 - **Bilibili search shows 5 results at a time** (显示更多 for the next 5). Each result is looked up in full, about
   2.5 s apiece from a server abroad, so 10 results took up to 30 s and were cut off at the search time limit.
+- **A deleted or region-locked video no longer breaks a Bilibili search or favourites import.** yt-dlp stopped at
+  the first such entry; it is now skipped and the rest are shown.
 - **A Bilibili search no longer says "Searching YouTube…".** The search button and the searching line name the
   source being searched.
 
