@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.26] - 2026-11-20
+
 ### Fixed
 
 - **Bilibili search fails far less often.** Bilibili's anti-bot check refused about half of the searches from a
@@ -21,6 +23,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
   instead of "search failed".
 - **A Bilibili search no longer says "Searching YouTube…".** The search button and the searching line name the
   source being searched.
+
+### Changed
+
+- **Dependencies updated.** The image is built with Go 1.27 on the latest Alpine and Node base images; Go
+  modules (including `golang.org/x/crypto`), the web build and test tools (Vite, Playwright, jsdom) and the CI
+  actions are up to date.
 
 ## [0.2.25] - 2026-11-20
 
@@ -485,7 +493,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.25...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.26...HEAD
+[0.2.26]: https://github.com/aaronsuns/melarka/compare/v0.2.25...v0.2.26
 [0.2.25]: https://github.com/aaronsuns/melarka/compare/v0.2.24...v0.2.25
 [0.2.24]: https://github.com/aaronsuns/melarka/compare/v0.2.23...v0.2.24
 [0.2.23]: https://github.com/aaronsuns/melarka/compare/v0.2.22...v0.2.23
