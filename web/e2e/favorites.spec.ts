@@ -117,6 +117,19 @@ test("large mode: 收藏 is a cover grid, a tap plays, the ⋯ menu stays on scr
     expect(m.x + m.width).toBeLessThanOrEqual(vp.width);
     await page.mouse.click(4, 4); // a tap elsewhere closes the menu
     await expect(menu).toHaveCount(0);
+    // A short screen (landscape phone, split view): the sheet scrolls instead of losing its top items.
+    await page.setViewportSize({ width: vp.width, height: 480 });
+    await grid.locator("li").first().getByRole("button", { name: /^更多/ }).click();
+    const short = (await menu.boundingBox())!;
+    expect(short.y, "menu top stays on screen").toBeGreaterThanOrEqual(0);
+    await page.mouse.click(4, 4);
+    await expect(menu).toHaveCount(0);
+    // A broken track's cell is dimmed on its cover, not on the whole cell, so its menu is neither faded nor painted under later cells.
+    const liOpacity = await grid.locator("li").first().evaluate((el) => {
+      el.classList.add("broken");
+      return getComputedStyle(el).opacity;
+    });
+    expect(liOpacity).toBe("1");
     await verifyPlaybackStarted(page, info, async () => {
       await grid.locator("li", { hasText: "甜蜜蜜" }).locator(".track-main").click();
     }, { trackId: id });

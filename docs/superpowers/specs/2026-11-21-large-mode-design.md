@@ -21,7 +21,7 @@ Aaron's 5-year-old uses Melarka on an iPad and pinch-zooms the 收藏 (Favorites
 ## Behaviour
 
 - **Setting:** `large_mode` boolean in `/me/preferences`, default false. Toggle on the Settings page with a one-line explanation ("适合小朋友和老人：封面更大，按钮更大"). Existing accounts are unchanged until they turn it on.
-- **收藏 grid:** 2 to 3 covers per row depending on width. Title under each cover in a larger font (kids use the cover, older people read the title). The ♥ and ⋯ stay, as larger touch targets on the cover corner; ⋯ opens the same menu as today. Search box, shuffle button and infinite loading are unchanged. Broken tracks stay disabled.
+- **收藏 grid:** 2 to 3 covers per row depending on width. Title under each cover in a larger font (kids use the cover, older people read the title); artist, duration and the ⬇︎ cached mark are not shown in the grid. ⋯ stays as a larger touch target on the cover's corner and opens the same menu as today, as a scrollable sheet above the bars (so a left-column cell cannot push it off screen). No ♥ overlay: every item in 收藏 is already a favorite. Search box, shuffle button and infinite loading are unchanged. A broken track's cover and title are dimmed and its main button disabled.
 - **Mini player and tab bar:** larger buttons and hit areas when the mode is on.
 
 ## Approaches considered
