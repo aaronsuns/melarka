@@ -168,3 +168,27 @@ test("the ⋯ menu closes on a tap outside it; ⋯ itself still toggles it", asy
   expect(screen.getAllByRole("menu")).toHaveLength(1);
   expect(within(screen.getByText("歌1").closest("li")!).getByRole("menu")).toBeInTheDocument();
 });
+
+// Large mode's 收藏 grid: the same rows, laid out as large covers.
+test("grid: the list is a cover grid and keeps tap-to-play and the ⋯ menu", async () => {
+  const onPlay = vi.fn();
+  renderList([tr(1), tr(2)], "member", { grid: true, onPlay });
+  await userEvent.click(await screen.findByText("歌2"));
+  expect(document.querySelector("ul")).toHaveClass("tracks", "tracks-grid");
+  expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
+  await userEvent.click(screen.getByRole("button", { name: "更多：歌2" }));
+  expect(screen.getByRole("menuitem", { name: "下一首播放" })).toBeInTheDocument();
+});
+
+test("grid: a broken track stays disabled and dimmed", async () => {
+  renderList([tr(1), tr(2, { broken: true })], "member", { grid: true });
+  const row = (await screen.findByText("歌2")).closest("li")!;
+  expect(row).toHaveClass("broken");
+  expect(within(row).getByText("歌2").closest("button")).toBeDisabled();
+});
+
+test("without grid the list is the usual rows", async () => {
+  renderList([tr(1)], "member");
+  await screen.findByText("歌1");
+  expect(document.querySelector("ul")).not.toHaveClass("tracks-grid");
+});

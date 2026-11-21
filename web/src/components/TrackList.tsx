@@ -21,9 +21,11 @@ interface Props {
   extraActions?: (t: Track) => { label: string; run: () => void }[];
   // A tap on a row; default: play the list from that row.
   onPlay?: (t: Track) => void;
+  // Large mode's 收藏: the same rows laid out as a grid of large covers.
+  grid?: boolean;
 }
 
-export function TrackList({ tracks, showAlbum = true, onChange, onRemoved, extraActions, onPlay }: Props) {
+export function TrackList({ tracks, showAlbum = true, onChange, onRemoved, extraActions, onPlay, grid = false }: Props) {
   const t = useT();
   const player = usePlayer();
   const offline = useOffline();
@@ -72,7 +74,7 @@ export function TrackList({ tracks, showAlbum = true, onChange, onRemoved, extra
   return (
     <>
       {error && <p className="error" role="alert">{error}</p>}
-      <ul className="tracks">
+      <ul className={grid ? "tracks tracks-grid" : "tracks"}>
         {tracks.map((track) => {
           const isCurrent = player.current?.id === track.id;
           return (

@@ -82,3 +82,45 @@ test("opening Melarka starts a shuffled favorites queue", async ({ page, browser
     await restoreResume(page); // also when the test failed half-way
   }
 });
+
+// 大图模式: 收藏 is a grid of large covers and one tap on a cover plays it.
+test("large mode: 收藏 is a cover grid, a tap plays, the ⋯ menu stays on screen", async ({ page }, info) => {
+  await login(page);
+  const shot = process.env.LARGE_MODE_SHOTS; // optional directory for a look at phone and iPad width
+  const setLarge = async (on: boolean) => {
+    const prefs = await (await page.request.get("/api/v1/me/preferences")).json();
+    expect((await page.request.put("/api/v1/me/preferences", { data: { ...prefs, large_mode: on } })).ok()).toBe(true);
+  };
+  try {
+    const id = await trackIdByTitle(page, "甜蜜蜜");
+    expect((await page.request.put(`/api/v1/favorites/${id}`)).status()).toBe(204);
+    await setLarge(true);
+    await page.goto("/library?tab=favorites");
+    const grid = page.locator("ul.tracks-grid");
+    await expect(grid).toBeVisible();
+    const cover = grid.locator("li", { hasText: "甜蜜蜜" }).locator(".cover").first();
+    const box = (await cover.boundingBox())!;
+    expect(box.width, "cover is large").toBeGreaterThan(120);
+    if (shot) {
+      await page.screenshot({ path: `${shot}/large-${info.project.name}-phone.png` });
+      await page.setViewportSize({ width: 820, height: 1100 });
+      await page.screenshot({ path: `${shot}/large-${info.project.name}-ipad.png` });
+      await page.setViewportSize(info.project.use.viewport ?? { width: 390, height: 844 });
+    }
+    // The ⋯ menu opens fully inside the screen, also for a cell in the left column.
+    await grid.locator("li").first().getByRole("button", { name: /^更多/ }).click();
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    const m = (await menu.boundingBox())!;
+    const vp = page.viewportSize()!;
+    expect(m.x).toBeGreaterThanOrEqual(0);
+    expect(m.x + m.width).toBeLessThanOrEqual(vp.width);
+    await page.mouse.click(4, 4); // a tap elsewhere closes the menu
+    await expect(menu).toHaveCount(0);
+    await verifyPlaybackStarted(page, info, async () => {
+      await grid.locator("li", { hasText: "甜蜜蜜" }).locator(".track-main").click();
+    }, { trackId: id });
+  } finally {
+    await setLarge(false);
+  }
+});

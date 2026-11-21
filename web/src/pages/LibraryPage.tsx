@@ -12,6 +12,7 @@ import { useInfinite } from "../components/useInfinite";
 import { errorMessage } from "../i18n/errors";
 import { useT } from "../i18n/i18n";
 import { usePlayer } from "../player/PlayerProvider";
+import { usePrefs } from "../prefs/PrefsProvider";
 import { ShuffleIcon } from "../components/icons";
 
 function tabs(t: ReturnType<typeof useT>) {
@@ -28,6 +29,7 @@ function tabs(t: ReturnType<typeof useT>) {
 function Songs({ favorites }: { favorites: boolean }) {
   const t = useT();
   const player = usePlayer();
+  const { prefs } = usePrefs();
   // 收藏's search box: typed text, then (after a pause) the server-side query.
   const [typed, setTyped] = useState("");
   const [q, setQ] = useState("");
@@ -57,6 +59,8 @@ function Songs({ favorites }: { favorites: boolean }) {
       )}
       <TrackList
         tracks={s.items}
+        // Large mode (an account setting): 收藏 is a grid of large covers.
+        grid={favorites && prefs.large_mode === true}
         // A favorite plays, then the queue goes on as 随机播放收藏 (topped up with random favorites).
         onPlay={favorites ? (track) => player.playList([track], 0, { source: "favorites" }) : undefined}
         onRemoved={(id) => s.setItems((ts) => ts.filter((track) => track.id !== id))}

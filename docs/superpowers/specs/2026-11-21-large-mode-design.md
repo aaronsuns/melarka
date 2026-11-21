@@ -1,6 +1,6 @@
 # Large mode (大图模式) — design
 
-Status: approved by Aaron in conversation, 2026-11-21. Size: small change.
+Status: implemented (2026-11-21). Approved by Aaron in conversation. Size: small change. Grid: 150px cells (190px from 700px wide); the ⋯ menu is a sheet above the bars; no ♥ overlay, since every item in 收藏 is a favorite.
 
 ## Intent and why
 

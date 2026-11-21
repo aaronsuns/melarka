@@ -205,3 +205,36 @@ test("favorites: search, tap a song, and the queue continues as shuffled favorit
   expect(player.queue.tracks[0].id).toBe(7);
   expect(player.queue.source).toBe("favorites");
 });
+
+// 大图模式 (account setting large_mode): only 收藏 becomes a cover grid.
+const largeModePrefs = (on: boolean | undefined) => ({ "GET /api/v1/me/preferences": () => ({ body: on === undefined ? { language: null, on_open: "resume" } : { language: null, on_open: "resume", large_mode: on } }) });
+const someTracks = { "GET /api/v1/tracks": () => ({ body: { items: [tr(1), tr(2)], next_cursor: "" } }) };
+
+test("large mode: 收藏 is a cover grid", async () => {
+  renderWithApp(<LibraryPage />, { path: "/library?tab=favorites", routes: { ...someTracks, ...largeModePrefs(true) } });
+  await screen.findByText("歌1");
+  await vi.waitFor(() => expect(document.querySelector("ul.tracks")).toHaveClass("tracks-grid"));
+});
+
+test("large mode: the 歌曲 tab keeps its rows", async () => {
+  renderWithApp(<LibraryPage />, { path: "/library?tab=songs", routes: { ...someTracks, ...largeModePrefs(true) } });
+  await screen.findByText("歌1");
+  await new Promise((r) => setTimeout(r, 50)); // let the preferences answer land
+  expect(document.querySelector("ul.tracks")).not.toHaveClass("tracks-grid");
+});
+
+test.each([false, undefined])("large_mode %s: 收藏 keeps its rows", async (on) => {
+  renderWithApp(<LibraryPage />, { path: "/library?tab=favorites", routes: { ...someTracks, ...largeModePrefs(on) } });
+  await screen.findByText("歌1");
+  await new Promise((r) => setTimeout(r, 50));
+  expect(document.querySelector("ul.tracks")).not.toHaveClass("tracks-grid");
+});
+
+test("large mode: an empty 收藏 still says so and keeps the search box", async () => {
+  renderWithApp(<LibraryPage />, {
+    path: "/library?tab=favorites",
+    routes: { "GET /api/v1/tracks": () => ({ body: { items: [], next_cursor: "" } }), ...largeModePrefs(true) },
+  });
+  expect(await screen.findByText("还没有收藏的歌", { exact: false })).toBeInTheDocument();
+  expect(screen.getByRole("searchbox", { name: "搜索收藏" })).toBeInTheDocument();
+});
