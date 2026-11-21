@@ -32,6 +32,15 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	if r, b := do(t, ts, kid, "PUT", "/api/v1/me/preferences", map[string]any{"language": "zh-Hant", "on_open": "resume", "normalize_loudness": false}); r.StatusCode != 200 || !strings.Contains(string(b), `"normalize_loudness":false`) || !strings.Contains(string(b), `"car_lyrics":false`) {
 		t.Fatalf("put normalize_loudness %d %s", r.StatusCode, b)
 	}
+	if _, b := do(t, ts, kid, "GET", "/api/v1/me/preferences", nil); !strings.Contains(string(b), `"large_mode":false`) {
+		t.Fatalf("large_mode defaults off: %s", b)
+	}
+	if r, b := do(t, ts, kid, "PUT", "/api/v1/me/preferences", map[string]any{"language": "zh-Hant", "on_open": "resume", "large_mode": true}); r.StatusCode != 200 || !strings.Contains(string(b), `"large_mode":true`) {
+		t.Fatalf("large_mode put: %d %s", r.StatusCode, b)
+	}
+	if _, b := do(t, ts, kid, "GET", "/api/v1/me/preferences", nil); !strings.Contains(string(b), `"large_mode":true`) {
+		t.Fatalf("large_mode round trip: %s", b)
+	}
 	if _, b := do(t, ts, other, "GET", "/api/v1/me/preferences", nil); strings.Contains(string(b), "zh-Hant") {
 		t.Fatal("leaked to another user")
 	}

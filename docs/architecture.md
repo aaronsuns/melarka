@@ -40,7 +40,7 @@ Each package under `internal/` has one job:
 | `media` | reads tags, durations and embedded lyrics with ffprobe |
 | `stream` | delivers a track at a quality tier: the original file, or a cached AAC transcode |
 | `personal` | favorites, dislikes, playlists, play history, the saved queue |
-| `prefs` | per-user preferences such as language and what happens on start |
+| `prefs` | per-user preferences such as language, what happens on start and large mode |
 | `radio` | picks the next tracks of a user's personal radio |
 | `tags` | the tag vocabulary and tags from folders, Last.fm, agents and people |
 | `lastfm` | Last.fm tags and similar tracks |

@@ -1,6 +1,6 @@
 // Package prefs stores per-user preferences (UI language, what the player
 // does when it opens, whether lyric lines go to the car/lock-screen title,
-// whether loud tracks are turned down).
+// whether loud tracks are turned down, large mode).
 package prefs
 
 import (
@@ -30,6 +30,11 @@ type Prefs struct {
 	// Same contract as CarLyrics: always set in what Get/Put return (default
 	// true); nil in a Put keeps the stored value.
 	NormalizeLoudness *bool `json:"normalize_loudness"`
+	// LargeMode: the web app shows 收藏 as a grid of large covers and enlarges
+	// the player and tab bar buttons (for young children and older people).
+	// Same contract: always set in what Get/Put return (default false); nil in
+	// a Put keeps the stored value.
+	LargeMode *bool `json:"large_mode"`
 }
 
 type Store struct {
@@ -45,10 +50,10 @@ func (s *Store) now() int64 {
 }
 
 func (s *Store) Get(ctx context.Context, userID int64) (Prefs, error) {
-	car, loud := true, true
-	p := Prefs{OnOpen: "shuffle_favorites", CarLyrics: &car, NormalizeLoudness: &loud}
+	car, loud, large := true, true, false
+	p := Prefs{OnOpen: "shuffle_favorites", CarLyrics: &car, NormalizeLoudness: &loud, LargeMode: &large}
 	var lang sql.NullString
-	err := s.DB.QueryRowContext(ctx, `SELECT language, on_open, car_lyrics, normalize_loudness FROM user_prefs WHERE user_id=?`, userID).Scan(&lang, &p.OnOpen, &car, &loud)
+	err := s.DB.QueryRowContext(ctx, `SELECT language, on_open, car_lyrics, normalize_loudness, large_mode FROM user_prefs WHERE user_id=?`, userID).Scan(&lang, &p.OnOpen, &car, &loud, &large)
 	if errors.Is(err, sql.ErrNoRows) {
 		return p, nil
 	}
@@ -75,11 +80,15 @@ func (s *Store) Put(ctx context.Context, userID int64, p Prefs) (Prefs, error) {
 	if p.NormalizeLoudness != nil {
 		loud = *p.NormalizeLoudness
 	}
-	if _, err := s.DB.ExecContext(ctx, `INSERT INTO user_prefs(user_id,language,on_open,car_lyrics,normalize_loudness,updated_at) VALUES (?1,?2,?3,COALESCE(?4,1),COALESCE(?5,1),?6)
+	var large any
+	if p.LargeMode != nil {
+		large = *p.LargeMode
+	}
+	if _, err := s.DB.ExecContext(ctx, `INSERT INTO user_prefs(user_id,language,on_open,car_lyrics,normalize_loudness,large_mode,updated_at) VALUES (?1,?2,?3,COALESCE(?4,1),COALESCE(?5,1),COALESCE(?7,0),?6)
 		ON CONFLICT(user_id) DO UPDATE SET language=excluded.language, on_open=excluded.on_open,
-		car_lyrics=COALESCE(?4, user_prefs.car_lyrics), normalize_loudness=COALESCE(?5, user_prefs.normalize_loudness),
+		car_lyrics=COALESCE(?4, user_prefs.car_lyrics), normalize_loudness=COALESCE(?5, user_prefs.normalize_loudness), large_mode=COALESCE(?7, user_prefs.large_mode),
 		updated_at=excluded.updated_at`,
-		userID, lang, p.OnOpen, car, loud, s.now()); err != nil {
+		userID, lang, p.OnOpen, car, loud, s.now(), large); err != nil {
 		return Prefs{}, err
 	}
 	return s.Get(ctx, userID)

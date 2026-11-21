@@ -90,3 +90,28 @@ func TestNormalizeLoudnessDefaultsOnAndSurvivesOlderClients(t *testing.T) {
 		t.Fatalf("first put without the field must default on: %+v %v", p, err)
 	}
 }
+
+func TestLargeModeDefaultsOffAndSurvivesOlderClients(t *testing.T) {
+	d := testutil.DB(t)
+	d.Exec(`INSERT INTO users(id,username,password_hash,role,created_at) VALUES (1,'a','h','member',0),(2,'b','h','member',0)`)
+	s := &Store{DB: d}
+	ctx := context.Background()
+	if p, err := s.Get(ctx, 1); err != nil || p.LargeMode == nil || *p.LargeMode {
+		t.Fatalf("large mode must default off: %+v %v", p, err)
+	}
+	on := true
+	if p, err := s.Put(ctx, 1, Prefs{OnOpen: "resume", LargeMode: &on}); err != nil || p.LargeMode == nil || !*p.LargeMode {
+		t.Fatalf("put on: %+v %v", p, err)
+	}
+	// A client that predates the field omits it: the stored choice stays.
+	if p, err := s.Put(ctx, 1, Prefs{OnOpen: "nothing"}); err != nil || p.LargeMode == nil || !*p.LargeMode || p.OnOpen != "nothing" {
+		t.Fatalf("omitted large_mode must keep the stored value: %+v %v", p, err)
+	}
+	if p, err := s.Put(ctx, 2, Prefs{OnOpen: "resume"}); err != nil || *p.LargeMode {
+		t.Fatalf("first put without the field must default off (and not leak from user 1): %+v %v", p, err)
+	}
+	off := false
+	if p, err := s.Put(ctx, 1, Prefs{OnOpen: "resume", LargeMode: &off}); err != nil || *p.LargeMode {
+		t.Fatalf("put off: %+v %v", p, err)
+	}
+}
