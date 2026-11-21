@@ -238,6 +238,9 @@ export interface Prefs {
   // Turn loud tracks down by their gain_db. Absent from an older server's
   // answer: treat that as on (the default).
   normalize_loudness?: boolean;
+  // Large mode: 收藏 as a cover grid, bigger bar buttons. Absent from an older
+  // server's answer: treat that as off (the default).
+  large_mode?: boolean;
 }
 
 export type TagKind = "genre" | "mood" | "scene" | "era" | "language" | "other";

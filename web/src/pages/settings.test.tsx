@@ -76,6 +76,28 @@ test("volume normalization is on by default, explained, and saves normalize_loud
   await waitFor(() => expect(box.checked).toBe(false));
 });
 
+test("large mode is off by default, explained, and saves large_mode", async () => {
+  const { f } = renderWithApp(<SettingsPage />, {
+    routes: { "PUT /api/v1/me/preferences": (init) => ({ body: JSON.parse(init.body as string) }) },
+  });
+  const box = (await screen.findByRole("checkbox", { name: "大图模式" })) as HTMLInputElement;
+  expect(box.checked).toBe(false);
+  expect(screen.getByText("适合小朋友和老人：封面更大，按钮更大")).toBeInTheDocument();
+  fireEvent.click(box);
+  await waitFor(() => expect(f.mock.calls.some((c) => String(c[0]).endsWith("/me/preferences") && c[1]?.method === "PUT")).toBe(true));
+  const put = f.mock.calls.find((c) => String(c[0]).endsWith("/me/preferences") && c[1]?.method === "PUT")!;
+  expect(JSON.parse(put[1]!.body as string)).toEqual({ language: null, on_open: "resume", large_mode: true });
+  await waitFor(() => expect(box.checked).toBe(true));
+});
+
+test("an older server's answer without large_mode shows the switch off", async () => {
+  renderWithApp(<SettingsPage />, {
+    routes: { "GET /api/v1/me/preferences": () => ({ body: { language: null, on_open: "resume" } }) },
+  });
+  const box = (await screen.findByRole("checkbox", { name: "大图模式" })) as HTMLInputElement;
+  expect(box.checked).toBe(false);
+});
+
 test("the footer shows the server version and links to the source (AGPL §13)", async () => {
   renderWithApp(<SettingsPage />, {
     routes: { "GET /api/v1/info": () => ({ body: { name: "Melarka", version: "0.1.0", language: "zh-Hans", languages: [] } }) },

@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const loggingOut = useRef(false);
   const carHint = useId();
   const loudnessHint = useId();
+  const largeHint = useId();
   const nativeHint = useId();
   // Inside a Lark native app (iPhone or Android): its own settings (cache, server) replace the
   // web's offline cache and the Home Screen tip.
@@ -131,6 +132,19 @@ export default function SettingsPage() {
           {t("settings.loudness")}
         </label>
         <span id={loudnessHint} className="small">{t("settings.loudnessHint")}</span>
+      </div>
+      <div className="field field-check">
+        <label className="field-check-row">
+          <input
+            type="checkbox"
+            className="switch"
+            aria-describedby={largeHint}
+            checked={prefs.large_mode === true}
+            onChange={(e) => void save({ ...prefs, large_mode: e.target.checked }).catch(() => {})}
+          />
+          {t("settings.largeMode")}
+        </label>
+        <span id={largeHint} className="small">{t("settings.largeModeHint")}</span>
       </div>
       </div>
       {isIOSSafari && !native && <p className="muted small">{t("settings.iosTip")}</p>}

@@ -23,6 +23,7 @@
   "error.not_linked": "这个账号已经不在这台设备上了",
   "settings.carLyrics": "车载歌词（蓝牙）", "settings.carLyricsHint": "在车载屏幕和锁屏上，把当前这句歌词显示为歌名。",
   "settings.loudness": "音量均衡", "settings.loudnessHint": "让每首歌的响度相近：只把太响的歌调低，不放大安静的歌。",
+  "settings.largeMode": "大图模式", "settings.largeModeHint": "适合小朋友和老人：封面更大，按钮更大",
 
   "app.notFound": "页面不存在",
 

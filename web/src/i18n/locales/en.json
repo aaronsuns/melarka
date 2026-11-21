@@ -23,6 +23,7 @@
   "error.not_linked": "That account is no longer signed in here",
   "settings.carLyrics": "Car lyrics (Bluetooth)", "settings.carLyricsHint": "Shows the current lyric line as the song title in the car and on the lock screen.",
   "settings.loudness": "Volume normalization", "settings.loudnessHint": "Plays every song at a similar loudness. Loud songs are turned down; quiet ones are never boosted.",
+  "settings.largeMode": "Large mode", "settings.largeModeHint": "For young children and older people: bigger covers and bigger buttons.",
 
   "app.notFound": "Page not found",
 

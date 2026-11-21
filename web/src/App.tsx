@@ -56,8 +56,9 @@ function Shell() {
   const youtubeOn = useYouTubeOn();
   const channelsOn = useChannelsEnabled() && youtubeOn; // 频道 and 视频 are built on YouTube
   const unplayed = useUnplayed(channelsOn);
+  const { prefs } = usePrefs();
   return (
-    <div className="shell">
+    <div className="shell" data-large={prefs.large_mode === true ? "true" : undefined}>
       <main className="content"><Outlet /></main>
       <ShellPlayer />
       <nav className={channelsOn ? "tabs tabs-6" : "tabs"}>
