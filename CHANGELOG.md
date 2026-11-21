@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.28] - 2026-11-21
+
+### Added
+
+- **Large mode (大图模式), an account setting for young children and older people.** Turn it on in Settings:
+  Library → 收藏 becomes a grid of large covers (one tap plays, the ⋯ menu stays), and the player and tab bar
+  buttons are bigger. Nothing is hidden or locked. The setting is stored with the account, so it follows it to
+  every device.
+
 ## [0.2.27] - 2026-11-21
 
 ### Added
@@ -507,7 +516,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.27...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.28...HEAD
+[0.2.28]: https://github.com/aaronsuns/melarka/compare/v0.2.27...v0.2.28
 [0.2.27]: https://github.com/aaronsuns/melarka/compare/v0.2.26...v0.2.27
 [0.2.26]: https://github.com/aaronsuns/melarka/compare/v0.2.25...v0.2.26
 [0.2.25]: https://github.com/aaronsuns/melarka/compare/v0.2.24...v0.2.25
