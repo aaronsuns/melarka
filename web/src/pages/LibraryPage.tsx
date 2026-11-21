@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { api } from "../api/client";
 import type { Album, Artist, TagCount, TagKind, Track } from "../api/types";
 import { AlbumCards, ArtistChips } from "../components/Cards";
+import { EmptyLibrary } from "../components/EmptyLibrary";
 import { More } from "../components/More";
 import { ShuffleFavoritesButton } from "../components/ShuffleFavorites";
 import { TagChips } from "../components/TagChips";
@@ -50,8 +51,9 @@ function Songs({ favorites }: { favorites: boolean }) {
           onChange={(e) => setTyped(e.target.value)}
         />
       )}
-      {s.done && s.items.length === 0 && (
-        <p className="muted">{favorites ? (q ? t("library.noFavoritesMatch") : t("library.noFavorites")) : t("library.empty")}</p>
+      {s.done && s.items.length === 0 && !favorites && <EmptyLibrary />}
+      {s.done && s.items.length === 0 && favorites && (
+        <p className="muted">{q ? t("library.noFavoritesMatch") : t("library.noFavorites")}</p>
       )}
       <TrackList
         tracks={s.items}

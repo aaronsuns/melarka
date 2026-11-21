@@ -561,5 +561,11 @@
   "error.bilibili_search_unavailable": "這台伺服器無法存取這些嗶哩嗶哩影片，很多影片僅限中國大陸觀看",
   "job.error.source_disabled": "這個影片來源已關閉，管理員重新開啟後可重試",
   "search.b23": "伺服器無法開啟 b23.tv 短連結：請開啟影片，複製 bilibili.com/video/BV… 開頭的完整網址",
-  "error.lookup_timeout": "查詢連結逾時，請重試"
+  "error.lookup_timeout": "查詢連結逾時，請重試",
+  "empty.title": "新增你的第一批歌曲",
+  "empty.step1": "把音樂檔案複製到 docker-compose.yml 旁 .env 檔裡 MUSIC_DIR 指定的資料夾（支援 mp3、flac、m4a、ogg 等音訊檔，子資料夾也可以）。",
+  "empty.step2": "開啟 管理 → 音樂庫，點「重新掃描」。",
+  "empty.step3": "一兩分鐘內歌曲就會出現在這裡；音樂庫很大時會更久。",
+  "empty.openLibraries": "開啟 管理 → 音樂庫",
+  "empty.member": "還沒有歌曲。請聯絡執行這個 Melarka 的人，請他把音樂加入音樂庫。"
 }

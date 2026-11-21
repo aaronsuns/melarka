@@ -120,6 +120,12 @@ there; it signs you out of the old one.
   button.
 - **About**: the app version.
 
+### CarPlay
+
+Melarka does not support CarPlay today: it does not appear on the CarPlay screen. What works in a car is
+Bluetooth: playback controls and the current lyric line on the head unit, and starting playback when
+the car connects (below).
+
 ### Starting playback in the car
 
 Most cars send a "play" command when Bluetooth connects, and iOS passes it to the app that played

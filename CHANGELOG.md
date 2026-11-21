@@ -7,6 +7,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The serve
 
 ## [Unreleased]
 
+## [0.2.27] - 2026-11-21
+
+### Added
+
+- **A first-run "Add your first songs" guide.** With no songs yet, Home and Library → Songs now say how to
+  point Melarka at your music: copy files into the folder set as `MUSIC_DIR`, then Rescan in Admin → Library.
+  People who are not admins are told to ask the person who runs Melarka.
+- **The "newer Melarka is available" notice is also on Home for admins**, not only in Admin → System.
+
+### Changed
+
+- **README, guides and website say plainly that Android Auto and CarPlay are not supported today.** Bluetooth
+  car controls, lyrics on the car display and car autoplay work as before.
+
 ## [0.2.26] - 2026-11-20
 
 ### Fixed
@@ -493,7 +507,8 @@ The first public release.
 - **Admin console** for users, pending songs, downloads, trash, libraries and yt-dlp updates.
 - **Version reporting** in `lark --version`, `GET /api/v1/info` and the settings pages.
 
-[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.26...HEAD
+[Unreleased]: https://github.com/aaronsuns/melarka/compare/v0.2.27...HEAD
+[0.2.27]: https://github.com/aaronsuns/melarka/compare/v0.2.26...v0.2.27
 [0.2.26]: https://github.com/aaronsuns/melarka/compare/v0.2.25...v0.2.26
 [0.2.25]: https://github.com/aaronsuns/melarka/compare/v0.2.24...v0.2.25
 [0.2.24]: https://github.com/aaronsuns/melarka/compare/v0.2.23...v0.2.24

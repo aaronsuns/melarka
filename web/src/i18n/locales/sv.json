@@ -569,5 +569,11 @@
   "error.bilibili_search_unavailable": "Inga av de här Bilibili-videorna går att nå från den här servern; många är bara tillgängliga i Kina",
   "job.error.source_disabled": "Den här videokällan stängdes av; försök igen när en admin slår på den",
   "search.b23": "Servern kan inte öppna b23.tv-kortlänkar: öppna videon och kopiera hela adressen som börjar med bilibili.com/video/BV…",
-  "error.lookup_timeout": "Det tog för lång tid att slå upp länken, försök igen"
+  "error.lookup_timeout": "Det tog för lång tid att slå upp länken, försök igen",
+  "empty.title": "Lägg till dina första låtar",
+  "empty.step1": "Kopiera dina musikfiler till mappen du angav som MUSIC_DIR i .env-filen bredvid docker-compose.yml (mp3, flac, m4a, ogg och andra ljudfiler fungerar, undermappar går bra).",
+  "empty.step2": "Öppna Admin → Bibliotek och tryck på Skanna om.",
+  "empty.step3": "Låtarna dyker upp här inom en minut eller två; stora bibliotek tar längre tid.",
+  "empty.openLibraries": "Öppna Admin → Bibliotek",
+  "empty.member": "Det finns inga låtar än. Be den som driver den här Melarka att lägga till musik i biblioteket."
 }

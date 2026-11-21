@@ -86,6 +86,12 @@ When the server can't be reached, the app shows a "can't connect" screen instead
 **Retry**, **Settings**, **Play Offline Favorites** (when some are cached) and **Stay Offline**. It
 tries again by itself when the network comes back.
 
+## Android Auto
+
+Melarka does not support Android Auto today: it does not appear in Android Auto's app list and has no
+car screen of its own. What works in a car is Bluetooth: playback controls and the current lyric line
+on the head unit, and car autoplay (below).
+
 ## Car autoplay
 
 Most cars send "play" when Bluetooth connects, and Android passes it to the app that played last:

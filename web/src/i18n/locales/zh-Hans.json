@@ -561,5 +561,11 @@
   "error.bilibili_search_unavailable": "这台服务器无法访问这些哔哩哔哩视频，很多视频仅限中国大陆观看",
   "job.error.source_disabled": "这个视频来源已关闭，管理员重新开启后可重试",
   "search.b23": "服务器无法打开 b23.tv 短链接：请打开视频，复制 bilibili.com/video/BV… 开头的完整网址",
-  "error.lookup_timeout": "查询链接超时，请重试"
+  "error.lookup_timeout": "查询链接超时，请重试",
+  "empty.title": "添加你的第一批歌曲",
+  "empty.step1": "把音乐文件复制到 docker-compose.yml 旁 .env 文件里 MUSIC_DIR 指定的文件夹（支持 mp3、flac、m4a、ogg 等音频文件，子文件夹也可以）。",
+  "empty.step2": "打开 管理 → 音乐库，点“重新扫描”。",
+  "empty.step3": "一两分钟内歌曲就会出现在这里；音乐库很大时会更久。",
+  "empty.openLibraries": "打开 管理 → 音乐库",
+  "empty.member": "还没有歌曲。请联系运行这个 Melarka 的人，让他把音乐加入音乐库。"
 }

@@ -88,9 +88,10 @@ In a desktop browser: Home and Albums. Demo data: invented songs and channels, g
   lock-screen controls.
 - **An Android app** with the same native playback engine: background play, gapless transitions, an
   offline cache of your favorites, car autoplay over Bluetooth, and launcher shortcuts; a signed APK
-  on every release (docs/android.md).
+  on every release (docs/android.md). Android Auto is not supported today.
 - **An iPhone app** with a native playback engine: background play, gapless transitions, an
-  offline cache of your favorites, and Shortcuts to start playing when the car connects.
+  offline cache of your favorites, and Shortcuts to start playing when the car connects. CarPlay is not
+  supported today.
 - **Now Playing** with shuffle and repeat (all or one), a sleep timer that fades out, volume
   normalization that turns loud songs down, and a queue you edit by hand: add to it, drag to
   reorder, swipe to remove.

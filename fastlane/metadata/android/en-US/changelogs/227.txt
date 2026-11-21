@@ -1,0 +1,1 @@
+A first-run guide shows how to add your first songs when the library is empty, and admins see the new-version notice on Home. README and guides say Android Auto and CarPlay are not supported yet.

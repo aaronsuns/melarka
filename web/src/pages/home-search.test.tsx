@@ -94,3 +94,28 @@ test("search shows an empty state", async () => {
   await userEvent.type(screen.getByRole("searchbox"), "zzz");
   expect(await screen.findByText("没有找到「zzz」")).toBeInTheDocument();
 });
+
+test("an empty library shows the first-run steps (admin) or who to ask (member)", async () => {
+  renderWithApp(<HomePage />, { role: "admin", routes: { "GET /api/v1/tracks": () => page([]) } });
+  expect(await screen.findByTestId("empty-library")).toHaveTextContent("MUSIC_DIR");
+  expect(screen.getByRole("link", { name: /管理 → 音乐库/ })).toBeInTheDocument();
+});
+
+test("a member with an empty library is told to ask the admin", async () => {
+  renderWithApp(<HomePage />, { routes: { "GET /api/v1/tracks": () => page([]) } });
+  const box = await screen.findByTestId("empty-library");
+  expect(box).not.toHaveTextContent("MUSIC_DIR");
+  expect(screen.queryByRole("link", { name: /管理 → 音乐库/ })).toBeNull();
+});
+
+test("home shows the update notice to an admin, not the first-run box when songs exist", async () => {
+  renderWithApp(<HomePage />, {
+    role: "admin",
+    routes: {
+      "GET /api/v1/tracks": () => page([tr(1)]),
+      "GET /api/v1/admin/update-check": () => ({ body: { enabled: true, current: "0.2.26", latest: "0.3.0", url: "https://example.test/r", newer: true, checked_at: 1 } }),
+    },
+  });
+  expect(await screen.findByRole("link", { name: "更新说明" })).toBeInTheDocument();
+  expect(screen.queryByTestId("empty-library")).toBeNull();
+});

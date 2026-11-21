@@ -1,0 +1,1 @@
+En guide vid första start visar hur du lägger till dina första låtar när biblioteket är tomt, och admins ser meddelandet om ny version på startsidan. Android Auto och CarPlay stöds inte än.

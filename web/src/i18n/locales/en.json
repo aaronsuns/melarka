@@ -569,5 +569,11 @@
   "error.bilibili_search_unavailable": "None of these Bilibili videos can be reached from this server; many are only available in mainland China",
   "job.error.source_disabled": "This video source was turned off; retry once an admin turns it on",
   "search.b23": "The server can't open b23.tv short links: open the video and copy its full bilibili.com/video/BV… address",
-  "error.lookup_timeout": "Looking up the link took too long; try again"
+  "error.lookup_timeout": "Looking up the link took too long; try again",
+  "empty.title": "Add your first songs",
+  "empty.step1": "Copy your music files into the folder you chose as MUSIC_DIR in the .env file next to docker-compose.yml (Melarka reads mp3, flac, m4a, ogg and other audio files, and sub-folders are fine).",
+  "empty.step2": "Open Admin → Library and tap Rescan.",
+  "empty.step3": "The songs appear here within a minute or two; large libraries take longer.",
+  "empty.openLibraries": "Open Admin → Library",
+  "empty.member": "There are no songs yet. Ask the person who runs this Melarka to add music to its library."
 }

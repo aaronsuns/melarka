@@ -3,6 +3,9 @@ import { BRAND } from "../brand";
 import { Link } from "react-router";
 import { api } from "../api/client";
 import type { TagCount, Track } from "../api/types";
+import { EmptyLibrary } from "../components/EmptyLibrary";
+import { UpdateBanner } from "../components/UpdateBanner";
+import { useAuth } from "../auth/AuthProvider";
 import { RecommendationsSection } from "../components/RecommendationsSection";
 import { useYouTubeOn } from "../videoSources";
 import { useShuffleFavorites } from "../components/ShuffleFavorites";
@@ -15,6 +18,7 @@ import { HeartIcon, RadioIcon, ShuffleIcon } from "../components/icons";
 
 export default function HomePage() {
   const t = useT();
+  const { user } = useAuth();
   const youtubeOn = useYouTubeOn();
   const player = usePlayer();
   const [pending, setPending] = useState<Track[]>([]);
@@ -22,6 +26,7 @@ export default function HomePage() {
   const [radioMsg, setRadioMsg] = useState("");
   const [shuffleMsg, setShuffleMsg] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const [topTags, setTopTags] = useState<TagCount[]>([]);
   const [activeDownloads, setActiveDownloads] = useState(0);
   const shuffleFavs = useShuffleFavorites();
@@ -33,7 +38,7 @@ export default function HomePage() {
     // make an empty pending section appear.
     const fail = (e: unknown) => setLoadError(t("home.loadFailed", { msg: e instanceof Error ? e.message : t("home.networkError") }));
     api.tracks({ status: "pending", sort: "added", limit: 20 }).then((p) => setPending(p.items.filter((t) => t.status === "pending"))).catch(fail);
-    api.tracks({ sort: "added", limit: 20 }).then((p) => setRecent(p.items)).catch(fail);
+    api.tracks({ sort: "added", limit: 20 }).then((p) => { setRecent(p.items); setLoaded(true); }).catch(fail);
     api.tags().then((ts) => setTopTags([...ts].sort((a, b) => b.count - a.count).slice(0, 12))).catch(() => {});
     // Best-effort: a stalled/unreachable download service shouldn't block
     // or clutter the home screen, so failures here are silently ignored.
@@ -69,6 +74,8 @@ export default function HomePage() {
   return (
     <>
       <h1 className="page-title">{BRAND}</h1>
+      {user?.role === "admin" && <UpdateBanner />}
+      {loaded && recent.length === 0 && pending.length === 0 && <EmptyLibrary />}
       {/* One row of equal quick-play buttons. */}
       <div className="quick-actions">
         <button className="secondary quick" onClick={shuffleFavs.go}><HeartIcon /><span>{t("home.shuffleFavorites")}</span></button>
