@@ -20,11 +20,15 @@ umask 077
 export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
 export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
-LABEL=io.github.aaronsuns.melarka.resign
+# MELARKA_INSTANCE (e.g. ipad) keeps a second device apart: its own launchd job, config (resign-<name>.env),
+# state and logs. Unset, the names are the original ones, so an existing single-device setup is unchanged.
+INST=${MELARKA_INSTANCE:-}
+SUF=${INST:+-$INST}
+LABEL=io.github.aaronsuns.melarka.resign${INST:+.$INST}
 REPO=https://github.com/aaronsuns/melarka.git
-CONFIG=$HOME/.config/melarka/resign.env
-STATE="$HOME/Library/Application Support/melarka-resign"   # src/, dd/, expires, version, notified
-LOGDIR=$HOME/Library/Logs/melarka-resign
+CONFIG=$HOME/.config/melarka/resign$SUF.env
+STATE="$HOME/Library/Application Support/melarka-resign$SUF"   # src/, dd/, expires, version, notified
+LOGDIR=$HOME/Library/Logs/melarka-resign$SUF
 PROFILES="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
 PLIST=$HOME/Library/LaunchAgents/$LABEL.plist
 SELF=$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")
@@ -59,6 +63,7 @@ install_job() {
 <dict>
   <key>Label</key><string>$LABEL</string>
   <key>ProgramArguments</key><array><string>/bin/bash</string><string>$SELF</string><string>run</string></array>
+  <key>EnvironmentVariables</key><dict><key>MELARKA_INSTANCE</key><string>$INST</string></dict>
   <key>StartInterval</key><integer>900</integer>
   <key>RunAtLoad</key><true/>
   <key>StandardOutPath</key><string>$LOGDIR/launchd.out</string>
@@ -204,7 +209,7 @@ for f in "$PROFILES"/*.mobileprovision; do
 done
 
 log "building $tag as $BUNDLE"
-xcodebuild -project "$src/ios/Lark.xcodeproj" -scheme Lark -configuration Release -destination generic/platform=iOS \
+xcodebuild -project "$src/ios/Lark.xcodeproj" -scheme Lark -configuration Release -destination "platform=iOS,id=$MELARKA_DEVICE" \
   -derivedDataPath "$STATE/dd" -allowProvisioningUpdates -quiet build \
   DEVELOPMENT_TEAM="$MELARKA_TEAM" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE" CODE_SIGN_STYLE=Automatic \
   MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="$version" || fail "build of $tag failed"

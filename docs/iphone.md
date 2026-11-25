@@ -64,6 +64,9 @@ Melarka release is installed the same way, within 15 minutes of being published.
   in `resign.env` to a command that sends one: it gets the subject as its last argument and the
   details on standard input.
 - Logs are in `~/Library/Logs/melarka-resign/`; `ios/scripts/resign.sh uninstall` stops it.
+- A second device (an iPad, say): put its identifier in `~/.config/melarka/resign-ipad.env` and run
+  `MELARKA_INSTANCE=ipad ios/scripts/resign.sh install`. It gets its own job, state and logs
+  (`...resign-ipad`); use the same `MELARKA_INSTANCE=ipad` with `status` and `uninstall`.
   Other settings are listed at the top of the script.
 - A free Apple ID can have at most three self-signed apps on a phone at a time.
 
