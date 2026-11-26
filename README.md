@@ -3,6 +3,7 @@
 Website: **<https://melarka.zexa.se>** (a short tour, screenshots and the one-command install).
 
 [![Melarka on AlternativeTo](https://alternativeto.net/static/badges/badge-compact-color.svg)](https://alternativeto.net/software/melarka/about/?utm_source=badge&utm_medium=referral)
+[![As seen on Open Source Alternatives](https://www.opensourcealternatives.to/badge-osa.svg)](https://www.opensourcealternatives.to)
 
 # Melarka
 
